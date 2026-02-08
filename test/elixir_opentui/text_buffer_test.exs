@@ -1,0 +1,103 @@
+defmodule ElixirOpentui.TextBufferTest do
+  use ExUnit.Case, async: true
+
+  alias ElixirOpentui.TextBuffer
+  alias ElixirOpentui.Color
+
+  describe "new/0 and from_text/1" do
+    test "empty buffer" do
+      buf = TextBuffer.new()
+      assert TextBuffer.to_plain(buf) == ""
+      assert TextBuffer.grapheme_count(buf) == 0
+    end
+
+    test "from plain text" do
+      buf = TextBuffer.from_text("Hello World")
+      assert TextBuffer.to_plain(buf) == "Hello World"
+      assert TextBuffer.grapheme_count(buf) == 11
+    end
+
+    test "from text with Unicode" do
+      buf = TextBuffer.from_text("Hello 世界")
+      assert TextBuffer.to_plain(buf) == "Hello 世界"
+      assert TextBuffer.grapheme_count(buf) == 8
+    end
+
+    test "emoji graphemes" do
+      buf = TextBuffer.from_text("Hi 👋🏽")
+      plain = TextBuffer.to_plain(buf)
+      assert String.contains?(plain, "Hi")
+    end
+  end
+
+  describe "from_spans/1" do
+    test "multiple styled spans" do
+      buf =
+        TextBuffer.from_spans([
+          {"Hello ", fg: Color.red()},
+          {"World", fg: Color.blue(), bold: true}
+        ])
+
+      assert TextBuffer.to_plain(buf) == "Hello World"
+      assert TextBuffer.grapheme_count(buf) == 11
+    end
+
+    test "plain strings in span list" do
+      buf = TextBuffer.from_spans(["Hello ", "World"])
+      assert TextBuffer.to_plain(buf) == "Hello World"
+    end
+  end
+
+  describe "display_width/1" do
+    test "ASCII text width equals length" do
+      buf = TextBuffer.from_text("Hello")
+      assert TextBuffer.display_width(buf) == 5
+    end
+
+    test "CJK characters are double-width" do
+      buf = TextBuffer.from_text("世界")
+      assert TextBuffer.display_width(buf) == 4
+    end
+
+    test "mixed ASCII and CJK" do
+      buf = TextBuffer.from_text("Hi世界")
+      assert TextBuffer.display_width(buf) == 6
+    end
+  end
+
+  describe "style_at/2" do
+    test "returns style at grapheme index" do
+      buf =
+        TextBuffer.from_spans([
+          {"Hello", fg: Color.red()},
+          {"World", fg: Color.blue()}
+        ])
+
+      style0 = TextBuffer.style_at(buf, 0)
+      assert style0.fg == Color.red()
+
+      style5 = TextBuffer.style_at(buf, 5)
+      assert style5.fg == Color.blue()
+    end
+
+    test "returns nil for out of bounds" do
+      buf = TextBuffer.from_text("Hi")
+      assert TextBuffer.style_at(buf, 10) == nil
+    end
+  end
+
+  describe "append/3" do
+    test "appends text with style" do
+      buf = TextBuffer.from_text("Hello")
+      buf = TextBuffer.append(buf, " World", fg: Color.green())
+      assert TextBuffer.to_plain(buf) == "Hello World"
+    end
+  end
+
+  describe "graphemes/1" do
+    test "returns grapheme cluster list" do
+      buf = TextBuffer.from_text("ABC")
+      assert TextBuffer.graphemes(buf) == ["A", "B", "C"]
+    end
+  end
+end

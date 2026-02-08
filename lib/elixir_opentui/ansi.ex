@@ -1,0 +1,184 @@
+defmodule ElixirOpentui.ANSI do
+  @moduledoc """
+  ANSI escape sequence generation.
+
+  Converts Buffer cells and diffs into terminal escape sequences.
+  Pure module — no side effects. All functions return iodata.
+  """
+
+  alias ElixirOpentui.{Buffer, Color}
+
+  # CSI (Control Sequence Introducer)
+  @csi "\e["
+
+  # --- Cursor control ---
+
+  @doc "Move cursor to (x, y). 1-indexed for ANSI."
+  @spec move_to(non_neg_integer(), non_neg_integer()) :: iodata()
+  def move_to(x, y), do: [@csi, Integer.to_string(y + 1), ";", Integer.to_string(x + 1), "H"]
+
+  @spec hide_cursor() :: iodata()
+  def hide_cursor, do: "\e[?25l"
+
+  @spec show_cursor() :: iodata()
+  def show_cursor, do: "\e[?25h"
+
+  @spec save_cursor() :: iodata()
+  def save_cursor, do: "\e7"
+
+  @spec restore_cursor() :: iodata()
+  def restore_cursor, do: "\e8"
+
+  # --- Screen control ---
+
+  @spec clear_screen() :: iodata()
+  def clear_screen, do: "\e[2J"
+
+  @spec clear_line() :: iodata()
+  def clear_line, do: "\e[2K"
+
+  @spec enter_alt_screen() :: iodata()
+  def enter_alt_screen, do: "\e[?1049h"
+
+  @spec leave_alt_screen() :: iodata()
+  def leave_alt_screen, do: "\e[?1049l"
+
+  @spec reset() :: iodata()
+  def reset, do: "\e[0m"
+
+  # --- Mouse mode ---
+
+  @spec enable_mouse() :: iodata()
+  def enable_mouse, do: ["\e[?1000h", "\e[?1002h", "\e[?1003h", "\e[?1006h"]
+
+  @spec disable_mouse() :: iodata()
+  def disable_mouse, do: ["\e[?1006l", "\e[?1003l", "\e[?1002l", "\e[?1000l"]
+
+  # --- Bracketed paste ---
+
+  @spec enable_paste() :: iodata()
+  def enable_paste, do: "\e[?2004h"
+
+  @spec disable_paste() :: iodata()
+  def disable_paste, do: "\e[?2004l"
+
+  # --- Color / attribute SGR ---
+
+  @doc "Generate SGR (Select Graphic Rendition) sequence for a cell's style."
+  @spec sgr(Color.t(), Color.t(), boolean(), boolean(), boolean(), boolean()) :: iodata()
+  def sgr(fg, bg, bold, italic, underline, strikethrough) do
+    parts =
+      []
+      |> maybe_add(bold, "1")
+      |> maybe_add(italic, "3")
+      |> maybe_add(underline, "4")
+      |> maybe_add(strikethrough, "9")
+      |> add_fg(fg)
+      |> add_bg(bg)
+
+    [@csi, Enum.intersperse(Enum.reverse(parts), ";"), "m"]
+  end
+
+  defp maybe_add(parts, true, code), do: [code | parts]
+  defp maybe_add(parts, false, _code), do: parts
+
+  defp add_fg(parts, {r, g, b, _a}) do
+    ["38;2;#{r};#{g};#{b}" | parts]
+  end
+
+  defp add_bg(parts, {r, g, b, _a}) do
+    ["48;2;#{r};#{g};#{b}" | parts]
+  end
+
+  # --- Full frame rendering ---
+
+  @doc "Render an entire buffer to ANSI iodata (for initial draw or full redraw)."
+  @spec render_full(Buffer.t()) :: iodata()
+  def render_full(%Buffer{cols: cols, rows: rows} = buf) do
+    for y <- 0..(rows - 1)//1, reduce: [] do
+      acc ->
+        row_data = render_row(buf, y, cols)
+        [acc, move_to(0, y), row_data]
+    end
+  end
+
+  @doc "Render only the diff changes between two buffers."
+  @spec render_diff([{non_neg_integer(), non_neg_integer(), Buffer.cell()}]) :: iodata()
+  def render_diff(changes) do
+    changes
+    |> group_consecutive()
+    |> Enum.map(fn {x, y, cells} ->
+      [move_to(x, y) | render_cells(cells)]
+    end)
+  end
+
+  @doc "Build a complete frame output: hide cursor, render, show cursor."
+  @spec frame(iodata()) :: iodata()
+  def frame(content) do
+    [hide_cursor(), content, show_cursor()]
+  end
+
+  # --- Helpers ---
+
+  defp render_row(buf, y, cols) do
+    {iodata, _prev} =
+      Enum.reduce(0..(cols - 1)//1, {[], nil}, fn x, {acc, prev_style} ->
+        cell = Buffer.get_cell(buf, x, y)
+        style = cell_style(cell)
+
+        if style == prev_style do
+          {[acc, cell.char], style}
+        else
+          sgr_seq = sgr(cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough)
+          {[acc, sgr_seq, cell.char], style}
+        end
+      end)
+
+    [iodata, reset()]
+  end
+
+  defp render_cells(cells) do
+    {iodata, _prev} =
+      Enum.reduce(cells, {[], nil}, fn cell, {acc, prev_style} ->
+        style = cell_style(cell)
+
+        if style == prev_style do
+          {[acc, cell.char], style}
+        else
+          sgr_seq = sgr(cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough)
+          {[acc, sgr_seq, cell.char], style}
+        end
+      end)
+
+    [iodata, reset()]
+  end
+
+  defp cell_style(cell) do
+    {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough}
+  end
+
+  # Group consecutive horizontal changes into runs for efficient cursor movement.
+  # Input: [{x, y, cell}, ...] (from Buffer.diff)
+  # Output: [{start_x, y, [cells]}, ...]
+  defp group_consecutive(changes) do
+    changes
+    |> Enum.sort_by(fn {x, y, _} -> {y, x} end)
+    |> Enum.chunk_while(
+      nil,
+      fn
+        {x, y, cell}, nil ->
+          {:cont, {x, y, x, [cell]}}
+
+        {x, y, cell}, {start_x, curr_y, prev_x, cells} when y == curr_y and x == prev_x + 1 ->
+          {:cont, {start_x, curr_y, x, cells ++ [cell]}}
+
+        {x, y, cell}, {start_x, curr_y, _prev_x, cells} ->
+          {:cont, {start_x, curr_y, cells}, {x, y, x, [cell]}}
+      end,
+      fn
+        nil -> {:cont, nil}
+        {start_x, y, _prev_x, cells} -> {:cont, {start_x, y, cells}, nil}
+      end
+    )
+  end
+end
