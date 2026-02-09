@@ -1,148 +1,251 @@
 defmodule ElixirOpentui.EditBuffer do
   @moduledoc """
-  Editable text buffer with cursor and selection support.
+  NIF-backed editable text buffer with cursor, undo/redo, and selection support.
 
-  Maps to ElixirOpentui's EditBuffer: supports setText/getText, cursor movement,
-  insertion, deletion, and selection ranges.
+  Wraps the native Zig EditBuffer which provides a rope-based text structure
+  with per-character undo/redo history. The cursor uses display-width
+  coordinates (row, col) rather than byte or grapheme offsets.
   """
 
+  alias ElixirOpentui.EditBufferNIF
+
   @type t :: %__MODULE__{
-          text: String.t(),
-          cursor: non_neg_integer(),
-          selection_start: non_neg_integer() | nil,
-          selection_end: non_neg_integer() | nil
+          ref: reference()
         }
 
-  defstruct text: "",
-            cursor: 0,
-            selection_start: nil,
-            selection_end: nil
+  defstruct [:ref]
 
-  @doc "Create an empty EditBuffer."
+  @doc "Create a new empty EditBuffer."
   @spec new() :: t()
-  def new, do: %__MODULE__{}
+  def new do
+    ref = EditBufferNIF.create()
+    %__MODULE__{ref: ref}
+  end
 
   @doc "Create an EditBuffer with initial text."
   @spec from_text(String.t()) :: t()
   def from_text(text) when is_binary(text) do
-    %__MODULE__{text: text, cursor: String.length(text)}
+    buf = new()
+    EditBufferNIF.set_text(buf.ref, text)
+    buf
   end
 
-  @doc "Get the buffer text."
+  @doc "Get the full buffer text."
   @spec get_text(t()) :: String.t()
-  def get_text(%__MODULE__{text: text}), do: text
+  def get_text(%__MODULE__{ref: ref}) do
+    EditBufferNIF.get_text(ref)
+  end
 
-  @doc "Set the buffer text, clamping cursor."
+  @doc "Set the buffer text, resetting cursor and clearing undo history."
   @spec set_text(t(), String.t()) :: t()
-  def set_text(%__MODULE__{} = buf, text) do
-    len = String.length(text)
-    %{buf | text: text, cursor: min(buf.cursor, len), selection_start: nil, selection_end: nil}
+  def set_text(%__MODULE__{ref: ref} = buf, text) when is_binary(text) do
+    EditBufferNIF.set_text(ref, text)
+    buf
   end
 
-  @doc "Get the cursor position (grapheme index)."
-  @spec get_cursor(t()) :: non_neg_integer()
-  def get_cursor(%__MODULE__{cursor: cursor}), do: cursor
-
-  @doc "Set cursor position, clamped to valid range."
-  @spec set_cursor(t(), integer()) :: t()
-  def set_cursor(%__MODULE__{text: text} = buf, pos) do
-    len = String.length(text)
-    clamped = pos |> max(0) |> min(len)
-    %{buf | cursor: clamped, selection_start: nil, selection_end: nil}
+  @doc "Replace buffer text, preserving undo history."
+  @spec replace_text(t(), String.t()) :: t()
+  def replace_text(%__MODULE__{ref: ref} = buf, text) when is_binary(text) do
+    EditBufferNIF.replace_text(ref, text)
+    buf
   end
 
-  @doc "Move cursor left by n graphemes."
-  @spec move_left(t(), non_neg_integer()) :: t()
-  def move_left(%__MODULE__{cursor: cursor} = buf, n \\ 1) do
-    set_cursor(buf, cursor - n)
+  @doc """
+  Get the cursor position as `{row, col, offset}`.
+
+  - `row` - 0-indexed logical line number
+  - `col` - display-width column on that line
+  - `offset` - global display-width offset from buffer start
+  """
+  @spec get_cursor(t()) :: {non_neg_integer(), non_neg_integer(), non_neg_integer()}
+  def get_cursor(%__MODULE__{ref: ref}) do
+    EditBufferNIF.get_cursor(ref)
   end
 
-  @doc "Move cursor right by n graphemes."
-  @spec move_right(t(), non_neg_integer()) :: t()
-  def move_right(%__MODULE__{cursor: cursor} = buf, n \\ 1) do
-    set_cursor(buf, cursor + n)
+  @doc "Set the cursor position by row and column (0-indexed). Clamps to valid range."
+  @spec set_cursor(t(), non_neg_integer(), non_neg_integer()) :: t()
+  def set_cursor(%__MODULE__{ref: ref} = buf, row, col)
+      when is_integer(row) and is_integer(col) do
+    EditBufferNIF.set_cursor(ref, row, col)
+    buf
   end
 
-  @doc "Move cursor to start of text."
-  @spec move_home(t()) :: t()
-  def move_home(%__MODULE__{} = buf), do: set_cursor(buf, 0)
+  @doc "Set the cursor position by display-width offset from buffer start."
+  @spec set_cursor_by_offset(t(), non_neg_integer()) :: t()
+  def set_cursor_by_offset(%__MODULE__{ref: ref} = buf, offset) when is_integer(offset) do
+    EditBufferNIF.set_cursor_by_offset(ref, offset)
+    buf
+  end
 
-  @doc "Move cursor to end of text."
-  @spec move_end(t()) :: t()
-  def move_end(%__MODULE__{text: text} = buf), do: set_cursor(buf, String.length(text))
-
-  @doc "Insert text at cursor position."
+  @doc "Insert text at the current cursor position."
   @spec insert(t(), String.t()) :: t()
-  def insert(%__MODULE__{text: text, cursor: cursor} = buf, str) do
-    {before, after_cursor} = split_at(text, cursor)
-    new_text = before <> str <> after_cursor
-    insert_len = String.length(str)
-    %{buf | text: new_text, cursor: cursor + insert_len, selection_start: nil, selection_end: nil}
+  def insert(%__MODULE__{ref: ref} = buf, text) when is_binary(text) do
+    EditBufferNIF.insert_char(ref, text)
+    buf
   end
 
-  @doc "Delete n graphemes before cursor (backspace)."
-  @spec delete_backward(t(), non_neg_integer()) :: t()
-  def delete_backward(buf, n \\ 1)
-  def delete_backward(%__MODULE__{cursor: 0} = buf, _n), do: buf
-
-  def delete_backward(%__MODULE__{text: text, cursor: cursor} = buf, n) do
-    delete_count = min(n, cursor)
-    {before, after_cursor} = split_at(text, cursor)
-    trimmed_before = String.slice(before, 0, String.length(before) - delete_count)
-    %{buf | text: trimmed_before <> after_cursor, cursor: cursor - delete_count}
+  @doc "Delete one grapheme before the cursor (backspace)."
+  @spec delete_backward(t()) :: t()
+  def delete_backward(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.delete_char_backward(ref)
+    buf
   end
 
-  @doc "Delete n graphemes after cursor (delete key)."
-  @spec delete_forward(t(), non_neg_integer()) :: t()
-  def delete_forward(%__MODULE__{text: text, cursor: cursor} = buf, n \\ 1) do
-    len = String.length(text)
-
-    if cursor >= len do
-      buf
-    else
-      {before, after_cursor} = split_at(text, cursor)
-      remaining = String.slice(after_cursor, min(n, String.length(after_cursor)), len)
-      %{buf | text: before <> (remaining || "")}
-    end
+  @doc "Delete one grapheme after the cursor (delete key)."
+  @spec delete_forward(t()) :: t()
+  def delete_forward(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.delete_char_forward(ref)
+    buf
   end
 
-  @doc "Select a range of text."
-  @spec select(t(), non_neg_integer(), non_neg_integer()) :: t()
-  def select(%__MODULE__{text: text} = buf, start, finish) do
-    len = String.length(text)
-    s = start |> max(0) |> min(len)
-    e = finish |> max(0) |> min(len)
-    {s, e} = if s > e, do: {e, s}, else: {s, e}
-    %{buf | selection_start: s, selection_end: e}
+  @doc "Move cursor one grapheme left."
+  @spec move_left(t()) :: t()
+  def move_left(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.move_cursor_left(ref)
+    buf
   end
 
-  @doc "Get selected text, or nil if no selection."
-  @spec get_selection(t()) :: String.t() | nil
-  def get_selection(%__MODULE__{selection_start: nil}), do: nil
-  def get_selection(%__MODULE__{selection_end: nil}), do: nil
-
-  def get_selection(%__MODULE__{text: text, selection_start: s, selection_end: e}) do
-    String.slice(text, s, e - s)
+  @doc "Move cursor one grapheme right."
+  @spec move_right(t()) :: t()
+  def move_right(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.move_cursor_right(ref)
+    buf
   end
 
-  @doc "Delete the selected text and place cursor at selection start."
-  @spec delete_selection(t()) :: t()
-  def delete_selection(%__MODULE__{selection_start: nil} = buf), do: buf
-  def delete_selection(%__MODULE__{selection_end: nil} = buf), do: buf
-
-  def delete_selection(%__MODULE__{text: text, selection_start: s, selection_end: e}) do
-    {before, _} = split_at(text, s)
-    {_, after_sel} = split_at(text, e)
-    %__MODULE__{text: before <> after_sel, cursor: s}
+  @doc "Move cursor up one logical line."
+  @spec move_up(t()) :: t()
+  def move_up(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.move_cursor_up(ref)
+    buf
   end
 
-  @doc "Get text length in graphemes."
-  @spec length(t()) :: non_neg_integer()
-  def length(%__MODULE__{text: text}), do: String.length(text)
+  @doc "Move cursor down one logical line."
+  @spec move_down(t()) :: t()
+  def move_down(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.move_cursor_down(ref)
+    buf
+  end
 
-  defp split_at(text, pos) do
-    before = String.slice(text, 0, pos)
-    after_part = String.slice(text, pos, String.length(text) - pos)
-    {before, after_part || ""}
+  @doc "Insert a newline at the cursor."
+  @spec new_line(t()) :: t()
+  def new_line(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.new_line(ref)
+    buf
+  end
+
+  @doc "Delete the current line."
+  @spec delete_line(t()) :: t()
+  def delete_line(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.delete_line(ref)
+    buf
+  end
+
+  @doc "Jump cursor to the given line number (0-indexed)."
+  @spec goto_line(t(), non_neg_integer()) :: t()
+  def goto_line(%__MODULE__{ref: ref} = buf, line) when is_integer(line) do
+    EditBufferNIF.goto_line(ref, line)
+    buf
+  end
+
+  @doc "Undo the last operation. Returns `{buf, metadata}` where metadata is a binary or nil."
+  @spec undo(t()) :: {t(), binary() | nil}
+  def undo(%__MODULE__{ref: ref} = buf) do
+    meta = EditBufferNIF.undo(ref)
+    {buf, meta}
+  end
+
+  @doc "Redo the last undone operation. Returns `{buf, metadata}` where metadata is a binary or nil."
+  @spec redo(t()) :: {t(), binary() | nil}
+  def redo(%__MODULE__{ref: ref} = buf) do
+    meta = EditBufferNIF.redo(ref)
+    {buf, meta}
+  end
+
+  @doc "Get the number of logical lines."
+  @spec line_count(t()) :: non_neg_integer()
+  def line_count(%__MODULE__{ref: ref}) do
+    EditBufferNIF.get_line_count(ref)
+  end
+
+  @doc """
+  Delete a range of text between two cursor positions.
+
+  Coordinates are `{row, col}` pairs (0-indexed, display-width columns).
+  """
+  @spec delete_range(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()
+  def delete_range(%__MODULE__{ref: ref} = buf, r1, c1, r2, c2)
+      when is_integer(r1) and is_integer(c1) and is_integer(r2) and is_integer(c2) do
+    EditBufferNIF.delete_range(ref, r1, c1, r2, c2)
+    buf
+  end
+
+  @doc "Clear all text from the buffer."
+  @spec clear(t()) :: t()
+  def clear(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.eb_clear(ref)
+    buf
+  end
+
+  @doc "Check whether there are any operations to undo."
+  @spec can_undo?(t()) :: boolean()
+  def can_undo?(%__MODULE__{ref: ref}) do
+    EditBufferNIF.can_undo(ref)
+  end
+
+  @doc "Check whether there are any operations to redo."
+  @spec can_redo?(t()) :: boolean()
+  def can_redo?(%__MODULE__{ref: ref}) do
+    EditBufferNIF.can_redo(ref)
+  end
+
+  @doc "Clear the undo/redo history."
+  @spec clear_history(t()) :: t()
+  def clear_history(%__MODULE__{ref: ref} = buf) do
+    EditBufferNIF.clear_history(ref)
+    buf
+  end
+
+  @doc """
+  Get the end-of-line cursor position as `{row, col, offset}`.
+  """
+  @spec get_eol(t()) :: {non_neg_integer(), non_neg_integer(), non_neg_integer()}
+  def get_eol(%__MODULE__{ref: ref}) do
+    EditBufferNIF.get_eol_eb(ref)
+  end
+
+  @doc """
+  Get the next word boundary cursor position as `{row, col, offset}`.
+  """
+  @spec get_next_word_boundary(t()) :: {non_neg_integer(), non_neg_integer(), non_neg_integer()}
+  def get_next_word_boundary(%__MODULE__{ref: ref}) do
+    EditBufferNIF.get_next_word_boundary_eb(ref)
+  end
+
+  @doc """
+  Get the previous word boundary cursor position as `{row, col, offset}`.
+  """
+  @spec get_prev_word_boundary(t()) :: {non_neg_integer(), non_neg_integer(), non_neg_integer()}
+  def get_prev_word_boundary(%__MODULE__{ref: ref}) do
+    EditBufferNIF.get_prev_word_boundary_eb(ref)
+  end
+
+  @doc """
+  Get text in the given display-width offset range.
+  """
+  @spec get_text_range(t(), non_neg_integer(), non_neg_integer()) :: String.t()
+  def get_text_range(%__MODULE__{ref: ref}, start_offset, end_offset)
+      when is_integer(start_offset) and is_integer(end_offset) do
+    EditBufferNIF.get_text_range(ref, start_offset, end_offset)
+  end
+
+  @doc """
+  Get text in the given coordinate range `(r1, c1)` to `(r2, c2)`.
+
+  Coordinates are 0-indexed, display-width columns.
+  """
+  @spec get_text_range_by_coords(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: String.t()
+  def get_text_range_by_coords(%__MODULE__{ref: ref}, r1, c1, r2, c2)
+      when is_integer(r1) and is_integer(c1) and is_integer(r2) and is_integer(c2) do
+    EditBufferNIF.get_text_range_by_coords(ref, r1, c1, r2, c2)
   end
 end

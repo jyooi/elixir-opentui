@@ -58,12 +58,14 @@ defmodule ElixirOpentui.Renderer do
   end
 
   @doc "Render an element tree and return {renderer, ansi_iodata}."
-  def render(%__MODULE__{backend: :native} = renderer, tree) do
+  def render(renderer, tree, opts \\ [])
+
+  def render(%__MODULE__{backend: :native} = renderer, tree, opts) do
     %{cols: cols, rows: rows, native_buf: nbuf} = renderer
     {tagged, layout_results} = Layout.compute(tree, cols, rows)
 
     nbuf = NativeBuffer.clear(nbuf)
-    nbuf = Painter.paint(tagged, layout_results, nbuf)
+    nbuf = Painter.paint(tagged, layout_results, nbuf, opts)
     {nbuf, ansi} = NativeBuffer.render_frame_capture(nbuf)
 
     new_renderer = %{
@@ -76,11 +78,11 @@ defmodule ElixirOpentui.Renderer do
     {new_renderer, ansi}
   end
 
-  def render(%__MODULE__{cols: cols, rows: rows, front: front} = renderer, tree) do
+  def render(%__MODULE__{cols: cols, rows: rows, front: front} = renderer, tree, opts) do
     {tagged, layout_results} = Layout.compute(tree, cols, rows)
 
     back = Buffer.new(cols, rows)
-    painted = Painter.paint(tagged, layout_results, back)
+    painted = Painter.paint(tagged, layout_results, back, opts)
 
     changes = Buffer.diff(front, painted)
     ansi_output = ANSI.render_diff(changes)
@@ -96,13 +98,15 @@ defmodule ElixirOpentui.Renderer do
   end
 
   @doc "Force a full redraw (no diff, re-render everything)."
-  def render_full(%__MODULE__{backend: :native} = renderer, tree) do
+  def render_full(renderer, tree, opts \\ [])
+
+  def render_full(%__MODULE__{backend: :native} = renderer, tree, opts) do
     %{cols: cols, rows: rows} = renderer
     {tagged, layout_results} = Layout.compute(tree, cols, rows)
 
     nbuf = NativeBuffer.new(cols, rows)
     nbuf = NativeBuffer.clear(nbuf)
-    nbuf = Painter.paint(tagged, layout_results, nbuf)
+    nbuf = Painter.paint(tagged, layout_results, nbuf, opts)
     {nbuf, ansi} = NativeBuffer.render_frame_capture(nbuf)
 
     new_renderer = %{
@@ -115,11 +119,11 @@ defmodule ElixirOpentui.Renderer do
     {new_renderer, ansi}
   end
 
-  def render_full(%__MODULE__{cols: cols, rows: rows} = renderer, tree) do
+  def render_full(%__MODULE__{cols: cols, rows: rows} = renderer, tree, opts) do
     {tagged, layout_results} = Layout.compute(tree, cols, rows)
 
     back = Buffer.new(cols, rows)
-    painted = Painter.paint(tagged, layout_results, back)
+    painted = Painter.paint(tagged, layout_results, back, opts)
 
     ansi_output = ANSI.render_full(painted)
 
