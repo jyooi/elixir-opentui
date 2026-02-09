@@ -15,7 +15,8 @@ defmodule ElixirOpentui.Input do
           key: atom() | String.t(),
           ctrl: boolean(),
           alt: boolean(),
-          shift: boolean()
+          shift: boolean(),
+          meta: boolean()
         }
 
   @type mouse_event :: %{
@@ -78,18 +79,18 @@ defmodule ElixirOpentui.Input do
 
   # Alt+key: \e followed by a regular char
   defp parse_loop(<<"\e", char, rest::binary>>, acc) when char >= 0x20 do
-    event = %{type: :key, key: <<char>>, ctrl: false, alt: true, shift: char in ?A..?Z}
+    event = %{type: :key, key: <<char>>, ctrl: false, alt: true, shift: char in ?A..?Z, meta: false}
     parse_loop(rest, [event | acc])
   end
 
   # Bare escape
   defp parse_loop(<<"\e">>, acc) do
-    [%{type: :key, key: :escape, ctrl: false, alt: false, shift: false} | acc]
+    [%{type: :key, key: :escape, ctrl: false, alt: false, shift: false, meta: false} | acc]
     |> Enum.reverse()
   end
 
   defp parse_loop(<<"\e", rest::binary>>, acc) do
-    parse_loop(rest, [%{type: :key, key: :escape, ctrl: false, alt: false, shift: false} | acc])
+    parse_loop(rest, [%{type: :key, key: :escape, ctrl: false, alt: false, shift: false, meta: false} | acc])
   end
 
   # Control characters
@@ -102,9 +103,9 @@ defmodule ElixirOpentui.Input do
 
     event =
       case char do
-        9 -> %{type: :key, key: :tab, ctrl: false, alt: false, shift: false}
-        10 -> %{type: :key, key: :enter, ctrl: false, alt: false, shift: false}
-        13 -> %{type: :key, key: :enter, ctrl: false, alt: false, shift: false}
+        9 -> %{type: :key, key: :tab, ctrl: false, alt: false, shift: false, meta: false}
+        10 -> %{type: :key, key: :enter, ctrl: false, alt: false, shift: false, meta: false}
+        13 -> %{type: :key, key: :enter, ctrl: false, alt: false, shift: false, meta: false}
         _ -> ctrl_key(letter)
       end
 
@@ -113,7 +114,7 @@ defmodule ElixirOpentui.Input do
 
   # Backspace / Delete
   defp parse_loop(<<127, rest::binary>>, acc) do
-    parse_loop(rest, [%{type: :key, key: :backspace, ctrl: false, alt: false, shift: false} | acc])
+    parse_loop(rest, [%{type: :key, key: :backspace, ctrl: false, alt: false, shift: false, meta: false} | acc])
   end
 
   # Regular UTF-8 character
@@ -122,7 +123,7 @@ defmodule ElixirOpentui.Input do
     shift = char in ?A..?Z
 
     parse_loop(rest, [
-      %{type: :key, key: key, ctrl: false, alt: false, shift: shift} | acc
+      %{type: :key, key: key, ctrl: false, alt: false, shift: shift, meta: false} | acc
     ])
   end
 
@@ -152,7 +153,7 @@ defmodule ElixirOpentui.Input do
   defp csi_to_event(_params, "D"), do: key(:left)
   defp csi_to_event(_params, "H"), do: key(:home)
   defp csi_to_event(_params, "F"), do: key(:end)
-  defp csi_to_event(_params, "Z"), do: %{type: :key, key: :tab, ctrl: false, alt: false, shift: true}
+  defp csi_to_event(_params, "Z"), do: %{type: :key, key: :tab, ctrl: false, alt: false, shift: true, meta: false}
 
   # Tilde-terminated sequences: \e[N~
   defp csi_to_event(params, "~") do
@@ -282,11 +283,11 @@ defmodule ElixirOpentui.Input do
   # --- Key event constructors ---
 
   defp key(name) do
-    %{type: :key, key: name, ctrl: false, alt: false, shift: false}
+    %{type: :key, key: name, ctrl: false, alt: false, shift: false, meta: false}
   end
 
   defp ctrl_key(letter) do
-    %{type: :key, key: letter, ctrl: true, alt: false, shift: false}
+    %{type: :key, key: letter, ctrl: true, alt: false, shift: false, meta: false}
   end
 
   # Modifier decoding: ANSI modifier value (1 = none, 2 = shift, 3 = alt, etc.)
@@ -297,7 +298,8 @@ defmodule ElixirOpentui.Input do
       event
       | shift: band(mod, 1) != 0,
         alt: band(mod, 2) != 0,
-        ctrl: band(mod, 4) != 0
+        ctrl: band(mod, 4) != 0,
+        meta: band(mod, 8) != 0
     }
   end
 
