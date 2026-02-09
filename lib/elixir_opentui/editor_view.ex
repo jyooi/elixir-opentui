@@ -91,14 +91,7 @@ defmodule ElixirOpentui.EditorView do
   """
   @spec set_wrap_mode(t(), wrap_mode()) :: t()
   def set_wrap_mode(%__MODULE__{ref: ref} = view, mode) when mode in [:none, :char, :word] do
-    mode_int =
-      case mode do
-        :none -> 0
-        :char -> 1
-        :word -> 2
-      end
-
-    EditBufferNIF.view_set_wrap_mode(ref, mode_int)
+    EditBufferNIF.view_set_wrap_mode(ref, EditBufferNIF.wrap_mode_int(mode))
     view
   end
 

@@ -335,11 +335,11 @@ defmodule ElixirOpentui.Painter do
         true -> {0, w}
       end
 
-    Enum.reduce(0..(max(0, String.length(line) - 1))//1, buf, fn col, b ->
-      ch = String.at(line, col)
-
+    line
+    |> String.graphemes()
+    |> Enum.with_index()
+    |> Enum.reduce(buf, fn {ch, col}, b ->
       if col >= sel_start and col < sel_end do
-        # Selection: invert fg/bg
         sel_fg = Color.with_opacity(bg, opacity)
         sel_bg = Color.with_opacity(fg, opacity)
         mod.draw_char(b, x + col, y, ch, sel_fg, sel_bg)

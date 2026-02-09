@@ -22,8 +22,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 elixir_opentui-*.tar
 
-# Editor/tool metadata
-.expert/
-
 # Zig build cache
 zig/opentui/.zig-cache/

@@ -1,4 +1,4 @@
-defmodule ElixirOpentui.DemoRunner do
+defmodule ElixirOpentui.Demo.DemoRunner do
   @moduledoc """
   Reusable runner for interactive widget demos.
 

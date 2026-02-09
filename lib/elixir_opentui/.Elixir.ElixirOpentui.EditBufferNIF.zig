@@ -22,7 +22,15 @@ const EditBufferData = struct {
     pool: *GraphemePool,
 };
 
-pub const EditBufferResource = beam.Resource(EditBufferData, root, .{});
+const EditBufferCallbacks = struct {
+    pub fn dtor(data: *EditBufferData) void {
+        data.edit_buffer.deinit();
+        data.pool.deinit();
+        beam.allocator.destroy(data.pool);
+    }
+};
+
+pub const EditBufferResource = beam.Resource(EditBufferData, root, .{ .Callbacks = EditBufferCallbacks });
 
 // ── create() → EditBufferResource ──────────────────────────────────────
 pub fn create() !EditBufferResource {
@@ -49,7 +57,8 @@ pub fn set_text(resource: EditBufferResource, text: []const u8) !void {
 pub fn get_text(resource: EditBufferResource) ![]u8 {
     const gpa = beam.allocator;
     const data = resource.unpack();
-    const buf = try gpa.alloc(u8, 1024 * 1024);
+    const byte_size = @max(1, data.edit_buffer.tb.getByteSize());
+    const buf = try gpa.alloc(u8, byte_size);
     defer gpa.free(buf);
     const len = data.edit_buffer.getText(buf);
     const result = try gpa.alloc(u8, len);
@@ -221,7 +230,8 @@ pub fn get_prev_word_boundary_eb(resource: EditBufferResource) beam.term {
 pub fn get_text_range(resource: EditBufferResource, start_offset: u32, end_offset: u32) ![]u8 {
     const gpa = beam.allocator;
     const data = resource.unpack();
-    const buf = try gpa.alloc(u8, 1024 * 1024);
+    const byte_size = @max(1, data.edit_buffer.tb.getByteSize());
+    const buf = try gpa.alloc(u8, byte_size);
     defer gpa.free(buf);
     const len = try data.edit_buffer.getTextRange(start_offset, end_offset, buf);
     const result = try gpa.alloc(u8, len);
@@ -233,7 +243,8 @@ pub fn get_text_range(resource: EditBufferResource, start_offset: u32, end_offse
 pub fn get_text_range_by_coords(resource: EditBufferResource, r1: u32, c1: u32, r2: u32, c2: u32) ![]u8 {
     const gpa = beam.allocator;
     const data = resource.unpack();
-    const buf = try gpa.alloc(u8, 1024 * 1024);
+    const byte_size = @max(1, data.edit_buffer.tb.getByteSize());
+    const buf = try gpa.alloc(u8, byte_size);
     defer gpa.free(buf);
     const len = data.edit_buffer.getTextRangeByCoords(r1, c1, r2, c2, buf);
     const result = try gpa.alloc(u8, len);
@@ -247,9 +258,21 @@ pub fn get_text_range_by_coords(resource: EditBufferResource, r1: u32, c1: u32, 
 
 const EditorViewData = struct {
     editor_view: *EditorView,
+    edit_buffer_ref: EditBufferResource, // prevents GC of parent EditBuffer
 };
 
-pub const EditorViewResource = beam.Resource(EditorViewData, root, .{});
+const EditorViewCallbacks = struct {
+    pub fn dtor(data: *EditorViewData) void {
+        // Cannot call editor_view.deinit() or text_buffer_view.deinit() because
+        // they access edit_buffer internals (events, rope) which may already be
+        // freed — BEAM GC doesn't guarantee destructor ordering between resources.
+        // The EditBuffer destructor handles freeing all shared state.
+        // We only free the EditorView allocation itself.
+        data.editor_view.global_allocator.destroy(data.editor_view);
+    }
+};
+
+pub const EditorViewResource = beam.Resource(EditorViewData, root, .{ .Callbacks = EditorViewCallbacks });
 
 // ── create_editor_view(edit_buf_resource, width, height) → EditorViewResource
 pub fn create_editor_view(edit_buf: EditBufferResource, width: u32, height: u32) !EditorViewResource {
@@ -259,6 +282,7 @@ pub fn create_editor_view(edit_buf: EditBufferResource, width: u32, height: u32)
 
     return EditorViewResource.create(.{
         .editor_view = editor_view,
+        .edit_buffer_ref = edit_buf,
     }, .{});
 }
 
@@ -358,7 +382,8 @@ pub fn view_delete_selected_text(view: EditorViewResource) !void {
 pub fn view_get_selected_text(view: EditorViewResource) ![]u8 {
     const gpa = beam.allocator;
     const data = view.unpack();
-    const buf = try gpa.alloc(u8, 1024 * 1024);
+    const byte_size = @max(1, data.editor_view.edit_buffer.tb.getByteSize());
+    const buf = try gpa.alloc(u8, byte_size);
     defer gpa.free(buf);
     const len = data.editor_view.getSelectedTextIntoBuffer(buf);
     if (len == 0) {
@@ -409,4 +434,82 @@ pub fn view_get_visual_eol(view: EditorViewResource) beam.term {
     const data = view.unpack();
     const vc = data.editor_view.getVisualEOL();
     return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
+}
+
+// ── get_text_display_width(resource) → u32 ───────────────────────────
+// Returns total rope weight (display width + newline count).
+// This is the offset system used by setCursorByOffset/offsetToCoords.
+// For CJK chars: width=2 per grapheme. For newlines: weight=1 each.
+pub fn get_text_display_width(resource: EditBufferResource) u32 {
+    const data = resource.unpack();
+    return data.edit_buffer.tb.rope.totalWeight();
+}
+
+// ── view_get_visible_lines(view) → [binary] ─────────────────────────
+// Returns the viewport-sliced virtual lines as a list of binaries.
+// Each line respects word/char wrapping and viewport scroll position.
+pub fn view_get_visible_lines(view: EditorViewResource) !beam.term {
+    const gpa = beam.allocator;
+    const data = view.unpack();
+    const ev = data.editor_view;
+
+    const vlines = ev.getVirtualLines();
+    const count = vlines.len;
+    if (count == 0) {
+        return beam.make(.{}, .{});
+    }
+
+    const byte_size = @max(1, ev.edit_buffer.tb.getByteSize());
+    const temp_buf = try gpa.alloc(u8, byte_size);
+    defer gpa.free(temp_buf);
+
+    var result_terms: [512]beam.term = undefined;
+    const n = @min(count, 512);
+
+    for (0..n) |i| {
+        const vline = &vlines[i];
+        const src_line = @as(u32, @intCast(vline.source_line));
+        const start_col = vline.source_col_offset;
+        const end_col = start_col + vline.width;
+
+        const len = ev.edit_buffer.getTextRangeByCoords(src_line, start_col, src_line, end_col, temp_buf);
+        const line_bin = try gpa.alloc(u8, len);
+        @memcpy(line_bin, temp_buf[0..len]);
+        result_terms[i] = beam.make(line_bin, .{});
+    }
+
+    return beam.make(result_terms[0..n], .{});
+}
+
+// ── view_selection_visual_coords(view, sel_start, sel_end) → {sr, sc, er, ec}
+// Returns viewport-relative visual coordinates for a selection range.
+// Uses save/restore cursor approach since getVisualCursor() handles viewport-relative translation.
+pub fn view_selection_visual_coords(view: EditorViewResource, sel_start: u32, sel_end: u32) beam.term {
+    const data = view.unpack();
+    const ev = data.editor_view;
+
+    _ = ev.getViewport() orelse return beam.make(.{ @as(u32, 0), @as(u32, 0), @as(u32, 0), @as(u32, 0) }, .{});
+
+    const saved_cursor = ev.edit_buffer.getPrimaryCursor();
+
+    ev.edit_buffer.setCursorByOffset(sel_start) catch return beam.make(.{ @as(u32, 0), @as(u32, 0), @as(u32, 0), @as(u32, 0) }, .{});
+    const start_vc = ev.getVisualCursor();
+
+    ev.edit_buffer.setCursorByOffset(sel_end) catch return beam.make(.{ @as(u32, 0), @as(u32, 0), @as(u32, 0), @as(u32, 0) }, .{});
+    const end_vc = ev.getVisualCursor();
+
+    // Restore original cursor
+    if (ev.edit_buffer.cursors.items.len > 0) {
+        ev.edit_buffer.cursors.items[0] = saved_cursor;
+    }
+
+    return beam.make(.{ start_vc.visual_row, start_vc.visual_col, end_vc.visual_row, end_vc.visual_col }, .{});
+}
+
+// ── view_set_viewport(view, x, y, width, height) → :ok ──────────────
+// Sets the viewport position and size. Used for mouse scroll.
+// moveCursor=false: don't move cursor, just change viewport scroll position.
+pub fn view_set_viewport(view: EditorViewResource, x: u32, y: u32, width: u32, height: u32) void {
+    const data = view.unpack();
+    data.editor_view.setViewport(api.Viewport{ .x = x, .y = y, .width = width, .height = height }, false);
 }

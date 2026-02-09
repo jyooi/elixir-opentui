@@ -1162,4 +1162,253 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       assert vc == 0
     end
   end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # GC Safety Tests (Fix #2/#3: destructors + dangling reference prevention)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "gc safety" do
+    test "EditorView survives after EditBuffer ref is dropped" do
+      buf = EditBufferNIF.create()
+      EditBufferNIF.set_text(buf, "hello world")
+      view = EditBufferNIF.create_editor_view(buf, 40, 10)
+
+      # Drop all Elixir references to EditBuffer
+      buf = nil
+      _ = buf
+      :erlang.garbage_collect()
+
+      # EditorView should still work — its nested resource ref keeps EditBuffer alive
+      {vr, vc, _lr, _lc, _offset} = EditBufferNIF.view_get_visual_cursor(view)
+      assert vr == 0
+      assert vc == 0
+    end
+
+    test "creating many resources doesn't leak memory" do
+      initial = :erlang.memory(:total)
+
+      for _ <- 1..100 do
+        buf = EditBufferNIF.create()
+        EditBufferNIF.set_text(buf, String.duplicate("x", 1000))
+        _view = EditBufferNIF.create_editor_view(buf, 40, 10)
+      end
+
+      :erlang.garbage_collect()
+      Process.sleep(50)
+      :erlang.garbage_collect()
+
+      final = :erlang.memory(:total)
+      # Memory growth should be bounded (allow 10MB margin for VM overhead)
+      assert final - initial < 10_000_000
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Right-Sized Allocation Tests (Fix #1)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "right-sized allocations" do
+    test "large text round-trips correctly" do
+      buf = EditBufferNIF.create()
+      large_text = String.duplicate("abcdefghij\n", 10_000)
+      EditBufferNIF.set_text(buf, large_text)
+      assert EditBufferNIF.get_text(buf) == large_text
+    end
+
+    test "empty buffer get_text returns empty string" do
+      buf = EditBufferNIF.create()
+      assert EditBufferNIF.get_text(buf) == ""
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Display Width Tests (Fix #4)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "get_text_display_width" do
+    test "ASCII text width equals grapheme count" do
+      buf = EditBufferNIF.create()
+      EditBufferNIF.set_text(buf, "hello")
+      assert EditBufferNIF.get_text_display_width(buf) == 5
+    end
+
+    test "multiline text includes newlines in weight" do
+      buf = EditBufferNIF.create()
+      EditBufferNIF.set_text(buf, "hello\nworld")
+      # weight = display_width(5) + newline(1) + display_width(5) = 11
+      assert EditBufferNIF.get_text_display_width(buf) == 11
+    end
+
+    test "CJK characters are double-width" do
+      buf = EditBufferNIF.create()
+      EditBufferNIF.set_text(buf, "你好世界")
+      # 4 CJK chars × 2 display-width = 8
+      assert EditBufferNIF.get_text_display_width(buf) == 8
+    end
+
+    test "empty buffer returns 0" do
+      buf = EditBufferNIF.create()
+      assert EditBufferNIF.get_text_display_width(buf) == 0
+    end
+
+    test "mixed ASCII and CJK" do
+      buf = EditBufferNIF.create()
+      EditBufferNIF.set_text(buf, "hi你好")
+      # 2 ASCII + 2 CJK × 2 = 6
+      assert EditBufferNIF.get_text_display_width(buf) == 6
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Visible Lines Tests (Fix #5)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "view_get_visible_lines" do
+    test "returns lines for simple text" do
+      {_buf, view} = create_view("hello\nworld", 40, 10)
+      lines = EditBufferNIF.view_get_visible_lines(view)
+      assert is_list(lines)
+      assert length(lines) == 2
+      assert Enum.at(lines, 0) == "hello"
+      assert Enum.at(lines, 1) == "world"
+    end
+
+    test "returns empty list for empty buffer" do
+      {_buf, view} = create_view("", 40, 10)
+      lines = EditBufferNIF.view_get_visible_lines(view)
+      assert is_list(lines)
+    end
+
+    test "char wrap splits long lines" do
+      {_buf, view} = create_view("abcdefghij", 5, 10)
+      EditBufferNIF.view_set_wrap_mode(view, 1)
+      lines = EditBufferNIF.view_get_visible_lines(view)
+      assert length(lines) == 2
+      assert Enum.at(lines, 0) == "abcde"
+      assert Enum.at(lines, 1) == "fghij"
+    end
+
+    test "word wrap respects word boundaries" do
+      {_buf, view} = create_view("hello world", 8, 10)
+      EditBufferNIF.view_set_wrap_mode(view, 2)
+      lines = EditBufferNIF.view_get_visible_lines(view)
+      assert length(lines) >= 2
+      assert Enum.at(lines, 0) =~ "hello"
+    end
+
+    test "no wrap mode returns logical lines" do
+      {_buf, view} = create_view("hello\nworld\nfoo", 40, 10)
+      EditBufferNIF.view_set_wrap_mode(view, 0)
+      lines = EditBufferNIF.view_get_visible_lines(view)
+      assert length(lines) == 3
+      assert Enum.at(lines, 0) == "hello"
+      assert Enum.at(lines, 1) == "world"
+      assert Enum.at(lines, 2) == "foo"
+    end
+
+    test "viewport slices visible region only" do
+      text = Enum.map_join(1..20, "\n", &"line#{&1}")
+      {_buf, view} = create_view(text, 40, 5)
+      EditBufferNIF.view_set_wrap_mode(view, 0)
+      lines = EditBufferNIF.view_get_visible_lines(view)
+      # Viewport is 5 lines tall, should return at most 5 lines
+      assert length(lines) <= 5
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Selection Visual Coords Tests (Fix #6)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "view_selection_visual_coords" do
+    test "returns 4-tuple of coordinates" do
+      {_buf, view} = create_view("hello world", 40, 10)
+      result = EditBufferNIF.view_selection_visual_coords(view, 0, 5)
+      assert is_tuple(result)
+      assert tuple_size(result) == 4
+    end
+
+    test "single line selection" do
+      {_buf, view} = create_view("hello world", 40, 10)
+      {sr, sc, er, ec} = EditBufferNIF.view_selection_visual_coords(view, 0, 5)
+      assert sr == 0
+      assert sc == 0
+      assert er == 0
+      assert ec == 5
+    end
+
+    test "multi-line selection" do
+      {_buf, view} = create_view("hello\nworld", 40, 10)
+      # Select from offset 0 ("h") to offset 8 ("or" in "world")
+      # "hello\n" = 6 chars, so offset 8 = "wo" in "world"
+      {sr, _sc, er, _ec} = EditBufferNIF.view_selection_visual_coords(view, 0, 8)
+      assert sr == 0
+      assert er == 1
+    end
+
+    test "zero-length selection" do
+      {_buf, view} = create_view("hello", 40, 10)
+      {sr, sc, er, ec} = EditBufferNIF.view_selection_visual_coords(view, 3, 3)
+      assert sr == er
+      assert sc == ec
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Viewport Scroll Tests (Fix #8)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "view_set_viewport" do
+    test "sets viewport and reads it back" do
+      text = Enum.map_join(1..20, "\n", &"line#{&1}")
+      {_buf, view} = create_view(text, 40, 5)
+
+      EditBufferNIF.view_set_viewport(view, 0, 3, 40, 5)
+      {ox, oy, w, h} = EditBufferNIF.view_get_viewport(view)
+      assert ox == 0
+      assert oy == 3
+      assert w == 40
+      assert h == 5
+    end
+
+    test "scrolled viewport returns different visible lines" do
+      text = Enum.map_join(1..20, "\n", &"line#{&1}")
+      {_buf, view} = create_view(text, 40, 3)
+      EditBufferNIF.view_set_wrap_mode(view, 0)
+
+      # Get lines at top
+      lines_top = EditBufferNIF.view_get_visible_lines(view)
+
+      # Move cursor down to line 7 so viewport follows, then set viewport to line 5
+      for _ <- 1..7, do: EditBufferNIF.view_move_down_visual(view)
+      EditBufferNIF.view_set_viewport(view, 0, 5, 40, 3)
+      lines_scrolled = EditBufferNIF.view_get_visible_lines(view)
+
+      assert lines_top != lines_scrolled
+    end
+  end
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # wrap_mode_int/1 Tests (Fix #14)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  describe "wrap_mode_int" do
+    test "maps :none to 0" do
+      assert EditBufferNIF.wrap_mode_int(:none) == 0
+    end
+
+    test "maps :char to 1" do
+      assert EditBufferNIF.wrap_mode_int(:char) == 1
+    end
+
+    test "maps :word to 2" do
+      assert EditBufferNIF.wrap_mode_int(:word) == 2
+    end
+
+    test "raises on invalid mode" do
+      assert_raise KeyError, fn ->
+        EditBufferNIF.wrap_mode_int(:invalid)
+      end
+    end
+  end
 end

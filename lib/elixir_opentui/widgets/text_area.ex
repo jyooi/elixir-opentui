@@ -21,7 +21,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   alias ElixirOpentui.EditBufferNIF
 
-  @wrap_mode_map %{none: 0, char: 1, word: 2}
+  # Wrap mode constants consolidated in EditBufferNIF.wrap_mode_int/1
 
   # ── Component callbacks ──────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
     if value != "", do: EditBufferNIF.set_text(edit_buffer, value)
 
-    EditBufferNIF.view_set_wrap_mode(editor_view, Map.get(@wrap_mode_map, wrap, 2))
+    EditBufferNIF.view_set_wrap_mode(editor_view, EditBufferNIF.wrap_mode_int(wrap))
     EditBufferNIF.view_set_scroll_margin(editor_view, 0.2)
 
     %{
@@ -90,16 +90,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
   def render(state) do
     import ElixirOpentui.View
 
-    text = EditBufferNIF.get_text(state.edit_buffer)
-    {scroll_y, _scroll_x} = get_viewport_scroll(state)
+    lines = EditBufferNIF.view_get_visible_lines(state.editor_view)
     {cursor_row, cursor_col} = get_visual_cursor_pos(state)
-
-    lines =
-      text
-      |> String.split("\n")
-      |> Enum.drop(scroll_y)
-      |> Enum.take(state.height)
-
     sel_coords = selection_visual_coords(state)
 
     textarea(
@@ -107,7 +99,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
       lines: lines,
       cursor_row: cursor_row,
       cursor_col: cursor_col,
-      scroll_y: scroll_y,
+      scroll_y: 0,
       placeholder: state.placeholder,
       selection: sel_coords,
       width: state.width,
@@ -122,8 +114,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
     execute_action(action, event, state)
   end
 
-  defp resolve_action(%{key: key, ctrl: ctrl, alt: alt, shift: shift, meta: meta}) do
-    super_ = meta
+  defp resolve_action(%{key: key, ctrl: ctrl, alt: alt, shift: shift} = event) do
+    super_ = Map.get(event, :meta, false)
 
     case {key, ctrl, alt, shift, super_} do
       # Movement
@@ -345,8 +337,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp execute_action(:buffer_end, _event, state) do
     state = collapse_selection(state)
-    text = EditBufferNIF.get_text(state.edit_buffer)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, String.length(text))
+    display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
+    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
     sync_scroll(state)
   end
 
@@ -359,8 +351,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp execute_action(:select_buffer_end, _event, state) do
     state = start_or_continue_selection(state)
-    text = EditBufferNIF.get_text(state.edit_buffer)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, String.length(text))
+    display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
+    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -502,11 +494,10 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   # Select all
   defp execute_action(:select_all, _event, state) do
-    text = EditBufferNIF.get_text(state.edit_buffer)
-    text_len = String.length(text)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, text_len)
-    state = %{state | selection: %{anchor: 0, focus: text_len}}
-    EditBufferNIF.view_set_selection(state.editor_view, 0, text_len)
+    display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
+    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
+    state = %{state | selection: %{anchor: 0, focus: display_width}}
+    EditBufferNIF.view_set_selection(state.editor_view, 0, display_width)
     sync_scroll(state)
   end
 
@@ -531,7 +522,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
         _ -> oy
       end
 
-    EditBufferNIF.view_set_viewport_size(state.editor_view, state.width, state.height)
+    EditBufferNIF.view_set_viewport(state.editor_view, 0, new_oy, state.width, state.height)
     %{state | scroll_y: new_oy}
   end
 
@@ -634,13 +625,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     end
   end
 
-  defp get_viewport_scroll(state) do
-    case EditBufferNIF.view_get_viewport(state.editor_view) do
-      {_ox, oy, _w, _h} -> {oy, 0}
-      nil -> {state.scroll_y, state.scroll_x}
-    end
-  end
-
   defp get_visual_cursor_pos(state) do
     {vr, vc, _lr, _lc, _offset} = EditBufferNIF.view_get_visual_cursor(state.editor_view)
     {vr, vc}
@@ -650,21 +634,27 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp selection_visual_coords(%{selection: %{anchor: a, focus: f}}) when a == f, do: nil
 
-  defp selection_visual_coords(%{selection: %{anchor: a, focus: f}}) do
+  defp selection_visual_coords(%{selection: %{anchor: a, focus: f}} = state) do
     {sel_start, sel_end} = if a <= f, do: {a, f}, else: {f, a}
-    %{start: sel_start, end: sel_end}
+    {sr, sc, er, ec} = EditBufferNIF.view_selection_visual_coords(state.editor_view, sel_start, sel_end)
+    %{start_row: sr, start_col: sc, end_row: er, end_col: ec}
   end
 
   # ── Change/Submit emission ───────────────────────────────────────────
 
-  defp emit_change(state) do
-    # The component framework handles on_change emission through the parent.
-    # We just return the state; the parent reads the text via render attrs.
+  defp emit_change(%{on_change: nil} = state), do: state
+
+  defp emit_change(%{on_change: tag} = state) do
+    text = EditBufferNIF.get_text(state.edit_buffer)
+    send(self(), {tag, text})
     state
   end
 
-  defp emit_submit(state) do
-    # Submit is handled by the parent reading on_submit from props.
+  defp emit_submit(%{on_submit: nil} = state), do: state
+
+  defp emit_submit(%{on_submit: tag} = state) do
+    text = EditBufferNIF.get_text(state.edit_buffer)
+    send(self(), {tag, text})
     state
   end
 end
