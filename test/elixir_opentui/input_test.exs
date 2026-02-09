@@ -11,6 +11,7 @@ defmodule ElixirOpentui.InputTest do
       assert event.ctrl == false
       assert event.alt == false
       assert event.shift == false
+      assert event.meta == false
     end
 
     test "uppercase sets shift flag" do
@@ -168,6 +169,7 @@ defmodule ElixirOpentui.InputTest do
       assert event.shift == true
       assert event.ctrl == false
       assert event.alt == false
+      assert event.meta == false
     end
 
     test "Alt+Up" do

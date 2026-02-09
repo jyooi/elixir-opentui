@@ -260,7 +260,94 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
+  defp paint_content(buf, %Element{type: :textarea} = el, x, y, w, h, opacity, focused) do
+    mod = buffer_mod(buf)
+    lines = Map.get(el.attrs, :lines, [])
+    placeholder = Map.get(el.attrs, :placeholder, "")
+    cursor_row = Map.get(el.attrs, :cursor_row, 0)
+    cursor_col = Map.get(el.attrs, :cursor_col, 0)
+    selection = Map.get(el.attrs, :selection)
+
+    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    placeholder_fg = Color.with_opacity({128, 128, 128, 255}, opacity)
+
+    buf =
+      if lines == [] do
+        # Show placeholder
+        placeholder_line = String.slice(placeholder, 0, w)
+        mod.draw_text(buf, x, y, placeholder_line, placeholder_fg, bg)
+      else
+        Enum.reduce(Enum.with_index(lines), buf, fn {line, row_idx}, b ->
+          if row_idx < h do
+            visible = String.slice(line, 0, w)
+
+            b =
+              if selection do
+                draw_textarea_line_with_selection(
+                  mod, b, x, y + row_idx, visible, row_idx, w, selection, fg, bg, opacity
+                )
+              else
+                mod.draw_text(b, x, y + row_idx, visible, fg, bg)
+              end
+
+            b
+          else
+            b
+          end
+        end)
+      end
+
+    # Draw cursor when focused
+    if focused do
+      if cursor_row >= 0 and cursor_row < h and cursor_col >= 0 and cursor_col < w do
+        cursor_line = Enum.at(lines, cursor_row, "")
+        cursor_char =
+          if cursor_col < String.length(cursor_line) do
+            String.at(cursor_line, cursor_col)
+          else
+            " "
+          end
+
+        cursor_fg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+        cursor_bg = Color.with_opacity(@focus_input_cursor_bg, opacity)
+        mod.draw_char(buf, x + cursor_col, y + cursor_row, cursor_char, cursor_fg, cursor_bg)
+      else
+        buf
+      end
+    else
+      buf
+    end
+  end
+
   defp paint_content(buf, _el, _x, _y, _w, _h, _opacity, _focused), do: buf
+
+  defp draw_textarea_line_with_selection(mod, buf, x, y, line, row_idx, w, sel, fg, bg, opacity) do
+    %{start_row: sr, start_col: sc, end_row: er, end_col: ec} = sel
+
+    # Determine which columns in this row are selected
+    {sel_start, sel_end} =
+      cond do
+        row_idx < sr or row_idx > er -> {w, w}
+        row_idx == sr and row_idx == er -> {sc, ec}
+        row_idx == sr -> {sc, w}
+        row_idx == er -> {0, ec}
+        true -> {0, w}
+      end
+
+    Enum.reduce(0..(max(0, String.length(line) - 1))//1, buf, fn col, b ->
+      ch = String.at(line, col)
+
+      if col >= sel_start and col < sel_end do
+        # Selection: invert fg/bg
+        sel_fg = Color.with_opacity(bg, opacity)
+        sel_bg = Color.with_opacity(fg, opacity)
+        mod.draw_char(b, x + col, y, ch, sel_fg, sel_bg)
+      else
+        mod.draw_char(b, x + col, y, ch, fg, bg)
+      end
+    end)
+  end
 
   defp paint_hit_region(buf, el, x, y, w, h) do
     if el.id do
