@@ -29,6 +29,7 @@ defmodule ElixirOpentui.View do
     :select,
     :checkbox,
     :scroll_box,
+    :textarea,
     :code,
     :markdown,
     :diff

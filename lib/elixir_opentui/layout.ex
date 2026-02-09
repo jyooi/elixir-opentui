@@ -202,7 +202,7 @@ defmodule ElixirOpentui.Layout do
     # use their content size. Containers (box, panel, etc.) use 0 on the main
     # axis (so flex-grow has room) and available space on the cross axis
     # (controlled later by stretch/align).
-    has_intrinsic = child.type in [:text, :label, :input, :button, :checkbox, :select]
+    has_intrinsic = child.type in [:text, :label, :input, :button, :checkbox, :select, :textarea]
 
     w =
       case style.width do
@@ -281,6 +281,10 @@ defmodule ElixirOpentui.Layout do
     4 + String.length(label)
   end
 
+  defp content_width(%Element{type: :textarea, attrs: attrs}, _avail) do
+    Map.get(attrs, :width, 40)
+  end
+
   defp content_width(%Element{type: :select, attrs: attrs}, avail) do
     options = Map.get(attrs, :options, [])
 
@@ -295,6 +299,10 @@ defmodule ElixirOpentui.Layout do
 
   defp content_height(%Element{type: type}, _avail) when type in [:text, :label, :input, :button, :checkbox],
     do: 1
+
+  defp content_height(%Element{type: :textarea, attrs: attrs}, _avail) do
+    Map.get(attrs, :height, 10)
+  end
 
   defp content_height(%Element{type: :select, attrs: attrs}, _avail) do
     options = Map.get(attrs, :options, [])
