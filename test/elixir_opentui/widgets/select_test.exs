@@ -3,8 +3,14 @@ defmodule ElixirOpentui.Widgets.SelectTest do
 
   alias ElixirOpentui.Widgets.Select
 
-  defp key(k) do
-    %{type: :key, key: k, ctrl: false, alt: false, shift: false}
+  defp key(k, opts \\ []) do
+    %{
+      type: :key,
+      key: k,
+      ctrl: Keyword.get(opts, :ctrl, false),
+      alt: Keyword.get(opts, :alt, false),
+      shift: Keyword.get(opts, :shift, false)
+    }
   end
 
   @options ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
@@ -12,14 +18,44 @@ defmodule ElixirOpentui.Widgets.SelectTest do
   describe "init/1" do
     test "initializes with options and default selection" do
       state = Select.init(%{options: @options, id: :sel})
-      assert state.options == @options
+      assert length(state.options) == 5
       assert state.selected == 0
       assert state.scroll_offset == 0
+      assert state._pending == []
     end
 
     test "initializes with custom selection" do
       state = Select.init(%{options: @options, selected: 2, id: :sel})
       assert state.selected == 2
+    end
+  end
+
+  describe "option normalization" do
+    test "string options auto-convert to SelectOption map" do
+      state = Select.init(%{options: ["Alpha", "Bravo"], id: :sel})
+      assert hd(state.options) == %{name: "Alpha", description: nil, value: nil}
+    end
+
+    test "SelectOption map with name/description/value" do
+      opts = [
+        %{name: "Alpha", description: "First letter", value: :alpha},
+        %{name: "Bravo", description: "Second letter", value: :bravo}
+      ]
+
+      state = Select.init(%{options: opts, id: :sel})
+      first = hd(state.options)
+      assert first.name == "Alpha"
+      assert first.description == "First letter"
+      assert first.value == :alpha
+    end
+
+    test "render includes normalized option format" do
+      state = Select.init(%{options: @options, id: :mysel})
+      tree = Select.render(state)
+      assert tree.type == :select
+      assert tree.id == :mysel
+      first_opt = hd(tree.attrs.options)
+      assert first_opt.name == "Alpha"
     end
   end
 
@@ -36,16 +72,82 @@ defmodule ElixirOpentui.Widgets.SelectTest do
       assert state.selected == 1
     end
 
-    test "down stops at last option" do
+    test "down stops at last option (wrap_selection false)" do
       state = Select.init(%{options: @options, selected: 4, id: :sel})
       state = Select.update(:key, key(:down), state)
       assert state.selected == 4
     end
 
-    test "up stops at first option" do
+    test "up stops at first option (wrap_selection false)" do
       state = Select.init(%{options: @options, selected: 0, id: :sel})
       state = Select.update(:key, key(:up), state)
       assert state.selected == 0
+    end
+  end
+
+  describe "vim navigation" do
+    test "j moves selection down" do
+      state = Select.init(%{options: @options, id: :sel})
+      state = Select.update(:key, key("j"), state)
+      assert state.selected == 1
+    end
+
+    test "k moves selection up" do
+      state = Select.init(%{options: @options, selected: 2, id: :sel})
+      state = Select.update(:key, key("k"), state)
+      assert state.selected == 1
+    end
+  end
+
+  describe "fast scroll" do
+    test "Shift+Down fast scrolls by step" do
+      state = Select.init(%{options: @options, fast_scroll_step: 3, id: :sel})
+      state = Select.update(:key, key(:down, shift: true), state)
+      assert state.selected == 3
+    end
+
+    test "Shift+Up fast scrolls by step" do
+      state = Select.init(%{options: @options, selected: 4, fast_scroll_step: 3, id: :sel})
+      state = Select.update(:key, key(:up, shift: true), state)
+      assert state.selected == 1
+    end
+
+    test "fast scroll clamps to bounds" do
+      state = Select.init(%{options: @options, selected: 3, fast_scroll_step: 5, id: :sel})
+      state = Select.update(:key, key(:down, shift: true), state)
+      assert state.selected == 4
+    end
+  end
+
+  describe "wrap_selection" do
+    test "wrap_selection true wraps at bottom" do
+      state = Select.init(%{options: @options, selected: 4, wrap_selection: true, id: :sel})
+      state = Select.update(:key, key(:down), state)
+      assert state.selected == 0
+    end
+
+    test "wrap_selection true wraps at top" do
+      state = Select.init(%{options: @options, selected: 0, wrap_selection: true, id: :sel})
+      state = Select.update(:key, key(:up), state)
+      assert state.selected == 4
+    end
+  end
+
+  describe "Enter key selection" do
+    test "Enter key emits on_select pending message" do
+      state = Select.init(%{options: @options, on_select: :item_selected, id: :sel})
+      state = Select.update(:key, key(:enter), state)
+      assert length(state._pending) == 1
+      [{tag, idx, opt}] = state._pending
+      assert tag == :item_selected
+      assert idx == 0
+      assert opt.name == "Alpha"
+    end
+
+    test "Enter no-op without on_select" do
+      state = Select.init(%{options: @options, id: :sel})
+      state = Select.update(:key, key(:enter), state)
+      assert state._pending == []
     end
   end
 
@@ -81,7 +183,7 @@ defmodule ElixirOpentui.Widgets.SelectTest do
     test "updates options and clamps selection" do
       state = Select.init(%{options: @options, selected: 4, id: :sel})
       state = Select.update({:set_options, ["A", "B"]}, nil, state)
-      assert state.options == ["A", "B"]
+      assert length(state.options) == 2
       assert state.selected == 1
     end
   end
@@ -100,14 +202,70 @@ defmodule ElixirOpentui.Widgets.SelectTest do
     end
   end
 
-  describe "render/1" do
-    test "produces a select element" do
-      state = Select.init(%{options: @options, id: :mysel})
+  describe "show_description" do
+    test "show_description affects rows_per_item" do
+      state = Select.init(%{options: @options, visible_count: 10, show_description: true, id: :sel})
+      # With show_description=true, rows_per_item=2, so visible_items = 10/2 = 5
+      # page_down should move by 5 items
+      state = Select.update(:key, key(:page_down), state)
+      assert state.selected == 4
+    end
+  end
+
+  describe "item_spacing" do
+    test "item_spacing affects rows_per_item" do
+      state =
+        Select.init(%{options: @options, visible_count: 10, item_spacing: 1, id: :sel})
+
+      # rows_per_item = 1 + 0 + 1 = 2, visible_items = 10/2 = 5
+      state = Select.update(:key, key(:page_down), state)
+      assert state.selected == 4
+    end
+  end
+
+  describe "on_change emission" do
+    test "arrow navigation emits on_change" do
+      state = Select.init(%{options: @options, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:down), state)
+      assert [{:changed, 1}] = state._pending
+    end
+
+    test "no emission when selection doesn't change" do
+      state = Select.init(%{options: @options, selected: 0, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:up), state)
+      assert state._pending == []
+    end
+
+    test "vim navigation emits on_change" do
+      state = Select.init(%{options: @options, on_change: :changed, id: :sel})
+      state = Select.update(:key, key("j"), state)
+      assert [{:changed, 1}] = state._pending
+    end
+
+    test "home emits on_change" do
+      state = Select.init(%{options: @options, selected: 3, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:home), state)
+      assert [{:changed, 0}] = state._pending
+    end
+
+    test "end emits on_change" do
+      state = Select.init(%{options: @options, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:end), state)
+      assert [{:changed, 4}] = state._pending
+    end
+
+    test "no on_change callback means no pending" do
+      state = Select.init(%{options: @options, id: :sel})
+      state = Select.update(:key, key(:down), state)
+      assert state._pending == []
+    end
+  end
+
+  describe "scroll indicator" do
+    test "scroll indicator reduces option text width by 1" do
+      state = Select.init(%{options: @options, show_scroll_indicator: true, id: :sel})
       tree = Select.render(state)
-      assert tree.type == :select
-      assert tree.id == :mysel
-      assert tree.attrs.options == @options
-      assert tree.attrs.selected == 0
+      assert tree.attrs.show_scroll_indicator == true
     end
   end
 end

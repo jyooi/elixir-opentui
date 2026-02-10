@@ -287,15 +287,22 @@ defmodule ElixirOpentui.Layout do
 
   defp content_width(%Element{type: :select, attrs: attrs}, avail) do
     options = Map.get(attrs, :options, [])
+    show_scroll_indicator = Map.get(attrs, :show_scroll_indicator, false)
 
-    if options == [] do
-      min(15, avail)
-    else
-      options |> Enum.map(&String.length(to_string(&1))) |> Enum.max()
-    end
+    base_w =
+      if options == [] do
+        min(15, avail)
+      else
+        options |> Enum.map(&select_option_width/1) |> Enum.max()
+      end
+
+    if show_scroll_indicator, do: base_w + 1, else: base_w
   end
 
   defp content_width(_el, _avail), do: 0
+
+  defp select_option_width(%{name: name}), do: String.length(name)
+  defp select_option_width(opt), do: String.length(to_string(opt))
 
   defp content_height(%Element{type: type}, _avail) when type in [:text, :label, :input, :button, :checkbox],
     do: 1
@@ -306,7 +313,10 @@ defmodule ElixirOpentui.Layout do
 
   defp content_height(%Element{type: :select, attrs: attrs}, _avail) do
     options = Map.get(attrs, :options, [])
-    max(1, length(options))
+    show_description = Map.get(attrs, :show_description, false)
+    item_spacing = Map.get(attrs, :item_spacing, 0)
+    rows_per = 1 + (if show_description, do: 1, else: 0) + item_spacing
+    max(1, length(options) * rows_per)
   end
 
   defp content_height(_el, _avail), do: 0

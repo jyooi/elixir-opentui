@@ -106,6 +106,8 @@ defmodule ElixirOpentui.NativeBuffer do
           italic: Bitwise.band(attrs, 2) != 0,
           underline: Bitwise.band(attrs, 4) != 0,
           strikethrough: Bitwise.band(attrs, 8) != 0,
+          dim: Bitwise.band(attrs, 16) != 0,
+          inverse: Bitwise.band(attrs, 32) != 0,
           hit_id: nil
         }
     end

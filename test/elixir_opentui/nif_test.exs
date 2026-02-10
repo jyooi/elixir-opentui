@@ -191,6 +191,35 @@ defmodule ElixirOpentui.NIFTest do
     end
   end
 
+  describe "dim/inverse attrs round-trip" do
+    test "NIF backend dim/inverse round-trip through attrs byte" do
+      ref = NIF.init(10, 5)
+      NIF.clear(ref)
+
+      # attrs byte: bold(1) | dim(16) | inverse(32) = 49
+      attrs = Bitwise.bor(1, Bitwise.bor(16, 32))
+
+      cell =
+        <<1, 0::16-little, 0::16-little, ?X, 0, 0, 0, 255, 255, 255, 0, 0, 0, attrs,
+          0::16-little>>
+
+      NIF.put_cells(ref, cell)
+      ansi = NIF.render_frame_capture(ref)
+
+      assert String.contains?(ansi, "X")
+      # SGR should contain ;1 (bold), ;2 (dim), ;7 (inverse)
+      assert String.contains?(ansi, ";1")
+      assert String.contains?(ansi, ";2")
+      assert String.contains?(ansi, ";7")
+
+      # Verify get_cell_data returns correct attrs
+      {_char, _fr, _fg, _fb, _br, _bg, _bb, stored_attrs, _hit} = NIF.get_cell_data(ref, 0, 0)
+      assert Bitwise.band(stored_attrs, 1) != 0
+      assert Bitwise.band(stored_attrs, 16) != 0
+      assert Bitwise.band(stored_attrs, 32) != 0
+    end
+  end
+
   describe "available?/0" do
     test "returns true when NIF is loaded" do
       assert NIF.available?() == true

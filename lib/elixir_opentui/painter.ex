@@ -141,43 +141,40 @@ defmodule ElixirOpentui.Painter do
 
     display = if value == "", do: placeholder, else: value
 
-    fg =
-      if value == "" do
-        Color.with_opacity({128, 128, 128, 255}, opacity)
-      else
-        (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-      end
+    default_fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+    default_bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    ph_fg = Map.get(el.attrs, :placeholder_fg, {128, 128, 128, 255}) |> Color.with_opacity(opacity)
 
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = if value == "", do: ph_fg, else: default_fg
+    bg = default_bg
 
     visible = String.slice(display, scroll_offset, w)
     buf = mod.draw_text(buf, x, y, visible, fg, bg)
 
-    if focused and value != "" do
-      cursor_x = cursor_pos - scroll_offset
+    if focused do
+      c_fg = Map.get(el.attrs, :cursor_fg, el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+      c_bg = Map.get(el.attrs, :cursor_bg, @focus_input_cursor_bg) |> Color.with_opacity(opacity)
 
-      if cursor_x >= 0 and cursor_x < w do
-        cursor_char =
-          if cursor_x < String.length(visible) do
-            String.at(visible, cursor_x)
-          else
-            " "
-          end
+      if value != "" do
+        cursor_x = cursor_pos - scroll_offset
 
-        cursor_fg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
-        cursor_bg = Color.with_opacity(@focus_input_cursor_bg, opacity)
-        mod.draw_char(buf, x + cursor_x, y, cursor_char, cursor_fg, cursor_bg)
+        if cursor_x >= 0 and cursor_x < w do
+          cursor_char =
+            if cursor_x < String.length(visible) do
+              String.at(visible, cursor_x)
+            else
+              " "
+            end
+
+          mod.draw_char(buf, x + cursor_x, y, cursor_char, c_fg, c_bg)
+        else
+          buf
+        end
       else
-        buf
+        mod.draw_char(buf, x, y, " ", c_fg, c_bg)
       end
     else
-      if focused and value == "" do
-        cursor_fg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
-        cursor_bg = Color.with_opacity(@focus_input_cursor_bg, opacity)
-        mod.draw_char(buf, x, y, " ", cursor_fg, cursor_bg)
-      else
-        buf
-      end
+      buf
     end
   end
 
@@ -202,30 +199,60 @@ defmodule ElixirOpentui.Painter do
     options = Map.get(el.attrs, :options, [])
     selected = Map.get(el.attrs, :selected, 0)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
+    show_description = Map.get(el.attrs, :show_description, false)
+    show_scroll_indicator = Map.get(el.attrs, :show_scroll_indicator, false)
+    item_spacing = Map.get(el.attrs, :item_spacing, 0)
 
     fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
     bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
     sel_fg = Color.with_opacity({255, 255, 255, 255}, opacity)
     sel_bg = Color.with_opacity(@select_highlight_bg, opacity)
+    desc_fg = Color.with_opacity({150, 150, 150, 255}, opacity)
 
-    visible_options = Enum.slice(options, scroll_offset, h)
+    text_w = if show_scroll_indicator, do: max(1, w - 1), else: w
+    rows_per = 1 + (if show_description, do: 1, else: 0) + item_spacing
+    visible_items = if rows_per > 0, do: max(1, div(h, rows_per)), else: h
+    visible_options = Enum.slice(options, scroll_offset, visible_items)
 
-    Enum.reduce(Enum.with_index(visible_options, scroll_offset), buf, fn {opt, idx}, b ->
-      row = y + idx - scroll_offset
+    buf =
+      Enum.reduce(Enum.with_index(visible_options, scroll_offset), buf, fn {opt, idx}, b ->
+        row_base = y + (idx - scroll_offset) * rows_per
 
-      if row < y + h do
-        opt_str = String.slice(to_string(opt), 0, w)
+        if row_base < y + h do
+          opt_name = option_name(opt)
+          opt_str = String.slice(opt_name, 0, text_w)
 
-        if focused and idx == selected do
-          b = mod.fill_rect(b, x, row, w, 1, " ", sel_fg, sel_bg)
-          mod.draw_text(b, x, row, opt_str, sel_fg, sel_bg)
+          b =
+            if focused and idx == selected do
+              b = mod.fill_rect(b, x, row_base, text_w, 1, " ", sel_fg, sel_bg)
+              mod.draw_text(b, x, row_base, opt_str, sel_fg, sel_bg)
+            else
+              mod.draw_text(b, x, row_base, opt_str, fg, bg)
+            end
+
+          if show_description and row_base + 1 < y + h do
+            desc = option_description(opt)
+
+            if desc do
+              desc_str = String.slice(desc, 0, text_w)
+              mod.draw_text(b, x, row_base + 1, desc_str, desc_fg, bg)
+            else
+              b
+            end
+          else
+            b
+          end
         else
-          mod.draw_text(b, x, row, opt_str, fg, bg)
+          b
         end
-      else
-        b
-      end
-    end)
+      end)
+
+    if show_scroll_indicator and length(options) > visible_items do
+      paint_scroll_indicator(buf, mod, x + w - 1, y, h, scroll_offset, length(options),
+        visible_items, fg, bg, opacity)
+    else
+      buf
+    end
   end
 
   defp paint_content(buf, %Element{type: :checkbox} = el, x, y, w, _h, opacity, focused) do
@@ -321,6 +348,39 @@ defmodule ElixirOpentui.Painter do
   end
 
   defp paint_content(buf, _el, _x, _y, _w, _h, _opacity, _focused), do: buf
+
+  # --- Select helpers ---
+
+  defp option_name(%{name: name}), do: name
+  defp option_name(opt), do: to_string(opt)
+
+  defp option_description(%{description: desc}) when is_binary(desc), do: desc
+  defp option_description(_), do: nil
+
+  defp paint_scroll_indicator(buf, mod, x, y, h, scroll_offset, total, visible, _fg, bg, opacity) do
+    indicator_fg = Color.with_opacity({100, 100, 100, 255}, opacity)
+
+    thumb_size = max(1, div(h * visible, total))
+
+    thumb_pos =
+      if total > visible,
+        do: div(scroll_offset * (h - thumb_size), total - visible),
+        else: 0
+
+    Enum.reduce(0..(h - 1)//1, buf, fn row, b ->
+      char =
+        cond do
+          row == 0 and scroll_offset > 0 -> "▲"
+          row == h - 1 and scroll_offset + visible < total -> "▼"
+          row >= thumb_pos and row < thumb_pos + thumb_size -> "█"
+          true -> "│"
+        end
+
+      mod.draw_char(b, x, y + row, char, indicator_fg, bg)
+    end)
+  end
+
+  # --- Textarea helpers ---
 
   defp draw_textarea_line_with_selection(mod, buf, x, y, line, row_idx, w, sel, fg, bg, opacity) do
     %{start_row: sr, start_col: sc, end_row: er, end_col: ec} = sel
