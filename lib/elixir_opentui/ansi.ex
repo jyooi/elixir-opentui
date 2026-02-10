@@ -62,16 +62,35 @@ defmodule ElixirOpentui.ANSI do
   @spec disable_paste() :: iodata()
   def disable_paste, do: "\e[?2004l"
 
+  # --- Cursor shape ---
+
+  @doc "Set terminal cursor shape. Steady variants."
+  @spec cursor_shape(:block | :underline | :bar) :: iodata()
+  def cursor_shape(:block), do: "\e[2 q"
+  def cursor_shape(:underline), do: "\e[4 q"
+  def cursor_shape(:bar), do: "\e[6 q"
+
   # --- Color / attribute SGR ---
 
   @doc "Generate SGR (Select Graphic Rendition) sequence for a cell's style."
-  @spec sgr(Color.t(), Color.t(), boolean(), boolean(), boolean(), boolean()) :: iodata()
-  def sgr(fg, bg, bold, italic, underline, strikethrough) do
+  @spec sgr(
+          Color.t(),
+          Color.t(),
+          boolean(),
+          boolean(),
+          boolean(),
+          boolean(),
+          boolean(),
+          boolean()
+        ) :: iodata()
+  def sgr(fg, bg, bold, italic, underline, strikethrough, dim \\ false, inverse \\ false) do
     parts =
       []
       |> maybe_add(bold, "1")
+      |> maybe_add(dim, "2")
       |> maybe_add(italic, "3")
       |> maybe_add(underline, "4")
+      |> maybe_add(inverse, "7")
       |> maybe_add(strikethrough, "9")
       |> add_fg(fg)
       |> add_bg(bg)
@@ -129,7 +148,18 @@ defmodule ElixirOpentui.ANSI do
         if style == prev_style do
           {[acc, cell.char], style}
         else
-          sgr_seq = sgr(cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough)
+          sgr_seq =
+            sgr(
+              cell.fg,
+              cell.bg,
+              cell.bold,
+              cell.italic,
+              cell.underline,
+              cell.strikethrough,
+              cell.dim,
+              cell.inverse
+            )
+
           {[acc, sgr_seq, cell.char], style}
         end
       end)
@@ -145,7 +175,18 @@ defmodule ElixirOpentui.ANSI do
         if style == prev_style do
           {[acc, cell.char], style}
         else
-          sgr_seq = sgr(cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough)
+          sgr_seq =
+            sgr(
+              cell.fg,
+              cell.bg,
+              cell.bold,
+              cell.italic,
+              cell.underline,
+              cell.strikethrough,
+              cell.dim,
+              cell.inverse
+            )
+
           {[acc, sgr_seq, cell.char], style}
         end
       end)
@@ -154,7 +195,8 @@ defmodule ElixirOpentui.ANSI do
   end
 
   defp cell_style(cell) do
-    {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough}
+    {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough,
+     cell.dim, cell.inverse}
   end
 
   # Group consecutive horizontal changes into runs for efficient cursor movement.

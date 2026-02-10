@@ -52,6 +52,33 @@ defmodule ElixirOpentui.Widgets.CheckboxTest do
     end
   end
 
+  describe "on_change emission" do
+    test "space toggle emits on_change with new value" do
+      state = Checkbox.init(%{label: "Test", on_change: :toggled, id: :cb})
+      state = Checkbox.update(:key, key(" "), state)
+      assert state.checked == true
+      assert [{:toggled, true}] = state._pending
+    end
+
+    test "enter toggle emits on_change" do
+      state = Checkbox.init(%{label: "Test", on_change: :toggled, id: :cb})
+      state = Checkbox.update(:key, key(:enter), state)
+      assert [{:toggled, true}] = state._pending
+    end
+
+    test "toggle message emits on_change" do
+      state = Checkbox.init(%{label: "Test", on_change: :toggled, id: :cb})
+      state = Checkbox.update(:toggle, nil, state)
+      assert [{:toggled, true}] = state._pending
+    end
+
+    test "no on_change means no pending" do
+      state = Checkbox.init(%{label: "Test", id: :cb})
+      state = Checkbox.update(:key, key(" "), state)
+      assert state._pending == []
+    end
+  end
+
   describe "render/1" do
     test "produces a checkbox element" do
       state = Checkbox.init(%{label: "Accept terms", id: :cb})

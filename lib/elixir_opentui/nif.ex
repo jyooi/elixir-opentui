@@ -25,7 +25,7 @@ defmodule ElixirOpentui.NIF do
       char_len: u8,       // 1-4
       fg: [3]u8,          // RGB
       bg: [3]u8,          // RGB
-      attrs: u8,          // bits: bold(0), italic(1), underline(2), strikethrough(3)
+      attrs: u8,          // bits: bold(0), italic(1), underline(2), strikethrough(3), dim(4), inverse(5)
       hit_id: u16,        // 0=none, 1..65535=mapped atom
       _pad: [2]u8,        // explicit padding to 16 bytes
 
@@ -420,8 +420,10 @@ defmodule ElixirOpentui.NIF do
       try output.appendSlice(gpa, "\x1b[0");
 
       if (attrs & 1 != 0) try output.appendSlice(gpa, ";1");
+      if (attrs & 16 != 0) try output.appendSlice(gpa, ";2");
       if (attrs & 2 != 0) try output.appendSlice(gpa, ";3");
       if (attrs & 4 != 0) try output.appendSlice(gpa, ";4");
+      if (attrs & 32 != 0) try output.appendSlice(gpa, ";7");
       if (attrs & 8 != 0) try output.appendSlice(gpa, ";9");
 
       try output.appendSlice(gpa, ";38;2;");

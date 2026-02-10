@@ -96,6 +96,44 @@ defmodule ElixirOpentui.ANSITest do
     end
   end
 
+  describe "dim and inverse attributes" do
+    test "dim attribute renders SGR code 2" do
+      fg = {255, 255, 255, 255}
+      bg = {0, 0, 0, 255}
+      result = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, true, false))
+      assert String.contains?(result, "2;")
+    end
+
+    test "inverse attribute renders SGR code 7" do
+      fg = {255, 255, 255, 255}
+      bg = {0, 0, 0, 255}
+      result = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, false, true))
+      assert String.contains?(result, "7;")
+    end
+
+    test "dim + bold combines correctly" do
+      fg = {255, 255, 255, 255}
+      bg = {0, 0, 0, 255}
+      result = IO.iodata_to_binary(ANSI.sgr(fg, bg, true, false, false, false, true, false))
+      assert String.contains?(result, "1")
+      assert String.contains?(result, "2")
+    end
+  end
+
+  describe "cursor shape" do
+    test "block cursor shape" do
+      assert IO.iodata_to_binary(ANSI.cursor_shape(:block)) == "\e[2 q"
+    end
+
+    test "underline cursor shape" do
+      assert IO.iodata_to_binary(ANSI.cursor_shape(:underline)) == "\e[4 q"
+    end
+
+    test "bar cursor shape" do
+      assert IO.iodata_to_binary(ANSI.cursor_shape(:bar)) == "\e[6 q"
+    end
+  end
+
   describe "full frame rendering" do
     test "renders a simple buffer" do
       buf = Buffer.new(3, 1)
@@ -130,6 +168,8 @@ defmodule ElixirOpentui.ANSITest do
         italic: false,
         underline: false,
         strikethrough: false,
+        dim: false,
+        inverse: false,
         hit_id: nil
       }
 
@@ -142,8 +182,8 @@ defmodule ElixirOpentui.ANSITest do
       white = {255, 255, 255, 255}
       black = {0, 0, 0, 255}
 
-      cell_a = %{char: "A", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, hit_id: nil}
-      cell_b = %{char: "B", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, hit_id: nil}
+      cell_a = %{char: "A", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, dim: false, inverse: false, hit_id: nil}
+      cell_b = %{char: "B", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, dim: false, inverse: false, hit_id: nil}
 
       result = IO.iodata_to_binary(ANSI.render_diff([{0, 0, cell_a}, {1, 0, cell_b}]))
       assert String.contains?(result, "A")

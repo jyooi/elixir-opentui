@@ -182,6 +182,21 @@ defmodule ElixirOpentui.BufferTest do
     end
   end
 
+  describe "dim and inverse cell attributes" do
+    test "buffer cell stores dim and inverse" do
+      buf = Buffer.new(10, 5)
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.dim == false
+      assert cell.inverse == false
+
+      custom_cell = %{cell | dim: true, inverse: true}
+      buf = Buffer.put_cell(buf, 0, 0, custom_cell)
+      stored = Buffer.get_cell(buf, 0, 0)
+      assert stored.dim == true
+      assert stored.inverse == true
+    end
+  end
+
   describe "diff/2" do
     test "empty diff for identical buffers" do
       buf = Buffer.new(5, 3)

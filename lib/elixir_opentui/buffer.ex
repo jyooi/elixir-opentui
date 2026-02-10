@@ -19,6 +19,8 @@ defmodule ElixirOpentui.Buffer do
           italic: boolean(),
           underline: boolean(),
           strikethrough: boolean(),
+          dim: boolean(),
+          inverse: boolean(),
           hit_id: term()
         }
 
@@ -224,6 +226,8 @@ defmodule ElixirOpentui.Buffer do
       italic: false,
       underline: false,
       strikethrough: false,
+      dim: false,
+      inverse: false,
       hit_id: nil
     }
   end
