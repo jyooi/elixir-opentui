@@ -26,6 +26,11 @@ defmodule ElixirOpentui.Widgets.TextInputTest do
       assert state.value == ""
       assert state.cursor_pos == 0
     end
+
+    test "initializes with _pending list" do
+      state = TextInput.init(%{id: :inp})
+      assert state._pending == []
+    end
   end
 
   describe "character insertion" do
@@ -148,6 +153,105 @@ defmodule ElixirOpentui.Widgets.TextInputTest do
       state = TextInput.update(:key, key("u", ctrl: true), state)
       assert state.value == " world"
       assert state.cursor_pos == 0
+    end
+  end
+
+  describe "Emacs keybindings" do
+    test "Ctrl+B moves cursor left" do
+      state = TextInput.init(%{value: "abc", id: :inp})
+      state = TextInput.update(:key, key("b", ctrl: true), state)
+      assert state.cursor_pos == 2
+    end
+
+    test "Ctrl+F moves cursor right" do
+      state = TextInput.init(%{value: "abc", id: :inp})
+      state = %{state | cursor_pos: 0}
+      state = TextInput.update(:key, key("f", ctrl: true), state)
+      assert state.cursor_pos == 1
+    end
+
+    test "Ctrl+D deletes forward" do
+      state = TextInput.init(%{value: "abc", id: :inp})
+      state = %{state | cursor_pos: 0}
+      state = TextInput.update(:key, key("d", ctrl: true), state)
+      assert state.value == "bc"
+      assert state.cursor_pos == 0
+    end
+  end
+
+  describe "emit_change via _pending" do
+    test "emit_change fires when on_change is set" do
+      state = TextInput.init(%{value: "", on_change: :text_changed, id: :inp})
+      state = TextInput.update(:key, key("a"), state)
+      assert state.value == "a"
+      assert {:text_changed, "a"} in state._pending
+    end
+
+    test "emit_change does not fire when on_change is nil" do
+      state = TextInput.init(%{value: "", id: :inp})
+      state = TextInput.update(:key, key("a"), state)
+      assert state.value == "a"
+      assert state._pending == []
+    end
+  end
+
+  describe "on_submit" do
+    test "Enter key triggers on_submit pending message" do
+      state = TextInput.init(%{value: "hello", on_submit: :submitted, id: :inp})
+      state = TextInput.update(:key, key(:enter), state)
+      assert {:submitted, "hello"} in state._pending
+    end
+
+    test "Enter key no-op when on_submit is nil" do
+      state = TextInput.init(%{value: "hello", id: :inp})
+      state = TextInput.update(:key, key(:enter), state)
+      assert state._pending == []
+    end
+  end
+
+  describe "max_length" do
+    test "max_length rejects insertion when at limit" do
+      state = TextInput.init(%{value: "abc", max_length: 3, id: :inp})
+      state = TextInput.update(:key, key("d"), state)
+      assert state.value == "abc"
+    end
+
+    test "max_length allows insertion when under limit" do
+      state = TextInput.init(%{value: "ab", max_length: 3, id: :inp})
+      state = TextInput.update(:key, key("c"), state)
+      assert state.value == "abc"
+    end
+
+    test "max_length truncates pasted text" do
+      state = TextInput.init(%{value: "", max_length: 5, id: :inp})
+      state = TextInput.update(:paste, %{type: :paste, data: "abcdefghij"}, state)
+      assert String.length(state.value) <= 5
+    end
+
+    test "max_length defaults to infinity" do
+      state = TextInput.init(%{id: :inp})
+      assert state.max_length == :infinity
+    end
+  end
+
+  describe "focus and cursor styling" do
+    test "focus colors passed through element attrs" do
+      state =
+        TextInput.init(%{
+          id: :inp,
+          focused_bg: {50, 50, 50, 255},
+          cursor_bg: {200, 200, 200, 255}
+        })
+
+      tree = TextInput.render(state)
+      assert tree.attrs.focused_bg == {50, 50, 50, 255}
+      assert tree.attrs.cursor_bg == {200, 200, 200, 255}
+    end
+
+    test "cursor_style passed through element attrs" do
+      state = TextInput.init(%{id: :inp, cursor_style: :bar})
+      tree = TextInput.render(state)
+      assert tree.attrs.cursor_style == :bar
     end
   end
 

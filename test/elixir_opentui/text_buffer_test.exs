@@ -94,6 +94,44 @@ defmodule ElixirOpentui.TextBufferTest do
     end
   end
 
+  describe "dim and inverse span support" do
+    test "TextBuffer span supports dim" do
+      buf = TextBuffer.from_spans([{"dimmed", dim: true}])
+      style = TextBuffer.style_at(buf, 0)
+      assert style.dim == true
+      assert style.inverse == false
+    end
+
+    test "TextBuffer span supports inverse" do
+      buf = TextBuffer.from_spans([{"inverted", inverse: true}])
+      style = TextBuffer.style_at(buf, 0)
+      assert style.inverse == true
+      assert style.dim == false
+    end
+  end
+
+  describe "styled/2" do
+    test "creates span with all attributes" do
+      buf = TextBuffer.styled("hello", bold: true, fg: {255, 0, 0, 255}, dim: true, inverse: true)
+      assert TextBuffer.to_plain(buf) == "hello"
+      style = TextBuffer.style_at(buf, 0)
+      assert style.bold == true
+      assert style.dim == true
+      assert style.inverse == true
+      assert style.fg == {255, 0, 0, 255}
+    end
+  end
+
+  describe "concat/1" do
+    test "merges multiple TextBuffers" do
+      a = TextBuffer.from_text("Hello ")
+      b = TextBuffer.styled("World", bold: true)
+      combined = TextBuffer.concat([a, b])
+      assert TextBuffer.to_plain(combined) == "Hello World"
+      assert TextBuffer.grapheme_count(combined) == 11
+    end
+  end
+
   describe "graphemes/1" do
     test "returns grapheme cluster list" do
       buf = TextBuffer.from_text("ABC")
