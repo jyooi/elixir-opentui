@@ -108,13 +108,21 @@ defmodule ElixirOpentui.Widgets.Select do
   end
 
   defp handle_key(%{key: :home}, state) do
-    %{state | selected: 0, scroll_offset: 0}
+    if state.selected == 0 do
+      state
+    else
+      %{state | selected: 0, scroll_offset: 0} |> emit_change()
+    end
   end
 
   defp handle_key(%{key: :end}, state) do
     max_idx = max(0, length(state.options) - 1)
-    state = %{state | selected: max_idx}
-    adjust_scroll(state)
+
+    if state.selected == max_idx do
+      state
+    else
+      %{state | selected: max_idx} |> adjust_scroll() |> emit_change()
+    end
   end
 
   defp handle_key(%{key: :page_up}, state) do
@@ -146,8 +154,12 @@ defmodule ElixirOpentui.Widgets.Select do
         clamp(new_idx, 0, max_idx)
       end
 
-    state = %{state | selected: new_idx}
-    adjust_scroll(state)
+    if new_idx == state.selected do
+      state
+    else
+      state = %{state | selected: new_idx}
+      state |> adjust_scroll() |> emit_change()
+    end
   end
 
   # --- Helpers ---
@@ -174,6 +186,14 @@ defmodule ElixirOpentui.Widgets.Select do
       end
 
     %{state | scroll_offset: max(0, scroll)}
+  end
+
+  defp emit_change(state) do
+    if state.on_change do
+      %{state | _pending: [{state.on_change, state.selected} | state._pending]}
+    else
+      state
+    end
   end
 
   defp emit_select(state) do

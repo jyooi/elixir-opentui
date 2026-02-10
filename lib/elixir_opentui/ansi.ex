@@ -156,8 +156,8 @@ defmodule ElixirOpentui.ANSI do
               cell.italic,
               cell.underline,
               cell.strikethrough,
-              Map.get(cell, :dim, false),
-              Map.get(cell, :inverse, false)
+              cell.dim,
+              cell.inverse
             )
 
           {[acc, sgr_seq, cell.char], style}
@@ -183,8 +183,8 @@ defmodule ElixirOpentui.ANSI do
               cell.italic,
               cell.underline,
               cell.strikethrough,
-              Map.get(cell, :dim, false),
-              Map.get(cell, :inverse, false)
+              cell.dim,
+              cell.inverse
             )
 
           {[acc, sgr_seq, cell.char], style}
@@ -196,7 +196,7 @@ defmodule ElixirOpentui.ANSI do
 
   defp cell_style(cell) do
     {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough,
-     Map.get(cell, :dim, false), Map.get(cell, :inverse, false)}
+     cell.dim, cell.inverse}
   end
 
   # Group consecutive horizontal changes into runs for efficient cursor movement.

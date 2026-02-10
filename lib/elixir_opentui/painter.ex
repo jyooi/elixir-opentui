@@ -141,43 +141,40 @@ defmodule ElixirOpentui.Painter do
 
     display = if value == "", do: placeholder, else: value
 
-    fg =
-      if value == "" do
-        Color.with_opacity({128, 128, 128, 255}, opacity)
-      else
-        (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-      end
+    default_fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+    default_bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    ph_fg = Map.get(el.attrs, :placeholder_fg, {128, 128, 128, 255}) |> Color.with_opacity(opacity)
 
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = if value == "", do: ph_fg, else: default_fg
+    bg = default_bg
 
     visible = String.slice(display, scroll_offset, w)
     buf = mod.draw_text(buf, x, y, visible, fg, bg)
 
-    if focused and value != "" do
-      cursor_x = cursor_pos - scroll_offset
+    if focused do
+      c_fg = Map.get(el.attrs, :cursor_fg, el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+      c_bg = Map.get(el.attrs, :cursor_bg, @focus_input_cursor_bg) |> Color.with_opacity(opacity)
 
-      if cursor_x >= 0 and cursor_x < w do
-        cursor_char =
-          if cursor_x < String.length(visible) do
-            String.at(visible, cursor_x)
-          else
-            " "
-          end
+      if value != "" do
+        cursor_x = cursor_pos - scroll_offset
 
-        cursor_fg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
-        cursor_bg = Color.with_opacity(@focus_input_cursor_bg, opacity)
-        mod.draw_char(buf, x + cursor_x, y, cursor_char, cursor_fg, cursor_bg)
+        if cursor_x >= 0 and cursor_x < w do
+          cursor_char =
+            if cursor_x < String.length(visible) do
+              String.at(visible, cursor_x)
+            else
+              " "
+            end
+
+          mod.draw_char(buf, x + cursor_x, y, cursor_char, c_fg, c_bg)
+        else
+          buf
+        end
       else
-        buf
+        mod.draw_char(buf, x, y, " ", c_fg, c_bg)
       end
     else
-      if focused and value == "" do
-        cursor_fg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
-        cursor_bg = Color.with_opacity(@focus_input_cursor_bg, opacity)
-        mod.draw_char(buf, x, y, " ", cursor_fg, cursor_bg)
-      else
-        buf
-      end
+      buf
     end
   end
 

@@ -223,6 +223,44 @@ defmodule ElixirOpentui.Widgets.SelectTest do
     end
   end
 
+  describe "on_change emission" do
+    test "arrow navigation emits on_change" do
+      state = Select.init(%{options: @options, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:down), state)
+      assert [{:changed, 1}] = state._pending
+    end
+
+    test "no emission when selection doesn't change" do
+      state = Select.init(%{options: @options, selected: 0, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:up), state)
+      assert state._pending == []
+    end
+
+    test "vim navigation emits on_change" do
+      state = Select.init(%{options: @options, on_change: :changed, id: :sel})
+      state = Select.update(:key, key("j"), state)
+      assert [{:changed, 1}] = state._pending
+    end
+
+    test "home emits on_change" do
+      state = Select.init(%{options: @options, selected: 3, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:home), state)
+      assert [{:changed, 0}] = state._pending
+    end
+
+    test "end emits on_change" do
+      state = Select.init(%{options: @options, on_change: :changed, id: :sel})
+      state = Select.update(:key, key(:end), state)
+      assert [{:changed, 4}] = state._pending
+    end
+
+    test "no on_change callback means no pending" do
+      state = Select.init(%{options: @options, id: :sel})
+      state = Select.update(:key, key(:down), state)
+      assert state._pending == []
+    end
+  end
+
   describe "scroll indicator" do
     test "scroll indicator reduces option text width by 1" do
       state = Select.init(%{options: @options, show_scroll_indicator: true, id: :sel})
