@@ -168,6 +168,8 @@ defmodule ElixirOpentui.ANSITest do
         italic: false,
         underline: false,
         strikethrough: false,
+        dim: false,
+        inverse: false,
         hit_id: nil
       }
 
@@ -180,8 +182,8 @@ defmodule ElixirOpentui.ANSITest do
       white = {255, 255, 255, 255}
       black = {0, 0, 0, 255}
 
-      cell_a = %{char: "A", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, hit_id: nil}
-      cell_b = %{char: "B", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, hit_id: nil}
+      cell_a = %{char: "A", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, dim: false, inverse: false, hit_id: nil}
+      cell_b = %{char: "B", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, dim: false, inverse: false, hit_id: nil}
 
       result = IO.iodata_to_binary(ANSI.render_diff([{0, 0, cell_a}, {1, 0, cell_b}]))
       assert String.contains?(result, "A")

@@ -151,6 +151,59 @@ defmodule ElixirOpentui.RuntimeTest do
     end
   end
 
+  defmodule PendingWidget do
+    use ElixirOpentui.Component
+
+    def init(props), do: %{on_select: Map.get(props, :on_select), id: Map.get(props, :id), _pending: []}
+
+    def update(:trigger, _event, state) do
+      %{state | _pending: [{state.on_select, 2, %{name: "Charlie"}} | state._pending]}
+    end
+
+    def update(_, _, state), do: state
+
+    def render(state) do
+      import ElixirOpentui.View
+      text(id: state.id, content: "widget")
+    end
+  end
+
+  defmodule SelectApp do
+    use ElixirOpentui.Component
+
+    def init(_props), do: %{last_msg: nil}
+
+    def update({:item_selected, idx, option}, _event, state) do
+      %{state | last_msg: "#{idx}:#{option.name}"}
+    end
+
+    def update(_, _, state), do: state
+
+    def render(state) do
+      import ElixirOpentui.View
+
+      box id: :root, width: 40, height: 10 do
+        text(id: :info, content: "msg: #{state.last_msg || "none"}")
+        component(PendingWidget, id: :sel_widget, on_select: :item_selected)
+      end
+    end
+  end
+
+  describe "pending message processing" do
+    test "processes 3-tuple pending messages from component" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 10)
+      Runtime.mount(rt, SelectApp)
+
+      # Trigger the widget to emit a 3-tuple pending message
+      Runtime.send_msg(rt, :sel_widget, :trigger)
+      Process.sleep(20)
+
+      frame = Runtime.get_frame(rt)
+      joined = Enum.join(frame)
+      assert String.contains?(joined, "msg: 2:Charlie")
+    end
+  end
+
   describe "event callbacks" do
     test "on_event callback is called" do
       test_pid = self()
