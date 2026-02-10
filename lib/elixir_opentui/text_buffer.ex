@@ -15,7 +15,9 @@ defmodule ElixirOpentui.TextBuffer do
           bold: boolean(),
           italic: boolean(),
           underline: boolean(),
-          strikethrough: boolean()
+          strikethrough: boolean(),
+          dim: boolean(),
+          inverse: boolean()
         }
 
   @type t :: %__MODULE__{
@@ -32,7 +34,9 @@ defmodule ElixirOpentui.TextBuffer do
     bold: false,
     italic: false,
     underline: false,
-    strikethrough: false
+    strikethrough: false,
+    dim: false,
+    inverse: false
   }
 
   @doc "Create an empty TextBuffer."
@@ -60,6 +64,24 @@ defmodule ElixirOpentui.TextBuffer do
       end)
 
     %__MODULE__{spans: styled}
+  end
+
+  @doc "Create a TextBuffer from a single styled text string."
+  @spec styled(String.t(), keyword()) :: t()
+  def styled(text, style \\ []) when is_binary(text) do
+    span =
+      @default_span_style
+      |> Map.put(:text, text)
+      |> Map.merge(Map.new(style))
+
+    %__MODULE__{spans: [span]}
+  end
+
+  @doc "Concatenate a list of TextBuffers into one."
+  @spec concat([t()]) :: t()
+  def concat(buffers) when is_list(buffers) do
+    spans = Enum.flat_map(buffers, fn %__MODULE__{spans: s} -> s end)
+    %__MODULE__{spans: spans}
   end
 
   @doc "Get the plain text content (all spans concatenated)."

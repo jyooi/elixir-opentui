@@ -259,8 +259,15 @@ defmodule ElixirOpentui.Runtime do
 
       comp ->
         new_comp_state = comp.module.update(msg, event, comp.state)
-        new_comp = %{comp | state: new_comp_state}
-        %{state | component_states: Map.put(state.component_states, component_id, new_comp)}
+
+        pending = Map.get(new_comp_state, :_pending, [])
+        clean_state = Map.put(new_comp_state, :_pending, [])
+        new_comp = %{comp | state: clean_state}
+        state = %{state | component_states: Map.put(state.component_states, component_id, new_comp)}
+
+        Enum.reduce(Enum.reverse(pending), state, fn {callback, value}, s ->
+          update_app(s, {callback, value})
+        end)
     end
   end
 
