@@ -191,6 +191,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {:enter, false, true, false, false} -> :submit
 
       # Undo/Redo
+      {"z", true, false, false, false} -> :undo
+      {"y", true, false, false, false} -> :redo
       {"-", true, false, false, false} -> :undo
       {".", true, false, false, false} -> :redo
       {"z", false, false, false, true} -> :undo
