@@ -93,6 +93,18 @@ defmodule ElixirOpentui.ANSI do
           boolean()
         ) :: iodata()
   def sgr(fg, bg, bold, italic, underline, strikethrough, dim \\ false, inverse \\ false, blink \\ false, hidden \\ false) do
+    sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden)
+  end
+
+  @doc "Generate SGR sequence from a cell map."
+  @spec sgr(map()) :: iodata()
+  def sgr(%{fg: fg, bg: bg, bold: bold, italic: italic, underline: underline,
+            strikethrough: strikethrough, dim: dim, inverse: inverse,
+            blink: blink, hidden: hidden}) do
+    sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden)
+  end
+
+  defp sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden) do
     parts =
       []
       |> maybe_add(bold, "1")
@@ -159,21 +171,7 @@ defmodule ElixirOpentui.ANSI do
         if style == prev_style do
           {[acc, cell.char], style}
         else
-          sgr_seq =
-            sgr(
-              cell.fg,
-              cell.bg,
-              cell.bold,
-              cell.italic,
-              cell.underline,
-              cell.strikethrough,
-              cell.dim,
-              cell.inverse,
-              cell.blink,
-              cell.hidden
-            )
-
-          {[acc, sgr_seq, cell.char], style}
+          {[acc, sgr(cell), cell.char], style}
         end
       end)
 
@@ -188,21 +186,7 @@ defmodule ElixirOpentui.ANSI do
         if style == prev_style do
           {[acc, cell.char], style}
         else
-          sgr_seq =
-            sgr(
-              cell.fg,
-              cell.bg,
-              cell.bold,
-              cell.italic,
-              cell.underline,
-              cell.strikethrough,
-              cell.dim,
-              cell.inverse,
-              cell.blink,
-              cell.hidden
-            )
-
-          {[acc, sgr_seq, cell.char], style}
+          {[acc, sgr(cell), cell.char], style}
         end
       end)
 

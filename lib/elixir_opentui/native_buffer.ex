@@ -58,11 +58,9 @@ defmodule ElixirOpentui.NativeBuffer do
   end
 
   @doc "Draw a character with alpha blending over existing cell."
-  @spec draw_char_blend(t(), integer(), integer(), String.t(), Color.t(), Color.t()) :: t()
-  def draw_char_blend(%__MODULE__{} = buf, x, y, char, fg, bg) do
-    # Alpha blending happens in Elixir before encoding (Color.blend called by Painter)
-    # NIF draw_char_blend is standalone — but for batch protocol, just emit a CELL record
-    %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, 0, 0)]}
+  @spec draw_char_blend(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
+  def draw_char_blend(%__MODULE__{} = buf, x, y, char, fg, bg, attrs \\ []) do
+    %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
   end
 
   @doc "Draw a string horizontally starting at (x, y) with optional text attributes."

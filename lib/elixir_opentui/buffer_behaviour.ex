@@ -32,6 +32,15 @@ defmodule ElixirOpentui.BufferBehaviour do
               fg :: Color.t(),
               bg :: Color.t()
             ) :: term()
+  @callback draw_char_blend(
+              buf :: term(),
+              x :: integer(),
+              y :: integer(),
+              char :: String.t(),
+              fg :: Color.t(),
+              bg :: Color.t(),
+              attrs :: keyword()
+            ) :: term()
   @callback draw_text(
               buf :: term(),
               x :: integer(),

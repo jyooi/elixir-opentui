@@ -84,9 +84,10 @@ defmodule ElixirOpentui.Buffer do
           non_neg_integer(),
           String.t(),
           Color.t(),
-          Color.t()
+          Color.t(),
+          keyword()
         ) :: t()
-  def draw_char_blend(buf, x, y, char, fg, bg) do
+  def draw_char_blend(buf, x, y, char, fg, bg, attrs \\ []) do
     case get_cell(buf, x, y) do
       nil ->
         buf
@@ -94,7 +95,7 @@ defmodule ElixirOpentui.Buffer do
       existing ->
         blended_fg = Color.blend(fg, existing.fg)
         blended_bg = Color.blend(bg, existing.bg)
-        draw_char(buf, x, y, char, blended_fg, blended_bg)
+        draw_char(buf, x, y, char, blended_fg, blended_bg, attrs)
     end
   end
 

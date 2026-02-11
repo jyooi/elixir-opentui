@@ -231,6 +231,44 @@ defmodule ElixirOpentui.ANSITest do
     end
   end
 
+  describe "sgr/1 map overload" do
+    test "produces same output as sgr/10" do
+      fg = {255, 0, 0, 255}
+      bg = {0, 0, 255, 255}
+
+      cell = %{fg: fg, bg: bg, bold: true, italic: false, underline: true,
+               strikethrough: false, dim: false, inverse: false, blink: false, hidden: false}
+
+      from_map = IO.iodata_to_binary(ANSI.sgr(cell))
+      from_args = IO.iodata_to_binary(ANSI.sgr(fg, bg, true, false, true, false, false, false, false, false))
+      assert from_map == from_args
+    end
+
+    test "all attributes set produces parity" do
+      fg = {128, 128, 128, 255}
+      bg = {64, 64, 64, 255}
+
+      cell = %{fg: fg, bg: bg, bold: true, italic: true, underline: true,
+               strikethrough: true, dim: true, inverse: true, blink: true, hidden: true}
+
+      from_map = IO.iodata_to_binary(ANSI.sgr(cell))
+      from_args = IO.iodata_to_binary(ANSI.sgr(fg, bg, true, true, true, true, true, true, true, true))
+      assert from_map == from_args
+    end
+
+    test "no attributes set produces parity" do
+      fg = {255, 255, 255, 255}
+      bg = {0, 0, 0, 255}
+
+      cell = %{fg: fg, bg: bg, bold: false, italic: false, underline: false,
+               strikethrough: false, dim: false, inverse: false, blink: false, hidden: false}
+
+      from_map = IO.iodata_to_binary(ANSI.sgr(cell))
+      from_args = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, false, false, false, false))
+      assert from_map == from_args
+    end
+  end
+
   describe "frame wrapper" do
     test "wraps content with cursor hide/show" do
       result = IO.iodata_to_binary(ANSI.frame("hello"))
