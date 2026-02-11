@@ -13,6 +13,9 @@ defmodule ElixirOpentui.Style do
   @type align_self :: :auto | :flex_start | :flex_end | :center | :stretch
   @type position_type :: :relative | :absolute
 
+  @type border_style :: :single | :double | :rounded | :heavy
+  @type cursor_style :: :block | :underline | :bar
+
   @type t :: %__MODULE__{
           flex_direction: flex_direction(),
           flex_grow: number(),
@@ -36,11 +39,27 @@ defmodule ElixirOpentui.Style do
           right: non_neg_integer() | nil,
           bottom: non_neg_integer() | nil,
           border: boolean(),
+          border_style: border_style(),
+          border_title: String.t() | nil,
+          border_title_align: :left | :center | :right,
           fg: Color.t() | nil,
           bg: Color.t() | nil,
           opacity: float(),
           overflow: :visible | :hidden,
-          z_index: integer()
+          z_index: integer(),
+          focus_fg: Color.t() | nil,
+          focus_bg: Color.t() | nil,
+          focus_border_color: Color.t() | nil,
+          cursor_color: Color.t() | nil,
+          cursor_style: cursor_style() | nil,
+          bold: boolean(),
+          italic: boolean(),
+          underline: boolean(),
+          strikethrough: boolean(),
+          dim: boolean(),
+          inverse: boolean(),
+          blink: boolean(),
+          hidden: boolean()
         }
 
   defstruct flex_direction: :column,
@@ -65,11 +84,27 @@ defmodule ElixirOpentui.Style do
             right: nil,
             bottom: nil,
             border: false,
+            border_style: :single,
+            border_title: nil,
+            border_title_align: :left,
             fg: nil,
             bg: nil,
             opacity: 1.0,
             overflow: :visible,
-            z_index: 0
+            z_index: 0,
+            focus_fg: nil,
+            focus_bg: nil,
+            focus_border_color: nil,
+            cursor_color: nil,
+            cursor_style: nil,
+            bold: false,
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            dim: false,
+            inverse: false,
+            blink: false,
+            hidden: false
 
   @doc "Build a Style from keyword attrs, normalizing shorthand padding/margin."
   @spec from_attrs(keyword()) :: t()

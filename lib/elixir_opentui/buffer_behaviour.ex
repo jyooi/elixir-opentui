@@ -15,6 +15,15 @@ defmodule ElixirOpentui.BufferBehaviour do
               fg :: Color.t(),
               bg :: Color.t()
             ) :: term()
+  @callback draw_char(
+              buf :: term(),
+              x :: integer(),
+              y :: integer(),
+              char :: String.t(),
+              fg :: Color.t(),
+              bg :: Color.t(),
+              attrs :: keyword()
+            ) :: term()
   @callback draw_char_blend(
               buf :: term(),
               x :: integer(),
@@ -31,6 +40,15 @@ defmodule ElixirOpentui.BufferBehaviour do
               fg :: Color.t(),
               bg :: Color.t()
             ) :: term()
+  @callback draw_text(
+              buf :: term(),
+              x :: integer(),
+              y :: integer(),
+              text :: String.t(),
+              fg :: Color.t(),
+              bg :: Color.t(),
+              attrs :: keyword()
+            ) :: term()
   @callback fill_rect(
               buf :: term(),
               x :: integer(),
@@ -40,6 +58,17 @@ defmodule ElixirOpentui.BufferBehaviour do
               char :: String.t(),
               fg :: Color.t(),
               bg :: Color.t()
+            ) :: term()
+  @callback fill_rect(
+              buf :: term(),
+              x :: integer(),
+              y :: integer(),
+              w :: integer(),
+              h :: integer(),
+              char :: String.t(),
+              fg :: Color.t(),
+              bg :: Color.t(),
+              attrs :: keyword()
             ) :: term()
   @callback set_hit_region(
               buf :: term(),
