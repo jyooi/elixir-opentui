@@ -248,10 +248,10 @@ defmodule ElixirOpentui.Widgets.TextInputTest do
       assert tree.attrs.cursor_bg == {200, 200, 200, 255}
     end
 
-    test "cursor_style passed through element attrs" do
+    test "cursor_style passed through element style" do
       state = TextInput.init(%{id: :inp, cursor_style: :bar})
       tree = TextInput.render(state)
-      assert tree.attrs.cursor_style == :bar
+      assert tree.style.cursor_style == :bar
     end
   end
 

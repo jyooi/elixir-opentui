@@ -51,10 +51,10 @@ defmodule ElixirOpentui.NativeBuffer do
     }
   end
 
-  @doc "Draw a single character at (x, y)."
-  @spec draw_char(t(), integer(), integer(), String.t(), Color.t(), Color.t()) :: t()
-  def draw_char(%__MODULE__{ops: ops} = buf, x, y, char, fg, bg) do
-    %{buf | ops: [ops | encode_cell(x, y, char, fg, bg, 0, 0)]}
+  @doc "Draw a single character at (x, y) with optional text attributes."
+  @spec draw_char(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
+  def draw_char(%__MODULE__{ops: ops} = buf, x, y, char, fg, bg, attrs \\ []) do
+    %{buf | ops: [ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
   end
 
   @doc "Draw a character with alpha blending over existing cell."
@@ -65,22 +65,22 @@ defmodule ElixirOpentui.NativeBuffer do
     %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, 0, 0)]}
   end
 
-  @doc "Draw a string horizontally starting at (x, y)."
-  @spec draw_text(t(), integer(), integer(), String.t(), Color.t(), Color.t()) :: t()
-  def draw_text(buf, x, y, text, fg, bg) do
+  @doc "Draw a string horizontally starting at (x, y) with optional text attributes."
+  @spec draw_text(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
+  def draw_text(buf, x, y, text, fg, bg, attrs \\ []) do
     text
     |> String.graphemes()
     |> Enum.reduce({buf, x}, fn grapheme, {b, cx} ->
-      {draw_char(b, cx, y, grapheme, fg, bg), cx + 1}
+      {draw_char(b, cx, y, grapheme, fg, bg, attrs), cx + 1}
     end)
     |> elem(0)
   end
 
-  @doc "Fill a rectangular region."
-  @spec fill_rect(t(), integer(), integer(), integer(), integer(), String.t(), Color.t(), Color.t()) ::
+  @doc "Fill a rectangular region with optional text attributes."
+  @spec fill_rect(t(), integer(), integer(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) ::
           t()
-  def fill_rect(%__MODULE__{ops: ops} = buf, x, y, w, h, char, fg, bg) do
-    %{buf | ops: [ops | encode_fill(x, y, w, h, char, fg, bg, 0)]}
+  def fill_rect(%__MODULE__{ops: ops} = buf, x, y, w, h, char, fg, bg, attrs \\ []) do
+    %{buf | ops: [ops | encode_fill(x, y, w, h, char, fg, bg, encode_attrs(attrs))]}
   end
 
   @doc "Set hit_id for a rectangular region."
@@ -108,6 +108,8 @@ defmodule ElixirOpentui.NativeBuffer do
           strikethrough: Bitwise.band(attrs, 8) != 0,
           dim: Bitwise.band(attrs, 16) != 0,
           inverse: Bitwise.band(attrs, 32) != 0,
+          blink: Bitwise.band(attrs, 64) != 0,
+          hidden: Bitwise.band(attrs, 128) != 0,
           hit_id: nil
         }
     end
@@ -169,6 +171,22 @@ defmodule ElixirOpentui.NativeBuffer do
   end
 
   # ── Binary Protocol Encoding ────────────────────────────────────────────
+
+  defp encode_attrs([]), do: 0
+
+  defp encode_attrs(attrs) do
+    Enum.reduce(attrs, 0, fn
+      {:bold, true}, acc -> Bitwise.bor(acc, 1)
+      {:italic, true}, acc -> Bitwise.bor(acc, 2)
+      {:underline, true}, acc -> Bitwise.bor(acc, 4)
+      {:strikethrough, true}, acc -> Bitwise.bor(acc, 8)
+      {:dim, true}, acc -> Bitwise.bor(acc, 16)
+      {:inverse, true}, acc -> Bitwise.bor(acc, 32)
+      {:blink, true}, acc -> Bitwise.bor(acc, 64)
+      {:hidden, true}, acc -> Bitwise.bor(acc, 128)
+      _, acc -> acc
+    end)
+  end
 
   defp encode_cell(x, y, char, {fr, fg, fb, _fa}, {br, bg, bb, _ba}, attrs, hit_id) do
     char_bin = pad_utf8(char)
