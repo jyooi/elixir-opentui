@@ -66,11 +66,27 @@ defmodule ElixirOpentui.Element do
     :right,
     :bottom,
     :border,
+    :border_style,
+    :border_title,
+    :border_title_align,
     :fg,
     :bg,
     :opacity,
     :overflow,
-    :z_index
+    :z_index,
+    :focus_fg,
+    :focus_bg,
+    :focus_border_color,
+    :cursor_color,
+    :cursor_style,
+    :bold,
+    :italic,
+    :underline,
+    :strikethrough,
+    :dim,
+    :inverse,
+    :blink,
+    :hidden
   ]
 
   @doc "Create an element from type, keyword attrs, and children list."

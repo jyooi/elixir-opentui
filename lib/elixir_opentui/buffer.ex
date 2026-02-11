@@ -21,6 +21,8 @@ defmodule ElixirOpentui.Buffer do
           strikethrough: boolean(),
           dim: boolean(),
           inverse: boolean(),
+          blink: boolean(),
+          hidden: boolean(),
           hit_id: term()
         }
 
@@ -66,11 +68,12 @@ defmodule ElixirOpentui.Buffer do
 
   def put_cell(buf, _, _, _), do: buf
 
-  @doc "Write a character at (x, y) with fg/bg colors."
-  @spec draw_char(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t()) ::
+  @doc "Write a character at (x, y) with fg/bg colors and optional text attributes."
+  @spec draw_char(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t(), keyword()) ::
           t()
-  def draw_char(buf, x, y, char, fg, bg) do
+  def draw_char(buf, x, y, char, fg, bg, attrs \\ []) do
     cell = %{blank_cell(fg, bg) | char: char}
+    cell = apply_attrs(cell, attrs)
     put_cell(buf, x, y, cell)
   end
 
@@ -81,9 +84,10 @@ defmodule ElixirOpentui.Buffer do
           non_neg_integer(),
           String.t(),
           Color.t(),
-          Color.t()
+          Color.t(),
+          keyword()
         ) :: t()
-  def draw_char_blend(buf, x, y, char, fg, bg) do
+  def draw_char_blend(buf, x, y, char, fg, bg, attrs \\ []) do
     case get_cell(buf, x, y) do
       nil ->
         buf
@@ -91,23 +95,23 @@ defmodule ElixirOpentui.Buffer do
       existing ->
         blended_fg = Color.blend(fg, existing.fg)
         blended_bg = Color.blend(bg, existing.bg)
-        draw_char(buf, x, y, char, blended_fg, blended_bg)
+        draw_char(buf, x, y, char, blended_fg, blended_bg, attrs)
     end
   end
 
-  @doc "Write a string horizontally starting at (x, y)."
-  @spec draw_text(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t()) ::
+  @doc "Write a string horizontally starting at (x, y) with optional text attributes."
+  @spec draw_text(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t(), keyword()) ::
           t()
-  def draw_text(buf, x, y, text, fg, bg) do
+  def draw_text(buf, x, y, text, fg, bg, attrs \\ []) do
     text
     |> String.graphemes()
     |> Enum.reduce({buf, x}, fn grapheme, {b, cx} ->
-      {draw_char(b, cx, y, grapheme, fg, bg), cx + 1}
+      {draw_char(b, cx, y, grapheme, fg, bg, attrs), cx + 1}
     end)
     |> elem(0)
   end
 
-  @doc "Fill a rectangular region with a character and colors."
+  @doc "Fill a rectangular region with a character, colors, and optional text attributes."
   @spec fill_rect(
           t(),
           non_neg_integer(),
@@ -116,13 +120,14 @@ defmodule ElixirOpentui.Buffer do
           non_neg_integer(),
           String.t(),
           Color.t(),
-          Color.t()
+          Color.t(),
+          keyword()
         ) :: t()
-  def fill_rect(buf, x, y, w, h, char, fg, bg) do
+  def fill_rect(buf, x, y, w, h, char, fg, bg, attrs \\ []) do
     for cy <- y..(y + h - 1)//1,
         cx <- x..(x + w - 1)//1,
         reduce: buf do
-      acc -> draw_char(acc, cx, cy, char, fg, bg)
+      acc -> draw_char(acc, cx, cy, char, fg, bg, attrs)
     end
   end
 
@@ -228,7 +233,25 @@ defmodule ElixirOpentui.Buffer do
       strikethrough: false,
       dim: false,
       inverse: false,
+      blink: false,
+      hidden: false,
       hit_id: nil
     }
+  end
+
+  defp apply_attrs(cell, []), do: cell
+
+  defp apply_attrs(cell, attrs) do
+    Enum.reduce(attrs, cell, fn
+      {:bold, v}, c -> %{c | bold: v}
+      {:italic, v}, c -> %{c | italic: v}
+      {:underline, v}, c -> %{c | underline: v}
+      {:strikethrough, v}, c -> %{c | strikethrough: v}
+      {:dim, v}, c -> %{c | dim: v}
+      {:inverse, v}, c -> %{c | inverse: v}
+      {:blink, v}, c -> %{c | blink: v}
+      {:hidden, v}, c -> %{c | hidden: v}
+      _, c -> c
+    end)
   end
 end
