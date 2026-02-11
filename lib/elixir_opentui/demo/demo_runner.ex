@@ -31,6 +31,12 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     # This enables lazy-read so IO.getn is the only terminal reader.
     :shell.start_interactive({:noshell, :raw})
 
+    # Disable ISIG at the POSIX terminal driver level so signal-generating
+    # bytes (Ctrl+Z=26, Ctrl+C=3, Ctrl+\=28) reach the app instead of
+    # being consumed by the kernel line discipline.
+    :os.set_signal(:sigtstp, :ignore)
+    :os.cmd(~c"stty -isig </dev/tty")
+
     {:ok, tty} = :file.open(~c"/dev/tty", [:write, :raw, :binary])
 
     try do
@@ -55,6 +61,8 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     after
       restore_terminal(tty)
       :file.close(tty)
+      :os.cmd(~c"stty isig </dev/tty")
+      :os.set_signal(:sigtstp, :default)
     end
   end
 

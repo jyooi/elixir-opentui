@@ -103,6 +103,8 @@ defmodule ElixirOpentui.Terminal do
 
   def handle_call(:enter, _from, state) do
     setup_raw_mode()
+    :os.set_signal(:sigtstp, :ignore)
+    disable_isig()
     output = [ANSI.enter_alt_screen(), ANSI.hide_cursor(), ANSI.enable_mouse(), ANSI.enable_paste()]
     write_stdout(output)
     {:reply, :ok, %{state | raw_mode: true}}
@@ -112,6 +114,8 @@ defmodule ElixirOpentui.Terminal do
     output = [ANSI.disable_paste(), ANSI.disable_mouse(), ANSI.show_cursor(), ANSI.leave_alt_screen(), ANSI.reset()]
     write_stdout(output)
     restore_mode()
+    restore_isig()
+    :os.set_signal(:sigtstp, :default)
     {:reply, :ok, %{state | raw_mode: false}}
   end
 
@@ -167,6 +171,7 @@ defmodule ElixirOpentui.Terminal do
       output = [ANSI.disable_paste(), ANSI.disable_mouse(), ANSI.show_cursor(), ANSI.leave_alt_screen(), ANSI.reset()]
       write_stdout(output)
       restore_mode()
+      restore_isig()
     end
 
     :ok
@@ -188,6 +193,18 @@ defmodule ElixirOpentui.Terminal do
 
   defp write_stdout(data) do
     :io.put_chars(:standard_io, data)
+  rescue
+    _ -> :ok
+  end
+
+  defp disable_isig do
+    :os.cmd(~c"stty -isig </dev/tty")
+  rescue
+    _ -> :ok
+  end
+
+  defp restore_isig do
+    :os.cmd(~c"stty isig </dev/tty")
   rescue
     _ -> :ok
   end

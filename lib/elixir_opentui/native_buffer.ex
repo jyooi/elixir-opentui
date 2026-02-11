@@ -32,7 +32,8 @@ defmodule ElixirOpentui.NativeBuffer do
     hit_reverse: %{},
     next_hit: 1,
     default_fg: {255, 255, 255, 255},
-    default_bg: {0, 0, 0, 255}
+    default_bg: {0, 0, 0, 255},
+    scissor_stack: []
   ]
 
   @doc "Create a new NIF-backed buffer."
@@ -51,16 +52,43 @@ defmodule ElixirOpentui.NativeBuffer do
     }
   end
 
+  @doc "Push a scissor rect. Drawing is clipped to the intersection of all active scissor rects."
+  def push_scissor(%__MODULE__{scissor_stack: stack} = buf, x, y, w, h) do
+    parent =
+      case stack do
+        [] -> {0, 0, buf.cols, buf.rows}
+        [top | _] -> top
+      end
+
+    clipped = intersect_rect({x, y, w, h}, parent)
+    %{buf | scissor_stack: [clipped | stack]}
+  end
+
+  @doc "Pop the top scissor rect, restoring the previous clip region."
+  def pop_scissor(%__MODULE__{scissor_stack: [_ | rest]} = buf) do
+    %{buf | scissor_stack: rest}
+  end
+
+  def pop_scissor(buf), do: buf
+
   @doc "Draw a single character at (x, y) with optional text attributes."
   @spec draw_char(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
-  def draw_char(%__MODULE__{ops: ops} = buf, x, y, char, fg, bg, attrs \\ []) do
-    %{buf | ops: [ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
+  def draw_char(%__MODULE__{} = buf, x, y, char, fg, bg, attrs \\ []) do
+    if in_scissor?(buf, x, y) do
+      %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
+    else
+      buf
+    end
   end
 
   @doc "Draw a character with alpha blending over existing cell."
   @spec draw_char_blend(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
   def draw_char_blend(%__MODULE__{} = buf, x, y, char, fg, bg, attrs \\ []) do
-    %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
+    if in_scissor?(buf, x, y) do
+      %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
+    else
+      buf
+    end
   end
 
   @doc "Draw a string horizontally starting at (x, y) with optional text attributes."
@@ -77,15 +105,27 @@ defmodule ElixirOpentui.NativeBuffer do
   @doc "Fill a rectangular region with optional text attributes."
   @spec fill_rect(t(), integer(), integer(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) ::
           t()
-  def fill_rect(%__MODULE__{ops: ops} = buf, x, y, w, h, char, fg, bg, attrs \\ []) do
-    %{buf | ops: [ops | encode_fill(x, y, w, h, char, fg, bg, encode_attrs(attrs))]}
+  def fill_rect(%__MODULE__{} = buf, x, y, w, h, char, fg, bg, attrs \\ []) do
+    {cx, cy, cw, ch} = clip_rect(buf, x, y, w, h)
+
+    if cw > 0 and ch > 0 do
+      %{buf | ops: [buf.ops | encode_fill(cx, cy, cw, ch, char, fg, bg, encode_attrs(attrs))]}
+    else
+      buf
+    end
   end
 
   @doc "Set hit_id for a rectangular region."
   @spec set_hit_region(t(), integer(), integer(), integer(), integer(), term()) :: t()
   def set_hit_region(%__MODULE__{} = buf, x, y, w, h, hit_id) do
-    {u16_id, buf} = map_hit_id(buf, hit_id)
-    %{buf | ops: [buf.ops | encode_hit(x, y, w, h, u16_id)]}
+    {cx, cy, cw, ch} = clip_rect(buf, x, y, w, h)
+
+    if cw > 0 and ch > 0 do
+      {u16_id, buf} = map_hit_id(buf, hit_id)
+      %{buf | ops: [buf.ops | encode_hit(cx, cy, cw, ch, u16_id)]}
+    else
+      buf
+    end
   end
 
   @doc "Get cell data at (x, y) from the front buffer."
@@ -212,6 +252,30 @@ defmodule ElixirOpentui.NativeBuffer do
       n when n >= 4 -> :binary.list_to_bin(Enum.take(bytes, 4))
       _ -> :binary.list_to_bin(bytes ++ List.duplicate(0, 4 - len))
     end
+  end
+
+  defp in_scissor?(%__MODULE__{scissor_stack: [], cols: cols, rows: rows}, x, y) do
+    x >= 0 and x < cols and y >= 0 and y < rows
+  end
+
+  defp in_scissor?(%__MODULE__{scissor_stack: [{sx, sy, sw, sh} | _]}, x, y) do
+    x >= sx and x < sx + sw and y >= sy and y < sy + sh
+  end
+
+  defp clip_rect(%__MODULE__{scissor_stack: [], cols: cols, rows: rows}, x, y, w, h) do
+    intersect_rect({x, y, w, h}, {0, 0, cols, rows})
+  end
+
+  defp clip_rect(%__MODULE__{scissor_stack: [scissor | _]}, x, y, w, h) do
+    intersect_rect({x, y, w, h}, scissor)
+  end
+
+  defp intersect_rect({x1, y1, w1, h1}, {x2, y2, w2, h2}) do
+    left = max(x1, x2)
+    top = max(y1, y2)
+    right = min(x1 + w1, x2 + w2)
+    bottom = min(y1 + h1, y2 + h2)
+    {left, top, max(0, right - left), max(0, bottom - top)}
   end
 
   defp map_hit_id(%__MODULE__{hit_map: map, hit_reverse: rev, next_hit: next} = buf, hit_id)
