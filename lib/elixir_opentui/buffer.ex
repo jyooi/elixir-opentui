@@ -31,10 +31,11 @@ defmodule ElixirOpentui.Buffer do
           rows: non_neg_integer(),
           cells: :array.array(cell()),
           default_fg: Color.t(),
-          default_bg: Color.t()
+          default_bg: Color.t(),
+          scissor_stack: [{integer(), integer(), integer(), integer()}]
         }
 
-  defstruct cols: 0, rows: 0, cells: nil, default_fg: nil, default_bg: nil
+  defstruct cols: 0, rows: 0, cells: nil, default_fg: nil, default_bg: nil, scissor_stack: []
 
   @default_fg {255, 255, 255, 255}
   @default_bg {0, 0, 0, 255}
@@ -59,14 +60,36 @@ defmodule ElixirOpentui.Buffer do
 
   def get_cell(_, _, _), do: nil
 
-  @doc "Set a cell at (x, y). No-op if out of bounds."
+  @doc "Set a cell at (x, y). No-op if out of bounds or outside scissor rect."
   @spec put_cell(t(), non_neg_integer(), non_neg_integer(), cell()) :: t()
-  def put_cell(%__MODULE__{cols: cols, rows: rows, cells: cells} = buf, x, y, cell)
-      when x >= 0 and x < cols and y >= 0 and y < rows do
-    %{buf | cells: :array.set(y * cols + x, cell, cells)}
+  def put_cell(%__MODULE__{} = buf, x, y, cell) do
+    if in_scissor?(buf, x, y) do
+      %{buf | cells: :array.set(y * buf.cols + x, cell, buf.cells)}
+    else
+      buf
+    end
   end
 
   def put_cell(buf, _, _, _), do: buf
+
+  @doc "Push a scissor rect. Drawing is clipped to the intersection of all active scissor rects."
+  def push_scissor(%__MODULE__{scissor_stack: stack} = buf, x, y, w, h) do
+    parent =
+      case stack do
+        [] -> {0, 0, buf.cols, buf.rows}
+        [top | _] -> top
+      end
+
+    clipped = intersect_rect({x, y, w, h}, parent)
+    %{buf | scissor_stack: [clipped | stack]}
+  end
+
+  @doc "Pop the top scissor rect, restoring the previous clip region."
+  def pop_scissor(%__MODULE__{scissor_stack: [_ | rest]} = buf) do
+    %{buf | scissor_stack: rest}
+  end
+
+  def pop_scissor(buf), do: buf
 
   @doc "Write a character at (x, y) with fg/bg colors and optional text attributes."
   @spec draw_char(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t(), keyword()) ::
@@ -221,6 +244,22 @@ defmodule ElixirOpentui.Buffer do
   end
 
   def diff(_, _), do: []
+
+  defp in_scissor?(%__MODULE__{scissor_stack: [], cols: cols, rows: rows}, x, y) do
+    x >= 0 and x < cols and y >= 0 and y < rows
+  end
+
+  defp in_scissor?(%__MODULE__{scissor_stack: [{sx, sy, sw, sh} | _]}, x, y) do
+    x >= sx and x < sx + sw and y >= sy and y < sy + sh
+  end
+
+  defp intersect_rect({x1, y1, w1, h1}, {x2, y2, w2, h2}) do
+    left = max(x1, x2)
+    top = max(y1, y2)
+    right = min(x1 + w1, x2 + w2)
+    bottom = min(y1 + h1, y2 + h2)
+    {left, top, max(0, right - left), max(0, bottom - top)}
+  end
 
   defp blank_cell(fg, bg) do
     %{
