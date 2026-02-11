@@ -183,4 +183,31 @@ defmodule ElixirOpentui.BorderTest do
       assert String.contains?(top, " Settings ")
     end
   end
+
+  describe "border title right-alignment corner safety" do
+    test "right-aligned title on narrow box preserves corners" do
+      tree = Element.new(:box, width: 8, height: 3, border: true,
+                         border_title: "Hi", border_title_align: :right)
+      {tagged, layout} = Layout.compute(tree, 8, 3)
+      buf = Buffer.new(8, 3)
+      rows = Painter.paint(tagged, layout, buf) |> Buffer.to_strings()
+      top = hd(rows)
+
+      assert String.at(top, 0) == "┌"
+      assert String.at(top, 7) == "┐"
+      assert String.contains?(top, " Hi ")
+    end
+
+    test "center-aligned title on narrow box preserves corners" do
+      tree = Element.new(:box, width: 8, height: 3, border: true,
+                         border_title: "Hi", border_title_align: :center)
+      {tagged, layout} = Layout.compute(tree, 8, 3)
+      buf = Buffer.new(8, 3)
+      rows = Painter.paint(tagged, layout, buf) |> Buffer.to_strings()
+      top = hd(rows)
+
+      assert String.at(top, 0) == "┌"
+      assert String.at(top, 7) == "┐"
+    end
+  end
 end

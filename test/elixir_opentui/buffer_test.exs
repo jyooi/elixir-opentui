@@ -98,6 +98,39 @@ defmodule ElixirOpentui.BufferTest do
       assert r > 100
       assert b > 0
     end
+
+    test "preserves text attributes through blend" do
+      buf = Buffer.new(10, 5)
+      buf = Buffer.draw_char(buf, 0, 0, " ", Color.blue(), Color.blue())
+
+      buf =
+        Buffer.draw_char_blend(
+          buf,
+          0,
+          0,
+          "B",
+          Color.rgba(255, 0, 0, 128),
+          Color.rgba(255, 0, 0, 128),
+          bold: true, italic: true
+        )
+
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.char == "B"
+      assert cell.bold == true
+      assert cell.italic == true
+    end
+
+    test "blend without attrs defaults to no attributes" do
+      buf = Buffer.new(10, 5)
+      buf = Buffer.draw_char(buf, 0, 0, " ", Color.blue(), Color.blue())
+
+      buf =
+        Buffer.draw_char_blend(buf, 0, 0, "X", Color.rgba(255, 0, 0, 128), Color.rgba(255, 0, 0, 128))
+
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.bold == false
+      assert cell.italic == false
+    end
   end
 
   describe "draw_text/6" do

@@ -135,6 +135,8 @@ defmodule ElixirOpentui.Painter do
           _left -> x + 1
         end
 
+      start_x = max(x + 1, min(start_x, x + w - 1 - title_display_w))
+
       mod.draw_text(buf, start_x, y, title_str, fg, bg)
     else
       buf
