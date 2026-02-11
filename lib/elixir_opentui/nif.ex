@@ -423,7 +423,9 @@ defmodule ElixirOpentui.NIF do
       if (attrs & 16 != 0) try output.appendSlice(gpa, ";2");
       if (attrs & 2 != 0) try output.appendSlice(gpa, ";3");
       if (attrs & 4 != 0) try output.appendSlice(gpa, ";4");
+      if (attrs & 64 != 0) try output.appendSlice(gpa, ";5");
       if (attrs & 32 != 0) try output.appendSlice(gpa, ";7");
+      if (attrs & 128 != 0) try output.appendSlice(gpa, ";8");
       if (attrs & 8 != 0) try output.appendSlice(gpa, ";9");
 
       try output.appendSlice(gpa, ";38;2;");

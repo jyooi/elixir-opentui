@@ -64,11 +64,18 @@ defmodule ElixirOpentui.ANSI do
 
   # --- Cursor shape ---
 
-  @doc "Set terminal cursor shape. Steady variants."
-  @spec cursor_shape(:block | :underline | :bar) :: iodata()
-  def cursor_shape(:block), do: "\e[2 q"
-  def cursor_shape(:underline), do: "\e[4 q"
-  def cursor_shape(:bar), do: "\e[6 q"
+  @doc "Set terminal cursor shape. Steady variants (no opts) or blink control."
+  @spec cursor_shape(:block | :underline | :bar, keyword()) :: iodata()
+  def cursor_shape(style, opts \\ [])
+  def cursor_shape(:block, opts) do
+    if Keyword.get(opts, :blink, false), do: "\e[1 q", else: "\e[2 q"
+  end
+  def cursor_shape(:underline, opts) do
+    if Keyword.get(opts, :blink, false), do: "\e[3 q", else: "\e[4 q"
+  end
+  def cursor_shape(:bar, opts) do
+    if Keyword.get(opts, :blink, false), do: "\e[5 q", else: "\e[6 q"
+  end
 
   # --- Color / attribute SGR ---
 
@@ -81,16 +88,32 @@ defmodule ElixirOpentui.ANSI do
           boolean(),
           boolean(),
           boolean(),
+          boolean(),
+          boolean(),
           boolean()
         ) :: iodata()
-  def sgr(fg, bg, bold, italic, underline, strikethrough, dim \\ false, inverse \\ false) do
+  def sgr(fg, bg, bold, italic, underline, strikethrough, dim \\ false, inverse \\ false, blink \\ false, hidden \\ false) do
+    sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden)
+  end
+
+  @doc "Generate SGR sequence from a cell map."
+  @spec sgr(map()) :: iodata()
+  def sgr(%{fg: fg, bg: bg, bold: bold, italic: italic, underline: underline,
+            strikethrough: strikethrough, dim: dim, inverse: inverse,
+            blink: blink, hidden: hidden}) do
+    sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden)
+  end
+
+  defp sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden) do
     parts =
       []
       |> maybe_add(bold, "1")
       |> maybe_add(dim, "2")
       |> maybe_add(italic, "3")
       |> maybe_add(underline, "4")
+      |> maybe_add(blink, "5")
       |> maybe_add(inverse, "7")
+      |> maybe_add(hidden, "8")
       |> maybe_add(strikethrough, "9")
       |> add_fg(fg)
       |> add_bg(bg)
@@ -148,19 +171,7 @@ defmodule ElixirOpentui.ANSI do
         if style == prev_style do
           {[acc, cell.char], style}
         else
-          sgr_seq =
-            sgr(
-              cell.fg,
-              cell.bg,
-              cell.bold,
-              cell.italic,
-              cell.underline,
-              cell.strikethrough,
-              cell.dim,
-              cell.inverse
-            )
-
-          {[acc, sgr_seq, cell.char], style}
+          {[acc, sgr(cell), cell.char], style}
         end
       end)
 
@@ -175,19 +186,7 @@ defmodule ElixirOpentui.ANSI do
         if style == prev_style do
           {[acc, cell.char], style}
         else
-          sgr_seq =
-            sgr(
-              cell.fg,
-              cell.bg,
-              cell.bold,
-              cell.italic,
-              cell.underline,
-              cell.strikethrough,
-              cell.dim,
-              cell.inverse
-            )
-
-          {[acc, sgr_seq, cell.char], style}
+          {[acc, sgr(cell), cell.char], style}
         end
       end)
 
@@ -196,7 +195,7 @@ defmodule ElixirOpentui.ANSI do
 
   defp cell_style(cell) do
     {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough,
-     cell.dim, cell.inverse}
+     cell.dim, cell.inverse, cell.blink, cell.hidden}
   end
 
   # Group consecutive horizontal changes into runs for efficient cursor movement.

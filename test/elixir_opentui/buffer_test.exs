@@ -98,6 +98,39 @@ defmodule ElixirOpentui.BufferTest do
       assert r > 100
       assert b > 0
     end
+
+    test "preserves text attributes through blend" do
+      buf = Buffer.new(10, 5)
+      buf = Buffer.draw_char(buf, 0, 0, " ", Color.blue(), Color.blue())
+
+      buf =
+        Buffer.draw_char_blend(
+          buf,
+          0,
+          0,
+          "B",
+          Color.rgba(255, 0, 0, 128),
+          Color.rgba(255, 0, 0, 128),
+          bold: true, italic: true
+        )
+
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.char == "B"
+      assert cell.bold == true
+      assert cell.italic == true
+    end
+
+    test "blend without attrs defaults to no attributes" do
+      buf = Buffer.new(10, 5)
+      buf = Buffer.draw_char(buf, 0, 0, " ", Color.blue(), Color.blue())
+
+      buf =
+        Buffer.draw_char_blend(buf, 0, 0, "X", Color.rgba(255, 0, 0, 128), Color.rgba(255, 0, 0, 128))
+
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.bold == false
+      assert cell.italic == false
+    end
   end
 
   describe "draw_text/6" do
@@ -218,6 +251,56 @@ defmodule ElixirOpentui.BufferTest do
       buf1 = Buffer.new(5, 3)
       buf2 = Buffer.new(10, 5)
       assert Buffer.diff(buf1, buf2) == []
+    end
+  end
+
+  describe "blink and hidden attrs" do
+    test "blank cell has blink: false and hidden: false" do
+      buf = Buffer.new(5, 3)
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.blink == false
+      assert cell.hidden == false
+    end
+
+    test "draw_char with attrs sets blink and hidden" do
+      buf = Buffer.new(5, 3)
+      buf = Buffer.draw_char(buf, 0, 0, "X", Color.white(), Color.black(), blink: true, hidden: true)
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.char == "X"
+      assert cell.blink == true
+      assert cell.hidden == true
+    end
+
+    test "draw_char with attrs sets all 8 attributes" do
+      buf = Buffer.new(5, 3)
+      attrs = [bold: true, italic: true, underline: true, strikethrough: true,
+               dim: true, inverse: true, blink: true, hidden: true]
+      buf = Buffer.draw_char(buf, 0, 0, "A", Color.white(), Color.black(), attrs)
+      cell = Buffer.get_cell(buf, 0, 0)
+      assert cell.bold == true
+      assert cell.italic == true
+      assert cell.underline == true
+      assert cell.strikethrough == true
+      assert cell.dim == true
+      assert cell.inverse == true
+      assert cell.blink == true
+      assert cell.hidden == true
+    end
+
+    test "draw_text with attrs propagates to all chars" do
+      buf = Buffer.new(10, 1)
+      buf = Buffer.draw_text(buf, 0, 0, "Hi", Color.white(), Color.black(), bold: true)
+      assert Buffer.get_cell(buf, 0, 0).bold == true
+      assert Buffer.get_cell(buf, 1, 0).bold == true
+      assert Buffer.get_cell(buf, 2, 0).bold == false
+    end
+
+    test "fill_rect with attrs propagates to all cells" do
+      buf = Buffer.new(5, 3)
+      buf = Buffer.fill_rect(buf, 0, 0, 3, 2, ".", Color.white(), Color.black(), italic: true)
+      assert Buffer.get_cell(buf, 0, 0).italic == true
+      assert Buffer.get_cell(buf, 2, 1).italic == true
+      assert Buffer.get_cell(buf, 3, 0).italic == false
     end
   end
 end
