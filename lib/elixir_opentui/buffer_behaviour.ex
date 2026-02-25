@@ -89,6 +89,14 @@ defmodule ElixirOpentui.BufferBehaviour do
             ) :: term()
   @callback get_cell(buf :: term(), x :: integer(), y :: integer()) :: map() | nil
   @callback get_hit_id(buf :: term(), x :: integer(), y :: integer()) :: term()
+  @callback push_scissor(
+              buf :: term(),
+              x :: integer(),
+              y :: integer(),
+              w :: integer(),
+              h :: integer()
+            ) :: term()
+  @callback pop_scissor(buf :: term()) :: term()
   @callback clear(buf :: term()) :: term()
   @callback to_strings(buf :: term()) :: [String.t()]
 end

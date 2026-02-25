@@ -48,9 +48,23 @@ defmodule ElixirOpentui.Painter do
         buf = paint_content(buf, el, x, y, w, h, opacity, focused)
         buf = paint_hit_region(buf, el, x, y, w, h)
 
-        Enum.reduce(el.children, buf, fn child, b ->
-          paint_node(child, layout, b, opacity, focus_id)
-        end)
+        buf =
+          if el.type == :scroll_box do
+            buffer_mod(buf).push_scissor(buf, x, y, w, h)
+          else
+            buf
+          end
+
+        buf =
+          Enum.reduce(el.children, buf, fn child, b ->
+            paint_node(child, layout, b, opacity, focus_id)
+          end)
+
+        if el.type == :scroll_box do
+          buffer_mod(buf).pop_scissor(buf)
+        else
+          buf
+        end
     end
   end
 
