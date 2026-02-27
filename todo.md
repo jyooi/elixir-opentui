@@ -110,42 +110,30 @@ All 5 items verified as done (~224 tests across EditBuffer + EditorView + scisso
 
 ---
 
-## Phase 9: Advanced Widgets — :x: MOSTLY TODO
+## Phase 9: Advanced Widgets — :white_check_mark: COMPLETE
 
-Only 1 of 6 items done. **This is the largest remaining gap.**
+All 6 items done (1018 tests total).
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
 | 9a | TextArea widget | :white_check_mark: | `widgets/text_area.ex` — NIF-backed, full keybindings, selection, undo/redo, scroll (164 tests) |
-| 9b | Code widget (syntax highlighting) | :x: | No `widgets/code.ex`, no `:makeup` dep |
-| 9c | Diff widget (unified/split) | :x: | No `widgets/diff.ex` |
-| 9d | Markdown widget | :x: | No `widgets/markdown.ex`, no `:earmark` dep |
-| 9e | TabSelect widget | :x: | No `widgets/tab_select.ex` |
-| 9f | LineNumber widget | :x: | No `widgets/line_number.ex` |
-
-### TODO for Phase 9:
-- [ ] **9b. Code widget** — Add `:makeup` dep to mix.exs, create `widgets/code.ex` with syntax highlighting, streaming mode (~200 LOC)
-- [ ] **9c. Diff widget** — Create `widgets/diff.ex` with unified + split views, line numbers (~250 LOC)
-- [ ] **9d. Markdown widget** — Add `:earmark` dep to mix.exs, create `widgets/markdown.ex` (~180 LOC)
-- [ ] **9e. TabSelect widget** — Create `widgets/tab_select.ex` with horizontal tabs, scroll arrows, underline indicator (~120 LOC)
-- [ ] **9f. LineNumber widget** — Create `widgets/line_number.ex` with line signs, per-line colors, auto-width (~80 LOC)
+| 9b | Code widget (syntax highlighting) | :white_check_mark: | `widgets/code.ex` — Makeup-based highlighting, scroll, streaming mode; `:makeup` + `:makeup_elixir` deps (19 tests) |
+| 9c | Diff widget (unified/split) | :white_check_mark: | `widgets/diff.ex` — unified + split views, diff parser, line numbers, scroll (22 tests) |
+| 9d | Markdown widget | :white_check_mark: | `widgets/markdown.ex` — Earmark-based parsing, headings/lists/code blocks/blockquotes; `:earmark` dep (18 tests) |
+| 9e | TabSelect widget | :white_check_mark: | `widgets/tab_select.ex` — horizontal tabs, scroll offset, bracket/arrow nav, wrap selection (24 tests) |
+| 9f | LineNumber widget | :white_check_mark: | `widgets/line_number.ex` — line signs, per-line colors, auto-width, custom line numbers (25 tests) |
 
 ---
 
-## Phase 10: Animation & Live Mode — :x: NOT STARTED
+## Phase 10: Animation & Live Mode — :white_check_mark: COMPLETE
 
-0 of 3 items done.
+All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
-| 10a | Timeline API (easing, duration, loops) | :x: | No animation.ex, no easing/timeline/tween anywhere in lib/ |
-| 10b | Continuous render mode | :x: | Runtime is event-driven only; no FPS-based loop, no :tick handler |
-| 10c | Pause/resume/suspend | :x: | No pause/resume/suspend functions in runtime.ex or terminal.ex |
-
-### TODO for Phase 10:
-- [ ] **10a. Timeline API** — Create `animation.ex` with duration, easing functions (linear, ease-in/out, bounce), loops, pause (~150 LOC)
-- [ ] **10b. Continuous render mode** — Add `Process.send_after`-based tick loop in `runtime.ex`, configurable FPS (~60 LOC)
-- [ ] **10c. Pause/resume/suspend** — Add pause/resume/suspend API to `runtime.ex` + `terminal.ex` for shell-out support (~40 LOC)
+| 10a | Timeline API (easing, duration, loops) | :white_check_mark: | `animation/timeline.ex` — play/pause/advance/value, loops, alternation, sync, once, callbacks (88 tests); `animation/easing.ex` — 25 easing functions (104 tests) |
+| 10b | Continuous render mode | :white_check_mark: | `runtime.ex` — `_live` flag, `request_live/drop_live` ref counting, 60 FPS tick loop via `Process.send_after`, tick delivery to components (18 tests) |
+| 10c | Pause/resume/suspend | :white_check_mark: | `runtime.ex` — suspend/resume with nesting (suspend_count), FSM idle↔running↔suspended transitions (18 tests) |
 
 ---
 
@@ -208,7 +196,7 @@ Only 1 of 6 items done. **This is the largest remaining gap.**
 |---|------|--------|----------|----------|
 | R1 | Opacity stack (push/pop) | :white_check_mark: | — | `painter.ex:43` multiplied inheritance (`parent_opacity * el.style.opacity`) |
 | R2 | z-index ordering | :x: | Low | z_index field exists in style.ex/element.ex but never used in painter.ex |
-| R3 | Continuous render mode | :x: | High | Same as Phase 10b |
+| R3 | Continuous render mode | :white_check_mark: | High | Implemented in Phase 10b — `runtime.ex` tick loop |
 
 ### TODO for Rendering:
 - [ ] **R2. z-index ordering** — Sort children by z_index before painting in `painter.ex`
@@ -224,32 +212,32 @@ Only 1 of 6 items done. **This is the largest remaining gap.**
 | Phase 5-6: Terminal I/O & Events | 14 | 14 | **100%** |
 | Phase 7: Styling Foundation | 5 | 5 | **100%** |
 | Phase 8: Text System Upgrade | 5 | 5 | **100%** |
-| Phase 9: Advanced Widgets | 1 | 6 | **~17%** |
-| Phase 10: Animation & Live Mode | 0 | 3 | **0%** |
+| Phase 9: Advanced Widgets | 6 | 6 | **100%** |
+| Phase 10: Animation & Live Mode | 3 | 3 | **100%** |
 | Phase 11: Advanced Input | 2 | 5 | **40%** |
 | Phase 12: DX & Polish | 0 | 4 | **~5%** |
 | Layout Gaps | 0 | 3 | **0%** |
-| Rendering Gaps | 1 | 2 | **50%** |
-| **TOTAL** | **52** | **72** | **~72%** |
+| Rendering Gaps | 2 | 2 | **100%** |
+| **TOTAL** | **60** | **72** | **~83%** |
 
 ---
 
 ## Prioritized TODO Checklist (by impact)
 
 ### Critical
-- [ ] 9b. Code widget (syntax highlighting via Makeup)
-- [ ] 9c. Diff widget (unified/split views)
-- [ ] 10b. Continuous render mode in Runtime
+- [x] 9b. Code widget (syntax highlighting via Makeup)
+- [x] 9c. Diff widget (unified/split views)
+- [x] 10b. Continuous render mode in Runtime
 
 ### High
-- [ ] 9d. Markdown widget (via Earmark)
-- [ ] 9e. TabSelect widget
-- [ ] 10a. Timeline API (easing, duration, loops)
+- [x] 9d. Markdown widget (via Earmark)
+- [x] 9e. TabSelect widget
+- [x] 10a. Timeline API (easing, duration, loops)
 - [ ] 11b. Clipboard via OSC 52
 
 ### Medium
-- [ ] 9f. LineNumber widget
-- [ ] 10c. Pause/resume/suspend
+- [x] 9f. LineNumber widget
+- [x] 10c. Pause/resume/suspend
 - [ ] 11d. Kitty keyboard protocol
 - [ ] 11e. Terminal capability detection
 - [ ] 12a. Publish to Hex.pm
@@ -267,6 +255,6 @@ Only 1 of 6 items done. **This is the largest remaining gap.**
 
 ## Test Stats
 
-- **Current test files:** 36
-- **Approximate test count:** ~760+ (per MEMORY.md)
-- **Test count by phase:** P1-2(~180), P3-4(~136), P5-6(~138), P7(~40), P8(~224), P9(164 textarea)
+- **Current test files:** 41
+- **Approximate test count:** 1228 (verified 2026-02-27)
+- **Test count by phase:** P1-2(~180), P3-4(~136), P5-6(~138), P7(~40), P8(~224), P9(272), P10(210)
