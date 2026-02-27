@@ -17,7 +17,7 @@ defmodule ElixirOpentui.Terminal do
           listeners: [pid()]
         }
 
-  defstruct cols: 80, rows: 24, raw_mode: false, listeners: []
+  defstruct cols: 80, rows: 24, raw_mode: false, suspended: false, listeners: []
 
   # --- Public API ---
 
@@ -60,6 +60,18 @@ defmodule ElixirOpentui.Terminal do
   @spec unsubscribe(GenServer.server()) :: :ok
   def unsubscribe(server) do
     GenServer.call(server, {:unsubscribe, self()})
+  end
+
+  @doc "Suspend the terminal — leaves raw/alt screen mode, saves state."
+  @spec suspend(GenServer.server()) :: :ok
+  def suspend(server) do
+    GenServer.call(server, :suspend)
+  end
+
+  @doc "Resume the terminal — re-enters raw/alt screen mode."
+  @spec resume(GenServer.server()) :: :ok
+  def resume(server) do
+    GenServer.call(server, :resume)
   end
 
   @doc "Query terminal size using ANSI escape / ioctl."
@@ -129,6 +141,28 @@ defmodule ElixirOpentui.Terminal do
 
   def handle_call({:unsubscribe, pid}, _from, state) do
     {:reply, :ok, %{state | listeners: List.delete(state.listeners, pid)}}
+  end
+
+  def handle_call(:suspend, _from, %{raw_mode: true} = state) do
+    output = [ANSI.disable_paste(), ANSI.disable_mouse(), ANSI.show_cursor(), ANSI.leave_alt_screen(), ANSI.reset()]
+    write_stdout(output)
+    restore_mode()
+    {:reply, :ok, %{state | suspended: true}}
+  end
+
+  def handle_call(:suspend, _from, state) do
+    {:reply, :ok, %{state | suspended: true}}
+  end
+
+  def handle_call(:resume, _from, %{suspended: true} = state) do
+    setup_raw_mode()
+    output = [ANSI.enter_alt_screen(), ANSI.hide_cursor(), ANSI.enable_mouse(), ANSI.enable_paste()]
+    write_stdout(output)
+    {:reply, :ok, %{state | suspended: false}}
+  end
+
+  def handle_call(:resume, _from, state) do
+    {:reply, :ok, state}
   end
 
   @impl true

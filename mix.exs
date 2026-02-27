@@ -24,7 +24,11 @@ defmodule ElixirOpentui.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:zigler, "~> 0.15.2", runtime: false}
+      {:zigler, "~> 0.15.2", runtime: false},
+      {:makeup, "~> 1.2"},
+      {:makeup_elixir, "~> 1.0", optional: true},
+      {:makeup_ts, "~> 0.2", optional: true},
+      {:earmark, "~> 1.4", optional: true}
     ]
   end
 end
