@@ -51,15 +51,15 @@ defmodule AnimationDemo do
     dim_fg = Color.rgb(100, 100, 100)
 
     panel_w = min(50, state.cols - 4)
+    bar = String.duplicate("#", trunc(opacity * 30))
 
     panel id: :main, title: "Animation Demo", width: panel_w, height: 12,
           border: true, fg: fg, bg: bg do
       text(content: "Press 'f' to toggle fade, 'q' to quit", fg: dim_fg, bg: bg)
       text(content: "")
-      text(content: "  Opacity: #{Float.round(opacity, 2)}", fg: fg, bg: bg)
+      text(content: "  Opacity: #{Float.round(opacity / 1, 2)}", fg: fg, bg: bg)
       text(content: "  Live: #{state._live}", fg: dim_fg, bg: bg)
       text(content: "")
-      bar = String.duplicate("#", trunc(opacity * 30))
       text(content: "  [#{String.pad_trailing(bar, 30)}]", fg: fg, bg: bg)
     end
   end

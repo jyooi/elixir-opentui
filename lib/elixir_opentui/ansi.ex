@@ -62,6 +62,43 @@ defmodule ElixirOpentui.ANSI do
   @spec disable_paste() :: iodata()
   def disable_paste, do: "\e[?2004l"
 
+  # --- Kitty keyboard protocol ---
+
+  @doc "Query current Kitty keyboard flags. Terminal responds with `\\e[?{flags}u`."
+  @spec query_kitty_keyboard() :: iodata()
+  def query_kitty_keyboard, do: "\e[?u"
+
+  @doc "Push Kitty keyboard flags onto the terminal's stack."
+  @spec push_kitty_keyboard(non_neg_integer()) :: iodata()
+  def push_kitty_keyboard(flags \\ default_kitty_flags()),
+    do: ["\e[>", Integer.to_string(flags), "u"]
+
+  @doc "Pop Kitty keyboard flags from the terminal's stack."
+  @spec pop_kitty_keyboard() :: iodata()
+  def pop_kitty_keyboard, do: "\e[<u"
+
+  @doc """
+  Set the Kitty keyboard flags for the current top-of-stack entry (no push/pop).
+
+  `\\e[={flags}u` replaces the current entry's flags directly. Sending
+  `set_kitty_keyboard(0)` before `pop_kitty_keyboard()` ensures keyboard
+  enhancements are disabled even if the pop doesn't take effect.
+  """
+  @spec set_kitty_keyboard(non_neg_integer()) :: iodata()
+  def set_kitty_keyboard(flags), do: ["\e[=", Integer.to_string(flags), "u"]
+
+  @doc "Enable xterm modifyOtherKeys mode 2 (fallback for non-Kitty terminals)."
+  @spec enable_modify_other_keys() :: iodata()
+  def enable_modify_other_keys, do: "\e[>4;2m"
+
+  @doc "Disable xterm modifyOtherKeys mode."
+  @spec disable_modify_other_keys() :: iodata()
+  def disable_modify_other_keys, do: "\e[>4;0m"
+
+  @doc "Default Kitty keyboard flags: disambiguate (1) + alternate keys (4) = 5."
+  @spec default_kitty_flags() :: non_neg_integer()
+  def default_kitty_flags, do: 5
+
   # --- Cursor shape ---
 
   @doc "Set terminal cursor shape. Steady variants (no opts) or blink control."
