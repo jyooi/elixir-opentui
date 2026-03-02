@@ -92,7 +92,15 @@ defmodule ElixirOpentui.Buffer do
   def pop_scissor(buf), do: buf
 
   @doc "Write a character at (x, y) with fg/bg colors and optional text attributes."
-  @spec draw_char(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t(), keyword()) ::
+  @spec draw_char(
+          t(),
+          non_neg_integer(),
+          non_neg_integer(),
+          String.t(),
+          Color.t(),
+          Color.t(),
+          keyword()
+        ) ::
           t()
   def draw_char(buf, x, y, char, fg, bg, attrs \\ []) do
     cell = %{blank_cell(fg, bg) | char: char}
@@ -123,7 +131,15 @@ defmodule ElixirOpentui.Buffer do
   end
 
   @doc "Write a string horizontally starting at (x, y) with optional text attributes."
-  @spec draw_text(t(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t(), keyword()) ::
+  @spec draw_text(
+          t(),
+          non_neg_integer(),
+          non_neg_integer(),
+          String.t(),
+          Color.t(),
+          Color.t(),
+          keyword()
+        ) ::
           t()
   def draw_text(buf, x, y, text, fg, bg, attrs \\ []) do
     text

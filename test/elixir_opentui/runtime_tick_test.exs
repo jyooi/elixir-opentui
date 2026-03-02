@@ -505,6 +505,89 @@ defmodule ElixirOpentui.RuntimeTickTest do
     end
   end
 
+  # ── send_app_msg/2 ───────────────────────────────────────────────────
+
+  describe "send_app_msg/2" do
+    test "send_app_msg delivers message to app module update/3" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 5)
+      Runtime.mount(rt, LiveToggleApp)
+
+      # Initially no ticking
+      Process.sleep(50)
+      frame = Runtime.get_frame(rt)
+      assert Enum.join(frame) =~ "ticks: 0"
+
+      # Enable live via send_app_msg
+      Runtime.send_app_msg(rt, :enable_live)
+      Process.sleep(100)
+
+      frame = Runtime.get_frame(rt)
+      count = extract_tick_count(frame)
+      assert count > 0, "send_app_msg should have enabled live mode and started ticking"
+    end
+
+    test "send_app_msg triggers live-mode transitions" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 5)
+      Runtime.mount(rt, LiveToggleApp)
+
+      # Enable then disable via send_app_msg
+      Runtime.send_app_msg(rt, :enable_live)
+      Process.sleep(100)
+
+      count1 = extract_tick_count(Runtime.get_frame(rt))
+      assert count1 > 0
+
+      Runtime.send_app_msg(rt, :disable_live)
+      Process.sleep(20)
+
+      count2 = extract_tick_count(Runtime.get_frame(rt))
+      Process.sleep(80)
+      count3 = extract_tick_count(Runtime.get_frame(rt))
+
+      assert count3 - count2 <= 1,
+             "Ticking should stop after disabling via send_app_msg"
+    end
+  end
+
+  # ── Tick Timer Safety ──────────────────────────────────────────────
+
+  describe "tick timer safety" do
+    test "rapid start/stop/start does not create duplicate tick chains" do
+      tick_count = :counters.new(1, [:atomics])
+
+      {:ok, rt} =
+        Runtime.start_link(
+          cols: 40,
+          rows: 5,
+          on_event: fn
+            %{type: :tick} -> :counters.add(tick_count, 1, 1)
+            _ -> :ok
+          end
+        )
+
+      Runtime.mount(rt, TickCounterApp)
+
+      # Rapid start/stop/start cycle
+      Runtime.start(rt)
+      Runtime.stop(rt)
+      Runtime.start(rt)
+      Runtime.stop(rt)
+      Runtime.start(rt)
+
+      :counters.put(tick_count, 1, 0)
+      Process.sleep(200)
+
+      count = :counters.get(tick_count, 1)
+      # At 30fps, ~6 ticks in 200ms. With duplicates it would be much higher.
+      assert count < 15,
+             "Expected < 15 ticks in 200ms at 30fps, got #{count} (possible duplicate chains)"
+
+      # Verify exactly one non-nil tick_timer_ref
+      internal = :sys.get_state(rt)
+      assert internal.tick_timer_ref != nil, "Should have exactly one active timer"
+    end
+  end
+
   # ── Helpers ──────────────────────────────────────────────────────────
 
   defp extract_tick_count(frame) do

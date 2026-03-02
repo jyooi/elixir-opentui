@@ -15,6 +15,8 @@ defmodule ElixirOpentui.Widgets.Markdown do
 
   use ElixirOpentui.Component
 
+  alias ElixirOpentui.Widgets.ScrollHelper
+
   @impl true
   def init(props) do
     content = Map.get(props, :content, "")
@@ -23,6 +25,7 @@ defmodule ElixirOpentui.Widgets.Markdown do
     %{
       content: content,
       blocks: blocks,
+      rendered_line_count: count_rendered_lines(blocks),
       id: Map.get(props, :id),
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
@@ -34,7 +37,14 @@ defmodule ElixirOpentui.Widgets.Markdown do
   @impl true
   def update({:set_content, content}, _event, state) do
     blocks = parse_markdown(content)
-    %{state | content: content, blocks: blocks}
+
+    %{
+      state
+      | content: content,
+        blocks: blocks,
+        scroll_offset: 0,
+        rendered_line_count: count_rendered_lines(blocks)
+    }
   end
 
   def update({:set_scroll_offset, offset}, _event, state) do
@@ -64,26 +74,33 @@ defmodule ElixirOpentui.Widgets.Markdown do
 
   # --- Key handling ---
 
-  defp handle_key(%{key: :up}, state) do
-    %{state | scroll_offset: max(0, state.scroll_offset - 1)}
+  defp handle_key(event, state) do
+    case ScrollHelper.handle_scroll_key(event,
+           offset: state.scroll_offset,
+           total: state.rendered_line_count,
+           visible: state.visible_lines
+         ) do
+      {:handled, new_offset} -> %{state | scroll_offset: new_offset}
+      :unhandled -> state
+    end
   end
 
-  defp handle_key(%{key: :down}, state) do
-    %{state | scroll_offset: state.scroll_offset + 1}
+  # NOTE: must mirror painter.ex markdown_blocks_to_lines/10
+  defp count_rendered_lines(blocks) do
+    Enum.reduce(blocks, 0, fn block, acc ->
+      acc +
+        case block do
+          %{type: :heading} -> 2
+          %{type: :paragraph, content: c} -> length(String.split(c, "\n")) + 1
+          %{type: :code_block, content: c} -> length(String.split(c, "\n")) + 1
+          %{type: :list, items: items} -> length(items) + 1
+          %{type: :blockquote, content: c} -> length(String.split(c, "\n")) + 1
+          %{type: :horizontal_rule} -> 2
+          %{type: :text} -> 1
+          _ -> 0
+        end
+    end)
   end
-
-  defp handle_key(%{key: :page_up}, state) do
-    step = state.visible_lines || 10
-    %{state | scroll_offset: max(0, state.scroll_offset - step)}
-  end
-
-  defp handle_key(%{key: :page_down}, state) do
-    step = state.visible_lines || 10
-    %{state | scroll_offset: state.scroll_offset + step}
-  end
-
-  defp handle_key(%{key: :home}, state), do: %{state | scroll_offset: 0}
-  defp handle_key(_, state), do: state
 
   # --- Markdown parsing ---
 
@@ -215,14 +232,21 @@ defmodule ElixirOpentui.Widgets.Markdown do
             block = %{type: :heading, level: level, content: text}
 
             case acc do
-              [] -> {:cont, block, []}
-              lines -> {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")}, [block]}
+              [] ->
+                {:cont, block, []}
+
+              lines ->
+                {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")},
+                 [block]}
             end
 
           String.trim(line) == "" ->
             case acc do
-              [] -> {:cont, []}
-              lines -> {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")}, []}
+              [] ->
+                {:cont, []}
+
+              lines ->
+                {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")}, []}
             end
 
           true ->

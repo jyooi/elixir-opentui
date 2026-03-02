@@ -16,7 +16,24 @@ defmodule ElixirOpentui.Runtime do
 
   use GenServer
 
-  alias ElixirOpentui.{Renderer, EventManager, Element, Buffer, NativeBuffer, Layout, Painter, Focus, Terminal}
+  require Logger
+
+  alias ElixirOpentui.{
+    Renderer,
+    EventManager,
+    Element,
+    Buffer,
+    NativeBuffer,
+    Layout,
+    Painter,
+    Focus,
+    Terminal
+  }
+
+  # Cap to prevent animation jumps when the VM pauses for GC, debugger, or
+  # system load. 500ms is well beyond normal frame intervals (~33ms at 30fps),
+  # so hitting this cap means we clearly missed multiple frames.
+  @max_dt 500
 
   @type component_state :: %{
           module: module(),
@@ -56,7 +73,8 @@ defmodule ElixirOpentui.Runtime do
     live_request_count: 0,
     live_refs: MapSet.new(),
     explicit_start: false,
-    suspend_count: 0
+    suspend_count: 0,
+    tick_timer_ref: nil
   ]
 
   # --- Public API ---
@@ -159,7 +177,7 @@ defmodule ElixirOpentui.Runtime do
   @doc "Send a message to the app module's update/3 directly."
   @spec send_app_msg(GenServer.server(), term()) :: :ok
   def send_app_msg(server, msg) do
-    GenServer.cast(server, {:app_msg, msg})
+    send_msg(server, nil, msg)
   end
 
   # --- GenServer callbacks ---
@@ -271,20 +289,32 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_call(:request_live, _from, state) do
     ref = make_ref()
-    state = %{state | live_refs: MapSet.put(state.live_refs, ref), live_request_count: state.live_request_count + 1}
+
+    state = %{
+      state
+      | live_refs: MapSet.put(state.live_refs, ref),
+        live_request_count: state.live_request_count + 1
+    }
+
     state = start_tick_loop(state)
     {:reply, ref, state}
   end
 
   def handle_call({:drop_live, ref}, _from, state) do
     if MapSet.member?(state.live_refs, ref) do
-      state = %{state | live_refs: MapSet.delete(state.live_refs, ref), live_request_count: max(state.live_request_count - 1, 0)}
+      state = %{
+        state
+        | live_refs: MapSet.delete(state.live_refs, ref),
+          live_request_count: max(state.live_request_count - 1, 0)
+      }
+
       state =
         if state.live_request_count == 0 and not state.explicit_start and not any_live?(state) do
           stop_tick_loop(state)
         else
           state
         end
+
       {:reply, :ok, state}
     else
       # Dropping same ref twice is a no-op
@@ -302,8 +332,10 @@ defmodule ElixirOpentui.Runtime do
   def handle_call(:resume, _from, state) do
     new_count = max(state.suspend_count - 1, 0)
     state = %{state | suspend_count: new_count}
+
     if new_count == 0 do
       if state.terminal, do: Terminal.resume(state.terminal)
+
       if any_live?(state) or state.live_request_count > 0 or state.explicit_start do
         state = start_tick_loop(state)
         {:reply, :ok, state}
@@ -330,12 +362,15 @@ defmodule ElixirOpentui.Runtime do
       cond do
         any_live?(new_state) and new_state.control_state == :idle ->
           start_tick_loop(new_state)
+
         not any_live?(new_state) and new_state.control_state == :running and
           new_state.live_request_count == 0 and not new_state.explicit_start ->
           stop_tick_loop(new_state)
+
         true ->
           new_state
       end
+
     {:noreply, new_state}
   end
 
@@ -357,7 +392,7 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_info(:tick, %{control_state: :running} = state) do
     now = System.monotonic_time(:millisecond)
-    dt = now - state.last_tick_time
+    dt = min(now - state.last_tick_time, @max_dt)
     state = %{state | last_tick_time: now}
 
     if state.on_event, do: state.on_event.(%{type: :tick, dt: dt})
@@ -372,6 +407,10 @@ defmodule ElixirOpentui.Runtime do
         schedule_tick(state)
       end
 
+    {:noreply, state}
+  end
+
+  def handle_info(:tick, %{control_state: :idle} = state) do
     {:noreply, state}
   end
 
@@ -421,7 +460,11 @@ defmodule ElixirOpentui.Runtime do
         pending = Map.get(new_comp_state, :_pending, [])
         clean_state = Map.put(new_comp_state, :_pending, [])
         new_comp = %{comp | state: clean_state}
-        state = %{state | component_states: Map.put(state.component_states, component_id, new_comp)}
+
+        state = %{
+          state
+          | component_states: Map.put(state.component_states, component_id, new_comp)
+        }
 
         Enum.reduce(Enum.reverse(pending), state, fn msg, s ->
           update_app(s, msg)
@@ -509,32 +552,58 @@ defmodule ElixirOpentui.Runtime do
     %{state | app_state: app_state, component_states: comp_states}
   end
 
+  # See ElixirOpentui.Component moduledoc for the _live convention.
+  @live_typo_variants [:live, :_Live, :is_live, :_live_mode]
+
   defp any_live?(state) do
-    app_live = is_map(state.app_state) and Map.get(state.app_state, :_live, false)
+    app_live = check_live(state.app_state)
 
     comp_live =
       Enum.any?(state.component_states, fn {_id, comp} ->
-        is_map(comp.state) and Map.get(comp.state, :_live, false)
+        check_live(comp.state)
       end)
 
     app_live or comp_live
   end
 
+  defp check_live(state) when is_map(state) do
+    case Map.get(state, :_live) do
+      val when val in [nil, false] ->
+        warn_live_typos(state)
+        false
+
+      _ ->
+        true
+    end
+  end
+
+  defp check_live(_), do: false
+
+  defp warn_live_typos(state) do
+    Enum.each(@live_typo_variants, fn key ->
+      if Map.has_key?(state, key) do
+        Logger.warning("Component state has #{inspect(key)} — did you mean :_live?")
+      end
+    end)
+  end
+
   defp start_tick_loop(%{control_state: :running} = state), do: state
 
   defp start_tick_loop(state) do
+    if state.tick_timer_ref, do: Process.cancel_timer(state.tick_timer_ref, info: false)
     now = System.monotonic_time(:millisecond)
-    state = %{state | control_state: :running, last_tick_time: now}
+    state = %{state | control_state: :running, last_tick_time: now, tick_timer_ref: nil}
     schedule_tick(state)
   end
 
   defp stop_tick_loop(state) do
-    %{state | control_state: :idle}
+    if state.tick_timer_ref, do: Process.cancel_timer(state.tick_timer_ref, info: false)
+    %{state | control_state: :idle, tick_timer_ref: nil}
   end
 
   defp schedule_tick(state) do
-    Process.send_after(self(), :tick, state.target_frame_time)
-    state
+    ref = Process.send_after(self(), :tick, state.target_frame_time)
+    %{state | tick_timer_ref: ref}
   end
 
   # Walk the tree and initialize any component elements

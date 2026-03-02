@@ -172,7 +172,13 @@ defmodule ElixirOpentui.EditBuffer do
 
   Coordinates are `{row, col}` pairs (0-indexed, display-width columns).
   """
-  @spec delete_range(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: t()
+  @spec delete_range(
+          t(),
+          non_neg_integer(),
+          non_neg_integer(),
+          non_neg_integer(),
+          non_neg_integer()
+        ) :: t()
   def delete_range(%__MODULE__{ref: ref} = buf, r1, c1, r2, c2)
       when is_integer(r1) and is_integer(c1) and is_integer(r2) and is_integer(c2) do
     EditBufferNIF.delete_range(ref, r1, c1, r2, c2)
@@ -243,7 +249,13 @@ defmodule ElixirOpentui.EditBuffer do
 
   Coordinates are 0-indexed, display-width columns.
   """
-  @spec get_text_range_by_coords(t(), non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()) :: String.t()
+  @spec get_text_range_by_coords(
+          t(),
+          non_neg_integer(),
+          non_neg_integer(),
+          non_neg_integer(),
+          non_neg_integer()
+        ) :: String.t()
   def get_text_range_by_coords(%__MODULE__{ref: ref}, r1, c1, r2, c2)
       when is_integer(r1) and is_integer(c1) and is_integer(r2) and is_integer(c2) do
     EditBufferNIF.get_text_range_by_coords(ref, r1, c1, r2, c2)
