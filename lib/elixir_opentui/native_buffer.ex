@@ -82,7 +82,8 @@ defmodule ElixirOpentui.NativeBuffer do
   end
 
   @doc "Draw a character with alpha blending over existing cell."
-  @spec draw_char_blend(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
+  @spec draw_char_blend(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) ::
+          t()
   def draw_char_blend(%__MODULE__{} = buf, x, y, char, fg, bg, attrs \\ []) do
     if in_scissor?(buf, x, y) do
       %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
@@ -103,7 +104,17 @@ defmodule ElixirOpentui.NativeBuffer do
   end
 
   @doc "Fill a rectangular region with optional text attributes."
-  @spec fill_rect(t(), integer(), integer(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) ::
+  @spec fill_rect(
+          t(),
+          integer(),
+          integer(),
+          integer(),
+          integer(),
+          String.t(),
+          Color.t(),
+          Color.t(),
+          keyword()
+        ) ::
           t()
   def fill_rect(%__MODULE__{} = buf, x, y, w, h, char, fg, bg, attrs \\ []) do
     {cx, cy, cw, ch} = clip_rect(buf, x, y, w, h)

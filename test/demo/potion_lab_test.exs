@@ -39,12 +39,18 @@ defmodule ElixirOpentui.Demo.PotionLabTest do
       ingredient_name = Enum.at(@ingredients, state.ingredient, "Dragon Scale")
       traits = build_traits(state)
 
-      panel id: :lab, title: "Potion Brewing Lab", width: 56, height: 24,
-            border: true, fg: @panel_fg, bg: @panel_bg do
+      panel id: :lab,
+            title: "Potion Brewing Lab",
+            width: 56,
+            height: 24,
+            border: true,
+            fg: @panel_fg,
+            bg: @panel_bg do
         text(content: "~~ Alchemist's Workshop ~~", fg: @title_fg, bg: @panel_bg)
         text(content: "")
 
         label(content: "Potion Name:", fg: @label_fg, bg: @panel_bg)
+
         input(
           id: :name_input,
           value: state.name,
@@ -54,9 +60,11 @@ defmodule ElixirOpentui.Demo.PotionLabTest do
           bg: @input_bg,
           fg: @panel_fg
         )
+
         text(content: "")
 
         label(content: "Base Ingredient:", fg: @label_fg, bg: @panel_bg)
+
         select(
           id: :ingredient,
           options: @ingredients,
@@ -66,14 +74,37 @@ defmodule ElixirOpentui.Demo.PotionLabTest do
           fg: @panel_fg,
           bg: @panel_bg
         )
+
         text(content: "")
 
         label(content: "Magical Properties:", fg: @label_fg, bg: @panel_bg)
+
         box direction: :row, gap: 2 do
-          checkbox(id: :glow, label: "Glowing", checked: state.glowing, fg: @panel_fg, bg: @panel_bg)
-          checkbox(id: :bubble, label: "Bubbling", checked: state.bubbling, fg: @panel_fg, bg: @panel_bg)
-          checkbox(id: :shimmer, label: "Shimmering", checked: state.shimmering, fg: @panel_fg, bg: @panel_bg)
+          checkbox(
+            id: :glow,
+            label: "Glowing",
+            checked: state.glowing,
+            fg: @panel_fg,
+            bg: @panel_bg
+          )
+
+          checkbox(
+            id: :bubble,
+            label: "Bubbling",
+            checked: state.bubbling,
+            fg: @panel_fg,
+            bg: @panel_bg
+          )
+
+          checkbox(
+            id: :shimmer,
+            label: "Shimmering",
+            checked: state.shimmering,
+            fg: @panel_fg,
+            bg: @panel_bg
+          )
         end
+
         text(content: "")
 
         button(
@@ -84,6 +115,7 @@ defmodule ElixirOpentui.Demo.PotionLabTest do
           fg: @button_fg,
           bg: @button_bg
         )
+
         text(content: "")
 
         text(content: String.duplicate("═", 52), fg: @divider_fg, bg: @panel_bg)
@@ -91,11 +123,13 @@ defmodule ElixirOpentui.Demo.PotionLabTest do
         if state.brewed do
           box height: 3 do
             label(content: "Result:", fg: @label_fg, bg: @panel_bg)
+
             text(
               content: "  >> \"#{state.name}\" <<",
               fg: @gold_fg,
               bg: @panel_bg
             )
+
             text(
               content: "  A Legendary #{traits} potion made with #{ingredient_name}.",
               fg: @panel_fg,
@@ -198,13 +232,15 @@ defmodule ElixirOpentui.Demo.PotionLabTest do
 
   describe "brewed state" do
     test "shows result text" do
-      rt = mount_lab(%{
-        name: "Starfire Elixir",
-        ingredient: 1,
-        glowing: true,
-        shimmering: true,
-        brewed: true
-      })
+      rt =
+        mount_lab(%{
+          name: "Starfire Elixir",
+          ingredient: 1,
+          glowing: true,
+          shimmering: true,
+          brewed: true
+        })
+
       text = frame_text(rt)
       assert String.contains?(text, "Result:")
       assert String.contains?(text, "Starfire Elixir")

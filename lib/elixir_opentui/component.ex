@@ -11,6 +11,25 @@ defmodule ElixirOpentui.Component do
   - `update/3` — Handle events, return new state
   - `render/1` — Return an Element tree from current state
 
+  ## Live Mode (Tick Loop)
+
+  Set `_live: true` in your component state to opt into the runtime tick
+  loop (~30 FPS). When live mode is active, tick events are delivered as:
+
+      def update(:tick, %{dt: dt}, state) do
+        # dt is the elapsed milliseconds since the last tick
+        %{state | elapsed: state.elapsed + dt}
+      end
+
+  The runtime automatically starts ticking when any component (or the
+  app module) has `_live: true` in its state, and stops when none do.
+
+  For programmatic control (e.g. starting/stopping animations from
+  external events), use `Runtime.request_live/1` and `Runtime.drop_live/2`.
+
+  > **Note:** The key must be exactly `:_live`. Common typos like `:live`
+  > or `:is_live` will trigger a warning in the logs.
+
   ## Example
 
       defmodule Counter do

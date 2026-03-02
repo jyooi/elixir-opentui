@@ -61,7 +61,17 @@ defmodule ElixirOpentui.EventManagerTest do
       {tree, buffer} = build_scene()
       em = EventManager.new(tree, buffer)
 
-      click = %{type: :mouse, action: :press, button: :left, x: 0, y: 0, ctrl: false, alt: false, shift: false}
+      click = %{
+        type: :mouse,
+        action: :press,
+        button: :left,
+        x: 0,
+        y: 0,
+        ctrl: false,
+        alt: false,
+        shift: false
+      }
+
       {em2, _} = EventManager.process(em, click)
       assert em2.focus.focused_id == :btn
     end
@@ -71,7 +81,17 @@ defmodule ElixirOpentui.EventManagerTest do
       em = EventManager.new(tree, buffer)
 
       # Click on empty area (beyond elements)
-      click = %{type: :mouse, action: :press, button: :left, x: 15, y: 4, ctrl: false, alt: false, shift: false}
+      click = %{
+        type: :mouse,
+        action: :press,
+        button: :left,
+        x: 15,
+        y: 4,
+        ctrl: false,
+        alt: false,
+        shift: false
+      }
+
       {em2, _} = EventManager.process(em, click)
       assert em2.focus.focused_id == nil
     end
@@ -80,7 +100,17 @@ defmodule ElixirOpentui.EventManagerTest do
       {tree, buffer} = build_scene()
       em = EventManager.new(tree, buffer)
 
-      right_click = %{type: :mouse, action: :press, button: :right, x: 0, y: 0, ctrl: false, alt: false, shift: false}
+      right_click = %{
+        type: :mouse,
+        action: :press,
+        button: :right,
+        x: 0,
+        y: 0,
+        ctrl: false,
+        alt: false,
+        shift: false
+      }
+
       {em2, _} = EventManager.process(em, right_click)
       assert em2.focus.focused_id == nil
     end

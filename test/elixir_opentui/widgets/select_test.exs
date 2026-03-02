@@ -204,7 +204,9 @@ defmodule ElixirOpentui.Widgets.SelectTest do
 
   describe "show_description" do
     test "show_description affects rows_per_item" do
-      state = Select.init(%{options: @options, visible_count: 10, show_description: true, id: :sel})
+      state =
+        Select.init(%{options: @options, visible_count: 10, show_description: true, id: :sel})
+
       # With show_description=true, rows_per_item=2, so visible_items = 10/2 = 5
       # page_down should move by 5 items
       state = Select.update(:key, key(:page_down), state)

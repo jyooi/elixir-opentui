@@ -64,6 +64,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   def update(:paste, %{type: :paste, data: data}, state) do
     state = maybe_delete_selection(state)
     EditBufferNIF.insert_char(state.edit_buffer, data)
+
     sync_scroll(state)
     |> emit_change()
   end
@@ -74,12 +75,14 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   def update(:resize, %{width: w, height: h}, state) do
     EditBufferNIF.view_set_viewport_size(state.editor_view, w, h)
+
     %{state | width: w, height: h}
     |> sync_scroll()
   end
 
   def update(:sync_value, %{value: value}, state) do
     EditBufferNIF.set_text(state.edit_buffer, value)
+
     %{state | selection: nil}
     |> sync_scroll()
   end
@@ -125,19 +128,16 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {:down, false, false, false, false} -> :move_down
       {"f", true, false, false, false} -> :move_right
       {"b", true, false, false, false} -> :move_left
-
       # Selection (shift+movement)
       {:left, false, false, true, false} -> :select_left
       {:right, false, false, true, false} -> :select_right
       {:up, false, false, true, false} -> :select_up
       {:down, false, false, true, false} -> :select_down
-
       # Line home/end (logical)
       {"a", true, false, false, false} -> :line_home
       {"e", true, false, false, false} -> :line_end
       {"a", true, false, true, false} -> :select_line_home
       {"e", true, false, true, false} -> :select_line_end
-
       # Visual line home/end
       {"a", false, true, false, false} -> :visual_line_home
       {"e", false, true, false, false} -> :visual_line_end
@@ -147,7 +147,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {:right, false, false, false, true} -> :visual_line_end
       {:left, false, false, true, true} -> :select_visual_line_home
       {:right, false, false, true, true} -> :select_visual_line_end
-
       # Buffer home/end
       {:home, false, false, false, false} -> :buffer_home
       {:end, false, false, false, false} -> :buffer_end
@@ -157,7 +156,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {:down, false, false, false, true} -> :buffer_end
       {:up, false, false, true, true} -> :select_buffer_home
       {:down, false, false, true, true} -> :select_buffer_end
-
       # Word movement
       {"f", false, true, false, false} -> :word_forward
       {"b", false, true, false, false} -> :word_backward
@@ -169,7 +167,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {"b", false, true, true, false} -> :select_word_backward
       {:right, false, true, true, false} -> :select_word_forward
       {:left, false, true, true, false} -> :select_word_backward
-
       # Deletion
       {:backspace, false, false, false, false} -> :backspace
       {:backspace, false, false, true, false} -> :backspace
@@ -185,11 +182,9 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {"d", true, false, true, false} -> :delete_line
       {"k", true, false, false, false} -> :delete_to_line_end
       {"u", true, false, false, false} -> :delete_to_line_start
-
       # Editing
       {:enter, false, false, false, false} -> :newline
       {:enter, false, true, false, false} -> :submit
-
       # Undo/Redo
       {"z", true, false, false, false} -> :undo
       {"y", true, false, false, false} -> :redo
@@ -197,13 +192,10 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {".", true, false, false, false} -> :redo
       {"z", false, false, false, true} -> :undo
       {"z", false, false, true, true} -> :redo
-
       # Select all
       {"a", false, false, false, true} -> :select_all
-
       # Character input - printable single chars without ctrl/alt/meta/super
       {ch, false, false, _, false} when is_binary(ch) -> :insert_char
-
       _ -> :noop
     end
   end
@@ -241,6 +233,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:select_left, _event, state) do
     state = start_or_continue_selection(state)
     EditBufferNIF.move_cursor_left(state.edit_buffer)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -248,6 +241,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:select_right, _event, state) do
     state = start_or_continue_selection(state)
     EditBufferNIF.move_cursor_right(state.edit_buffer)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -255,6 +249,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:select_up, _event, state) do
     state = start_or_continue_selection(state)
     EditBufferNIF.view_move_up_visual(state.editor_view)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -262,6 +257,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:select_down, _event, state) do
     state = start_or_continue_selection(state)
     EditBufferNIF.view_move_down_visual(state.editor_view)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -287,6 +283,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     {row, _col, _off} = EditBufferNIF.get_cursor(state.edit_buffer)
     EditBufferNIF.set_cursor(state.edit_buffer, row, 0)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -295,6 +292,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_eol(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -318,6 +316,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_sol(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -326,6 +325,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_eol(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -347,6 +347,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:select_buffer_home, _event, state) do
     state = start_or_continue_selection(state)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, 0)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -355,6 +356,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -378,6 +380,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_next_word_boundary(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -386,6 +389,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = start_or_continue_selection(state)
     {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_prev_word_boundary(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+
     update_selection_focus(state)
     |> sync_scroll()
   end
@@ -436,6 +440,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:delete_line, _event, state) do
     state = clear_selection(state)
     EditBufferNIF.delete_line(state.edit_buffer)
+
     sync_scroll(state)
     |> emit_change()
   end
@@ -469,6 +474,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:newline, _event, state) do
     state = maybe_delete_selection(state)
     EditBufferNIF.new_line(state.edit_buffer)
+
     sync_scroll(state)
     |> emit_change()
   end
@@ -480,6 +486,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   # Undo/Redo
   defp execute_action(:undo, _event, state) do
     EditBufferNIF.undo(state.edit_buffer)
+
     %{state | selection: nil}
     |> apply_nif_selection_reset()
     |> sync_scroll()
@@ -488,6 +495,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp execute_action(:redo, _event, state) do
     EditBufferNIF.redo(state.edit_buffer)
+
     %{state | selection: nil}
     |> apply_nif_selection_reset()
     |> sync_scroll()
@@ -507,6 +515,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:insert_char, %{key: ch}, state) do
     state = maybe_delete_selection(state)
     EditBufferNIF.insert_char(state.edit_buffer, ch)
+
     sync_scroll(state)
     |> emit_change()
   end
@@ -594,6 +603,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     EditBufferNIF.view_delete_selected_text(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, sel_start)
     EditBufferNIF.view_reset_selection(state.editor_view)
+
     %{state | selection: nil}
     |> sync_scroll()
   end
@@ -638,7 +648,10 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp selection_visual_coords(%{selection: %{anchor: a, focus: f}} = state) do
     {sel_start, sel_end} = if a <= f, do: {a, f}, else: {f, a}
-    {sr, sc, er, ec} = EditBufferNIF.view_selection_visual_coords(state.editor_view, sel_start, sel_end)
+
+    {sr, sc, er, ec} =
+      EditBufferNIF.view_selection_visual_coords(state.editor_view, sel_start, sel_end)
+
     %{start_row: sr, start_col: sc, end_row: er, end_col: ec}
   end
 

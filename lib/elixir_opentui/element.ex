@@ -20,6 +20,8 @@ defmodule ElixirOpentui.Element do
           | :checkbox
           | :scroll_box
           | :textarea
+          | :tab_select
+          | :line_number
           | :code
           | :markdown
           | :diff

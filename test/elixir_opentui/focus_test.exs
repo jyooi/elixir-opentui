@@ -177,9 +177,10 @@ defmodule ElixirOpentui.FocusTest do
 
   describe "empty tree" do
     test "handles tree with no focusable elements" do
-      tree = Element.new(:box, [id: :root, width: 40, height: 10], [
-        Element.new(:text, id: :label, content: "Static")
-      ])
+      tree =
+        Element.new(:box, [id: :root, width: 40, height: 10], [
+          Element.new(:text, id: :label, content: "Static")
+        ])
 
       focus = Focus.from_tree(tree)
       assert focus.focusable_ids == []

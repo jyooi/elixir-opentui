@@ -50,7 +50,8 @@ defmodule ElixirOpentui.EditorView do
   @doc """
   Get the current viewport as `{offset_x, offset_y, width, height}` or `nil`.
   """
-  @spec get_viewport(t()) :: {non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()} | nil
+  @spec get_viewport(t()) ::
+          {non_neg_integer(), non_neg_integer(), non_neg_integer(), non_neg_integer()} | nil
   def get_viewport(%__MODULE__{ref: ref}) do
     EditBufferNIF.view_get_viewport(ref)
   end

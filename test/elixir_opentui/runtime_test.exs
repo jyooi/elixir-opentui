@@ -154,7 +154,8 @@ defmodule ElixirOpentui.RuntimeTest do
   defmodule PendingWidget do
     use ElixirOpentui.Component
 
-    def init(props), do: %{on_select: Map.get(props, :on_select), id: Map.get(props, :id), _pending: []}
+    def init(props),
+      do: %{on_select: Map.get(props, :on_select), id: Map.get(props, :id), _pending: []}
 
     def update(:trigger, _event, state) do
       %{state | _pending: [{state.on_select, 2, %{name: "Charlie"}} | state._pending]}

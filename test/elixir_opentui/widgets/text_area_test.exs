@@ -384,7 +384,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       state = TextArea.update(:key, key_event("A", shift: true), state)
       assert get_text(state) == "A"
     end
-
   end
 
   # ── Unicode / Emoji ─────────────────────────────────────────────────
