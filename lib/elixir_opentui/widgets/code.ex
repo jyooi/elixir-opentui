@@ -20,6 +20,8 @@ defmodule ElixirOpentui.Widgets.Code do
 
   use ElixirOpentui.Component
 
+  alias ElixirOpentui.Widgets.ScrollHelper
+
   @impl true
   def init(props) do
     content = Map.get(props, :content, "")
@@ -38,6 +40,7 @@ defmodule ElixirOpentui.Widgets.Code do
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
       streaming: Map.get(props, :streaming, false),
+      line_count: length(String.split(content, "\n")),
       _pending: []
     }
   end
@@ -45,12 +48,19 @@ defmodule ElixirOpentui.Widgets.Code do
   @impl true
   def update({:set_content, content}, _event, state) do
     tokens = highlight(content, state.filetype)
-    %{state | content: content, tokens: tokens}
+    %{state | content: content, tokens: tokens, line_count: length(String.split(content, "\n"))}
   end
 
   def update({:set_content, content, filetype}, _event, state) do
     tokens = highlight(content, filetype)
-    %{state | content: content, filetype: filetype, tokens: tokens}
+
+    %{
+      state
+      | content: content,
+        filetype: filetype,
+        tokens: tokens,
+        line_count: length(String.split(content, "\n"))
+    }
   end
 
   def update({:set_filetype, filetype}, _event, state) do
@@ -88,7 +98,7 @@ defmodule ElixirOpentui.Widgets.Code do
       filetype: state.filetype,
       tokens: state.tokens,
       lines: lines,
-      line_count: length(lines),
+      line_count: state.line_count,
       show_line_numbers: state.show_line_numbers,
       line_number_offset: state.line_number_offset,
       wrap_mode: state.wrap_mode,
@@ -100,38 +110,16 @@ defmodule ElixirOpentui.Widgets.Code do
 
   # --- Key handling for scrolling ---
 
-  defp handle_key(%{key: :up}, state) do
-    %{state | scroll_offset: max(0, state.scroll_offset - 1)}
+  defp handle_key(event, state) do
+    case ScrollHelper.handle_scroll_key(event,
+           offset: state.scroll_offset,
+           total: state.line_count,
+           visible: state.visible_lines
+         ) do
+      {:handled, new_offset} -> %{state | scroll_offset: new_offset}
+      :unhandled -> state
+    end
   end
-
-  defp handle_key(%{key: :down}, state) do
-    max_offset = max(0, line_count(state) - (state.visible_lines || line_count(state)))
-    %{state | scroll_offset: min(max_offset, state.scroll_offset + 1)}
-  end
-
-  defp handle_key(%{key: :page_up}, state) do
-    step = state.visible_lines || 10
-    %{state | scroll_offset: max(0, state.scroll_offset - step)}
-  end
-
-  defp handle_key(%{key: :page_down}, state) do
-    step = state.visible_lines || 10
-    max_offset = max(0, line_count(state) - (state.visible_lines || line_count(state)))
-    %{state | scroll_offset: min(max_offset, state.scroll_offset + step)}
-  end
-
-  defp handle_key(%{key: :home}, state) do
-    %{state | scroll_offset: 0}
-  end
-
-  defp handle_key(%{key: :end}, state) do
-    max_offset = max(0, line_count(state) - (state.visible_lines || line_count(state)))
-    %{state | scroll_offset: max_offset}
-  end
-
-  defp handle_key(_, state), do: state
-
-  defp line_count(state), do: length(String.split(state.content, "\n"))
 
   # --- Syntax highlighting ---
 

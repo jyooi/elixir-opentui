@@ -63,8 +63,10 @@ defmodule ElixirOpentui.NIFTest do
       NIF.clear(ref)
 
       # Fill 3x2 rect at (1,1) with '#', green fg, black bg
-      fill = <<2, 1::16-little, 1::16-little, 3::16-little, 2::16-little,
-               ?#, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0>>
+      fill =
+        <<2, 1::16-little, 1::16-little, 3::16-little, 2::16-little, ?#, 0, 0, 0, 0, 255, 0, 0, 0,
+          0, 0>>
+
       NIF.put_cells(ref, fill)
       _ansi = NIF.render_frame_capture(ref)
 
@@ -100,10 +102,44 @@ defmodule ElixirOpentui.NIFTest do
 
       # Two CELL records + one HIT
       batch = <<
-        1, 0::16-little, 0::16-little, ?X, 0, 0, 0, 200, 200, 200, 50, 50, 50, 0, 0::16-little,
-        1, 1::16-little, 0::16-little, ?Y, 0, 0, 0, 200, 200, 200, 50, 50, 50, 0, 0::16-little,
-        3, 0::16-little, 0::16-little, 2::16-little, 1::16-little, 7::16-little
+        1,
+        0::16-little,
+        0::16-little,
+        ?X,
+        0,
+        0,
+        0,
+        200,
+        200,
+        200,
+        50,
+        50,
+        50,
+        0,
+        0::16-little,
+        1,
+        1::16-little,
+        0::16-little,
+        ?Y,
+        0,
+        0,
+        0,
+        200,
+        200,
+        200,
+        50,
+        50,
+        50,
+        0,
+        0::16-little,
+        3,
+        0::16-little,
+        0::16-little,
+        2::16-little,
+        1::16-little,
+        7::16-little
       >>
+
       NIF.put_cells(ref, batch)
       _ansi = NIF.render_frame_capture(ref)
 
@@ -128,7 +164,9 @@ defmodule ElixirOpentui.NIFTest do
       ref = NIF.init(5, 3)
       NIF.clear(ref)
 
-      cell = <<1, 2::16-little, 1::16-little, ?Z, 0, 0, 0, 128, 64, 32, 10, 20, 30, 0, 0::16-little>>
+      cell =
+        <<1, 2::16-little, 1::16-little, ?Z, 0, 0, 0, 128, 64, 32, 10, 20, 30, 0, 0::16-little>>
+
       NIF.put_cells(ref, cell)
       ansi = NIF.render_frame_capture(ref)
 
@@ -157,9 +195,38 @@ defmodule ElixirOpentui.NIFTest do
 
       # Write "Hi" at row 0
       batch = <<
-        1, 0::16-little, 0::16-little, ?H, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0::16-little,
-        1, 1::16-little, 0::16-little, ?i, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0::16-little
+        1,
+        0::16-little,
+        0::16-little,
+        ?H,
+        0,
+        0,
+        0,
+        255,
+        255,
+        255,
+        0,
+        0,
+        0,
+        0,
+        0::16-little,
+        1,
+        1::16-little,
+        0::16-little,
+        ?i,
+        0,
+        0,
+        0,
+        255,
+        255,
+        255,
+        0,
+        0,
+        0,
+        0,
+        0::16-little
       >>
+
       NIF.put_cells(ref, batch)
       _ansi = NIF.render_frame_capture(ref)
 

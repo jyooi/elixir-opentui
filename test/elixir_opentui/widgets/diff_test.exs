@@ -146,9 +146,10 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       lines = tree.attrs.lines
 
       # Find the paired remove/add line
-      paired = Enum.find(lines, fn line ->
-        line.left.type == :remove and line.right.type == :add
-      end)
+      paired =
+        Enum.find(lines, fn line ->
+          line.left.type == :remove and line.right.type == :add
+        end)
 
       assert paired != nil
       assert paired.left.content == "line 2"
@@ -160,9 +161,10 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       tree = Diff.render(state)
       lines = tree.attrs.lines
 
-      empty_sides = Enum.filter(lines, fn line ->
-        line.left.type == :empty or line.right.type == :empty
-      end)
+      empty_sides =
+        Enum.filter(lines, fn line ->
+          line.left.type == :empty or line.right.type == :empty
+        end)
 
       # The second hunk has 1 remove and 2 adds, so there should be an empty left side
       assert length(empty_sides) > 0

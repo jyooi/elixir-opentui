@@ -89,7 +89,7 @@ defmodule ElixirOpentui.Focus do
       path ->
         Enum.find(path, fn el ->
           el.type in @focusable_types or
-            (el.attrs[:focusable] == true)
+            el.attrs[:focusable] == true
         end)
         |> case do
           nil -> nil

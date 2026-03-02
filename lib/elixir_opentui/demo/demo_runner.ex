@@ -163,7 +163,16 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
   end
 
-  defp handle_events(demo_mod, [event | rest], state, renderer, tty, input_pid, start_time, timeout) do
+  defp handle_events(
+         demo_mod,
+         [event | rest],
+         state,
+         renderer,
+         tty,
+         input_pid,
+         start_time,
+         timeout
+       ) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
         # Render after each event
@@ -171,7 +180,17 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         focus_id = demo_mod.focused_id(new_state)
         {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
         tty_write(tty, [ansi, "\e[?25l"])
-        handle_events(demo_mod, rest, new_state, new_renderer, tty, input_pid, start_time, timeout)
+
+        handle_events(
+          demo_mod,
+          rest,
+          new_state,
+          new_renderer,
+          tty,
+          input_pid,
+          start_time,
+          timeout
+        )
 
       :quit ->
         :ok

@@ -580,6 +580,7 @@ defmodule ElixirOpentui.EditBufferNIFTest do
 
     test "repeated set_text" do
       buf = EditBufferNIF.create()
+
       for i <- 1..10 do
         text = "iteration #{i}"
         EditBufferNIF.set_text(buf, text)
@@ -1107,10 +1108,12 @@ defmodule ElixirOpentui.EditBufferNIFTest do
 
     test "viewport after many inserts" do
       {buf, view} = create_view("", 40, 5)
+
       for i <- 1..20 do
         EditBufferNIF.insert_char(buf, "line #{i}")
         EditBufferNIF.new_line(buf)
       end
+
       {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(view)
       # Viewport should have scrolled down
       assert oy > 0

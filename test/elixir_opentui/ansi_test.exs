@@ -124,21 +124,36 @@ defmodule ElixirOpentui.ANSITest do
     test "blink attribute renders SGR code 5" do
       fg = {255, 255, 255, 255}
       bg = {0, 0, 0, 255}
-      result = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, false, false, true, false))
+
+      result =
+        IO.iodata_to_binary(
+          ANSI.sgr(fg, bg, false, false, false, false, false, false, true, false)
+        )
+
       assert String.contains?(result, "5;")
     end
 
     test "hidden attribute renders SGR code 8" do
       fg = {255, 255, 255, 255}
       bg = {0, 0, 0, 255}
-      result = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, false, false, false, true))
+
+      result =
+        IO.iodata_to_binary(
+          ANSI.sgr(fg, bg, false, false, false, false, false, false, false, true)
+        )
+
       assert String.contains?(result, "8;")
     end
 
     test "blink + hidden combines correctly" do
       fg = {255, 255, 255, 255}
       bg = {0, 0, 0, 255}
-      result = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, false, false, true, true))
+
+      result =
+        IO.iodata_to_binary(
+          ANSI.sgr(fg, bg, false, false, false, false, false, false, true, true)
+        )
+
       assert String.contains?(result, "5")
       assert String.contains?(result, "8")
     end
@@ -220,8 +235,35 @@ defmodule ElixirOpentui.ANSITest do
       white = {255, 255, 255, 255}
       black = {0, 0, 0, 255}
 
-      cell_a = %{char: "A", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, dim: false, inverse: false, blink: false, hidden: false, hit_id: nil}
-      cell_b = %{char: "B", fg: white, bg: black, bold: false, italic: false, underline: false, strikethrough: false, dim: false, inverse: false, blink: false, hidden: false, hit_id: nil}
+      cell_a = %{
+        char: "A",
+        fg: white,
+        bg: black,
+        bold: false,
+        italic: false,
+        underline: false,
+        strikethrough: false,
+        dim: false,
+        inverse: false,
+        blink: false,
+        hidden: false,
+        hit_id: nil
+      }
+
+      cell_b = %{
+        char: "B",
+        fg: white,
+        bg: black,
+        bold: false,
+        italic: false,
+        underline: false,
+        strikethrough: false,
+        dim: false,
+        inverse: false,
+        blink: false,
+        hidden: false,
+        hit_id: nil
+      }
 
       result = IO.iodata_to_binary(ANSI.render_diff([{0, 0, cell_a}, {1, 0, cell_b}]))
       assert String.contains?(result, "A")
@@ -236,11 +278,26 @@ defmodule ElixirOpentui.ANSITest do
       fg = {255, 0, 0, 255}
       bg = {0, 0, 255, 255}
 
-      cell = %{fg: fg, bg: bg, bold: true, italic: false, underline: true,
-               strikethrough: false, dim: false, inverse: false, blink: false, hidden: false}
+      cell = %{
+        fg: fg,
+        bg: bg,
+        bold: true,
+        italic: false,
+        underline: true,
+        strikethrough: false,
+        dim: false,
+        inverse: false,
+        blink: false,
+        hidden: false
+      }
 
       from_map = IO.iodata_to_binary(ANSI.sgr(cell))
-      from_args = IO.iodata_to_binary(ANSI.sgr(fg, bg, true, false, true, false, false, false, false, false))
+
+      from_args =
+        IO.iodata_to_binary(
+          ANSI.sgr(fg, bg, true, false, true, false, false, false, false, false)
+        )
+
       assert from_map == from_args
     end
 
@@ -248,11 +305,24 @@ defmodule ElixirOpentui.ANSITest do
       fg = {128, 128, 128, 255}
       bg = {64, 64, 64, 255}
 
-      cell = %{fg: fg, bg: bg, bold: true, italic: true, underline: true,
-               strikethrough: true, dim: true, inverse: true, blink: true, hidden: true}
+      cell = %{
+        fg: fg,
+        bg: bg,
+        bold: true,
+        italic: true,
+        underline: true,
+        strikethrough: true,
+        dim: true,
+        inverse: true,
+        blink: true,
+        hidden: true
+      }
 
       from_map = IO.iodata_to_binary(ANSI.sgr(cell))
-      from_args = IO.iodata_to_binary(ANSI.sgr(fg, bg, true, true, true, true, true, true, true, true))
+
+      from_args =
+        IO.iodata_to_binary(ANSI.sgr(fg, bg, true, true, true, true, true, true, true, true))
+
       assert from_map == from_args
     end
 
@@ -260,11 +330,26 @@ defmodule ElixirOpentui.ANSITest do
       fg = {255, 255, 255, 255}
       bg = {0, 0, 0, 255}
 
-      cell = %{fg: fg, bg: bg, bold: false, italic: false, underline: false,
-               strikethrough: false, dim: false, inverse: false, blink: false, hidden: false}
+      cell = %{
+        fg: fg,
+        bg: bg,
+        bold: false,
+        italic: false,
+        underline: false,
+        strikethrough: false,
+        dim: false,
+        inverse: false,
+        blink: false,
+        hidden: false
+      }
 
       from_map = IO.iodata_to_binary(ANSI.sgr(cell))
-      from_args = IO.iodata_to_binary(ANSI.sgr(fg, bg, false, false, false, false, false, false, false, false))
+
+      from_args =
+        IO.iodata_to_binary(
+          ANSI.sgr(fg, bg, false, false, false, false, false, false, false, false)
+        )
+
       assert from_map == from_args
     end
   end

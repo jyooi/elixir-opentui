@@ -75,30 +75,27 @@ defmodule ElixirOpentui.Widgets.CodeTest do
     test "returns nil tokens for nil filetype" do
       assert Code.highlight("some code", nil) == nil
     end
+  end
+
+  @has_makeup_elixir Elixir.Code.ensure_loaded?(Makeup.Lexers.ElixirLexer)
+
+  describe "syntax highlighting" do
+    @describetag skip: if(!@has_makeup_elixir, do: "Makeup.Lexers.ElixirLexer not available")
 
     test "highlights elixir code" do
       tokens = Code.highlight("defmodule Foo do\nend", "elixir")
-
-      if tokens do
-        assert is_list(tokens)
-        assert length(tokens) > 0
-      end
+      assert is_list(tokens)
+      assert length(tokens) > 0
     end
 
     test "highlights with 'ex' alias" do
       tokens = Code.highlight("def hello, do: :ok", "ex")
-
-      if tokens do
-        assert is_list(tokens)
-      end
+      assert is_list(tokens)
     end
 
     test "handles empty content" do
       tokens = Code.highlight("", "elixir")
-
-      if tokens do
-        assert is_list(tokens)
-      end
+      assert is_list(tokens)
     end
   end
 

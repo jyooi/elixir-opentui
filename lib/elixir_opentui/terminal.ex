@@ -116,13 +116,27 @@ defmodule ElixirOpentui.Terminal do
   def handle_call(:enter, _from, state) do
     setup_raw_mode()
     :os.set_signal(:sigtstp, :ignore)
-    output = [ANSI.enter_alt_screen(), ANSI.hide_cursor(), ANSI.enable_mouse(), ANSI.enable_paste()]
+
+    output = [
+      ANSI.enter_alt_screen(),
+      ANSI.hide_cursor(),
+      ANSI.enable_mouse(),
+      ANSI.enable_paste()
+    ]
+
     write_stdout(output)
     {:reply, :ok, %{state | raw_mode: true}}
   end
 
   def handle_call(:leave, _from, state) do
-    output = [ANSI.disable_paste(), ANSI.disable_mouse(), ANSI.show_cursor(), ANSI.leave_alt_screen(), ANSI.reset()]
+    output = [
+      ANSI.disable_paste(),
+      ANSI.disable_mouse(),
+      ANSI.show_cursor(),
+      ANSI.leave_alt_screen(),
+      ANSI.reset()
+    ]
+
     write_stdout(output)
     restore_mode()
     :os.set_signal(:sigtstp, :default)
@@ -144,10 +158,17 @@ defmodule ElixirOpentui.Terminal do
   end
 
   def handle_call(:suspend, _from, %{raw_mode: true} = state) do
-    output = [ANSI.disable_paste(), ANSI.disable_mouse(), ANSI.show_cursor(), ANSI.leave_alt_screen(), ANSI.reset()]
+    output = [
+      ANSI.disable_paste(),
+      ANSI.disable_mouse(),
+      ANSI.show_cursor(),
+      ANSI.leave_alt_screen(),
+      ANSI.reset()
+    ]
+
     write_stdout(output)
     restore_mode()
-    {:reply, :ok, %{state | suspended: true}}
+    {:reply, :ok, %{state | suspended: true, raw_mode: false}}
   end
 
   def handle_call(:suspend, _from, state) do
@@ -156,9 +177,17 @@ defmodule ElixirOpentui.Terminal do
 
   def handle_call(:resume, _from, %{suspended: true} = state) do
     setup_raw_mode()
-    output = [ANSI.enter_alt_screen(), ANSI.hide_cursor(), ANSI.enable_mouse(), ANSI.enable_paste()]
+
+    output = [
+      ANSI.enter_alt_screen(),
+      ANSI.hide_cursor(),
+      ANSI.enable_mouse(),
+      ANSI.enable_paste()
+    ]
+
     write_stdout(output)
-    {:reply, :ok, %{state | suspended: false}}
+    # Resume always enters raw mode regardless of pre-suspend state
+    {:reply, :ok, %{state | suspended: false, raw_mode: true}}
   end
 
   def handle_call(:resume, _from, state) do
@@ -200,7 +229,14 @@ defmodule ElixirOpentui.Terminal do
   @impl true
   def terminate(_reason, state) do
     if state.raw_mode do
-      output = [ANSI.disable_paste(), ANSI.disable_mouse(), ANSI.show_cursor(), ANSI.leave_alt_screen(), ANSI.reset()]
+      output = [
+        ANSI.disable_paste(),
+        ANSI.disable_mouse(),
+        ANSI.show_cursor(),
+        ANSI.leave_alt_screen(),
+        ANSI.reset()
+      ]
+
       write_stdout(output)
       restore_mode()
       :os.set_signal(:sigtstp, :default)
@@ -228,5 +264,4 @@ defmodule ElixirOpentui.Terminal do
   rescue
     _ -> :ok
   end
-
 end

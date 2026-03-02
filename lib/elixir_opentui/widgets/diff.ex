@@ -18,20 +18,25 @@ defmodule ElixirOpentui.Widgets.Diff do
 
   use ElixirOpentui.Component
 
+  alias ElixirOpentui.Widgets.ScrollHelper
+
   @impl true
   def init(props) do
     diff_text = Map.get(props, :diff, "")
     parsed = parse_diff(diff_text)
+    view = Map.get(props, :view, :unified)
 
     %{
       diff: diff_text,
       parsed: parsed,
-      view: Map.get(props, :view, :unified),
+      view: view,
       id: Map.get(props, :id),
       show_line_numbers: Map.get(props, :show_line_numbers, true),
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
       filetype: Map.get(props, :filetype),
+      unified_line_count: length(build_unified_lines(parsed)),
+      split_line_count: length(build_split_lines(parsed)),
       _pending: []
     }
   end
@@ -39,7 +44,15 @@ defmodule ElixirOpentui.Widgets.Diff do
   @impl true
   def update({:set_diff, diff_text}, _event, state) do
     parsed = parse_diff(diff_text)
-    %{state | diff: diff_text, parsed: parsed, scroll_offset: 0}
+
+    %{
+      state
+      | diff: diff_text,
+        parsed: parsed,
+        scroll_offset: 0,
+        unified_line_count: length(build_unified_lines(parsed)),
+        split_line_count: length(build_split_lines(parsed))
+    }
   end
 
   def update({:set_view, view}, _event, state) when view in [:unified, :split] do
@@ -75,7 +88,7 @@ defmodule ElixirOpentui.Widgets.Diff do
       diff: state.diff,
       view: state.view,
       lines: lines,
-      line_count: length(lines),
+      line_count: current_line_count(state),
       show_line_numbers: state.show_line_numbers,
       scroll_offset: state.scroll_offset,
       visible_lines: state.visible_lines,
@@ -85,44 +98,19 @@ defmodule ElixirOpentui.Widgets.Diff do
 
   # --- Key handling ---
 
-  defp handle_key(%{key: :up}, state) do
-    %{state | scroll_offset: max(0, state.scroll_offset - 1)}
-  end
-
-  defp handle_key(%{key: :down}, state) do
-    total = total_lines(state)
-    max_offset = max(0, total - (state.visible_lines || total))
-    %{state | scroll_offset: min(max_offset, state.scroll_offset + 1)}
-  end
-
-  defp handle_key(%{key: :page_up}, state) do
-    step = state.visible_lines || 10
-    %{state | scroll_offset: max(0, state.scroll_offset - step)}
-  end
-
-  defp handle_key(%{key: :page_down}, state) do
-    step = state.visible_lines || 10
-    total = total_lines(state)
-    max_offset = max(0, total - (state.visible_lines || total))
-    %{state | scroll_offset: min(max_offset, state.scroll_offset + step)}
-  end
-
-  defp handle_key(%{key: :home}, state), do: %{state | scroll_offset: 0}
-
-  defp handle_key(%{key: :end}, state) do
-    total = total_lines(state)
-    max_offset = max(0, total - (state.visible_lines || total))
-    %{state | scroll_offset: max_offset}
-  end
-
-  defp handle_key(_, state), do: state
-
-  defp total_lines(state) do
-    case state.view do
-      :unified -> length(build_unified_lines(state.parsed))
-      :split -> length(build_split_lines(state.parsed))
+  defp handle_key(event, state) do
+    case ScrollHelper.handle_scroll_key(event,
+           offset: state.scroll_offset,
+           total: current_line_count(state),
+           visible: state.visible_lines
+         ) do
+      {:handled, new_offset} -> %{state | scroll_offset: new_offset}
+      :unhandled -> state
     end
   end
+
+  defp current_line_count(%{view: :unified} = state), do: state.unified_line_count
+  defp current_line_count(%{view: :split} = state), do: state.split_line_count
 
   # --- Diff parsing ---
 
@@ -273,7 +261,11 @@ defmodule ElixirOpentui.Widgets.Diff do
 
       [other | rest2] ->
         # Handle unexpected line types
-        split_line = %{left: other, right: %{type: :empty, content: "", old_line: nil, new_line: nil}}
+        split_line = %{
+          left: other,
+          right: %{type: :empty, content: "", old_line: nil, new_line: nil}
+        }
+
         build_split_hunk(rest2, [split_line | acc])
     end
   end

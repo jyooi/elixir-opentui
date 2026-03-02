@@ -159,9 +159,11 @@ defmodule ElixirOpentui.Animation.Timeline do
 
   @doc "Get the current elapsed time, clamped to duration for non-looping timelines."
   def current_time(%__MODULE__{state: :idle}), do: 0
+
   def current_time(%__MODULE__{loop: loop, elapsed: elapsed, duration: dur}) when loop != false do
     if dur > 0, do: :erlang.float(rem(trunc(elapsed), dur)), else: 0.0
   end
+
   def current_time(%__MODULE__{elapsed: elapsed, duration: dur}) do
     min(elapsed, dur * 1.0)
   end
@@ -189,7 +191,15 @@ defmodule ElixirOpentui.Animation.Timeline do
   def restart(%__MODULE__{} = tl) do
     items = Enum.map(tl.items, &reset_item/1)
 
-    %{tl | state: :playing, elapsed: 0.0, loop_count: 0, items: items, started: false, values: %{}}
+    %{
+      tl
+      | state: :playing,
+        elapsed: 0.0,
+        loop_count: 0,
+        items: items,
+        started: false,
+        values: %{}
+    }
   end
 
   @doc "Advance the timeline by `dt` milliseconds. Returns updated timeline."
@@ -216,7 +226,10 @@ defmodule ElixirOpentui.Animation.Timeline do
   @doc "Get the current interpolated value for a property."
   @spec value(t(), atom()) :: float()
   def value(%__MODULE__{values: values}, property) do
-    Map.get(values, property)
+    case Map.fetch(values, property) do
+      {:ok, v} -> v
+      :error -> raise ArgumentError, "unknown timeline property: #{inspect(property)}"
+    end
   end
 
   @doc "Returns true when the timeline has completed (not looping)."
@@ -244,7 +257,10 @@ defmodule ElixirOpentui.Animation.Timeline do
 
   defp item_end_time(%{type: :animation, delay: delay, duration: dur}), do: delay + dur
   defp item_end_time(%{type: :callback, at: at}), do: at
-  defp item_end_time(%{type: :sync, timeline: child, start_at: start_at}), do: start_at + child.duration
+
+  defp item_end_time(%{type: :sync, timeline: child, start_at: start_at}),
+    do: start_at + child.duration
+
   defp item_end_time(%{type: :sync, timeline: child}), do: child.duration
   defp item_end_time(_), do: 0
 
@@ -254,7 +270,12 @@ defmodule ElixirOpentui.Animation.Timeline do
     end)
   end
 
-  defp evaluate_item(%{type: :animation, once: true, completed: true} = item, _elapsed, values, _dt) do
+  defp evaluate_item(
+         %{type: :animation, once: true, completed: true} = item,
+         _elapsed,
+         values,
+         _dt
+       ) do
     {item, values}
   end
 
@@ -333,7 +354,12 @@ defmodule ElixirOpentui.Animation.Timeline do
     end
   end
 
-  defp evaluate_item(%{type: :callback, fired: false, at: at, fun: fun} = item, elapsed, values, _dt)
+  defp evaluate_item(
+         %{type: :callback, fired: false, at: at, fun: fun} = item,
+         elapsed,
+         values,
+         _dt
+       )
        when elapsed >= at do
     fun.()
     {%{item | fired: true}, values}
@@ -357,7 +383,9 @@ defmodule ElixirOpentui.Animation.Timeline do
 
       if child.state == :playing do
         child_target =
-          if child.loop, do: effective_elapsed * 1.0, else: min(effective_elapsed, child.duration * 1.0)
+          if child.loop,
+            do: effective_elapsed * 1.0,
+            else: min(effective_elapsed, child.duration * 1.0)
 
         dt = max(child_target - child.elapsed, 0)
         new_child = advance(child, dt)
@@ -424,7 +452,8 @@ defmodule ElixirOpentui.Animation.Timeline do
   defp should_loop_animation?(%{loop: false}), do: false
   defp should_loop_animation?(%{loop: _}), do: true
 
-  defp handle_completion(%{elapsed: elapsed, duration: dur} = tl) when dur > 0 and elapsed >= dur do
+  defp handle_completion(%{elapsed: elapsed, duration: dur} = tl)
+       when dur > 0 and elapsed >= dur do
     cond do
       tl.loop == true ->
         # Infinite loop
@@ -433,7 +462,16 @@ defmodule ElixirOpentui.Animation.Timeline do
 
         if overshoot > 0 do
           once_values = collect_once_values(tl)
-          tl = %{tl | elapsed: 0.0, loop_count: tl.loop_count + 1, items: items, started: false, values: once_values}
+
+          tl = %{
+            tl
+            | elapsed: 0.0,
+              loop_count: tl.loop_count + 1,
+              items: items,
+              started: false,
+              values: once_values
+          }
+
           maybe_fire_on_loop(tl) |> advance(overshoot)
         else
           # Exact boundary — preserve values from last frame, just reset items for next loop
@@ -448,7 +486,16 @@ defmodule ElixirOpentui.Animation.Timeline do
 
         if overshoot > 0 do
           once_values = collect_once_values(tl)
-          tl = %{tl | elapsed: 0.0, loop_count: tl.loop_count + 1, items: items, started: false, values: once_values}
+
+          tl = %{
+            tl
+            | elapsed: 0.0,
+              loop_count: tl.loop_count + 1,
+              items: items,
+              started: false,
+              values: once_values
+          }
+
           maybe_fire_on_loop(tl) |> advance(overshoot)
         else
           tl = %{tl | elapsed: 0.0, loop_count: tl.loop_count + 1, items: items, started: false}
@@ -482,7 +529,17 @@ defmodule ElixirOpentui.Animation.Timeline do
   defp reset_item(%{type: :sync, timeline: child} = item) do
     # Reset child to idle so auto_play can re-trigger
     items = Enum.map(child.items, &reset_item/1)
-    child = %{child | state: :idle, elapsed: 0.0, loop_count: 0, items: items, started: false, values: %{}}
+
+    child = %{
+      child
+      | state: :idle,
+        elapsed: 0.0,
+        loop_count: 0,
+        items: items,
+        started: false,
+        values: %{}
+    }
+
     %{item | timeline: child}
   end
 

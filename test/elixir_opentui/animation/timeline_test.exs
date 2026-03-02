@@ -599,212 +599,212 @@ defmodule ElixirOpentui.Animation.TimelineTest do
   # ── Timing Precision ──────────────────────────────────────────────────
 
   describe "Timing Precision - Animation Start Time Overshoot" do
-      test "should account for overshoot when animation starts late" do
-        tl =
-          new_timeline(duration: 2000)
-          |> Timeline.add(:x, from: 0, to: 100, duration: 1000, ease: :linear, start_time: 50)
-          |> Timeline.play()
+    test "should account for overshoot when animation starts late" do
+      tl =
+        new_timeline(duration: 2000)
+        |> Timeline.add(:x, from: 0, to: 100, duration: 1000, ease: :linear, start_time: 50)
+        |> Timeline.play()
 
-        tl = Timeline.advance(tl, 66)
-        assert_in_delta Timeline.value(tl, :x), 1.6, 0.1
-      end
+      tl = Timeline.advance(tl, 66)
+      assert_in_delta Timeline.value(tl, :x), 1.6, 0.1
+    end
 
-      test "should handle multiple animations with different start time overshoots" do
-        tl =
-          new_timeline(duration: 3000)
-          |> Timeline.add(:x, from: 0, to: 100, duration: 1000, ease: :linear, start_time: 30)
-          |> Timeline.add(:y, from: 0, to: 200, duration: 1000, ease: :linear, start_time: 80)
-          |> Timeline.play()
+    test "should handle multiple animations with different start time overshoots" do
+      tl =
+        new_timeline(duration: 3000)
+        |> Timeline.add(:x, from: 0, to: 100, duration: 1000, ease: :linear, start_time: 30)
+        |> Timeline.add(:y, from: 0, to: 200, duration: 1000, ease: :linear, start_time: 80)
+        |> Timeline.play()
 
-        tl = Timeline.advance(tl, 100)
+      tl = Timeline.advance(tl, 100)
 
-        assert_in_delta Timeline.value(tl, :x), 7, 0.1
-        assert_in_delta Timeline.value(tl, :y), 4, 0.1
-      end
+      assert_in_delta Timeline.value(tl, :x), 7, 0.1
+      assert_in_delta Timeline.value(tl, :y), 4, 0.1
+    end
 
-      test "should handle zero duration animations with overshoot" do
-        tl =
-          new_timeline(duration: 1000)
-          |> Timeline.add(:x, from: 0, to: 100, duration: 0, start_time: 50)
-          |> Timeline.play()
+    test "should handle zero duration animations with overshoot" do
+      tl =
+        new_timeline(duration: 1000)
+        |> Timeline.add(:x, from: 0, to: 100, duration: 0, start_time: 50)
+        |> Timeline.play()
 
-        tl = Timeline.advance(tl, 66)
-        assert Timeline.value(tl, :x) == 100
-      end
+      tl = Timeline.advance(tl, 66)
+      assert Timeline.value(tl, :x) == 100
+    end
   end
 
   describe "Timing Precision - Loop Delay Precision" do
     test "should account for overshoot in loop delays" do
-        tl =
-          new_timeline(duration: 5000)
-          |> Timeline.add(:x,
-            from: 0,
-            to: 100,
-            duration: 1000,
-            loop: 3,
-            loop_delay: 500,
-            ease: :linear
-          )
-          |> Timeline.play()
+      tl =
+        new_timeline(duration: 5000)
+        |> Timeline.add(:x,
+          from: 0,
+          to: 100,
+          duration: 1000,
+          loop: 3,
+          loop_delay: 500,
+          ease: :linear
+        )
+        |> Timeline.play()
 
-        tl = Timeline.advance(tl, 1000)
-        assert Timeline.value(tl, :x) == 100
+      tl = Timeline.advance(tl, 1000)
+      assert Timeline.value(tl, :x) == 100
 
-        # Overshoot: 516ms past end of first run, 500ms delay => 16ms into second run
-        tl = Timeline.advance(tl, 516)
-        assert_in_delta Timeline.value(tl, :x), 1.6, 0.1
-      end
+      # Overshoot: 516ms past end of first run, 500ms delay => 16ms into second run
+      tl = Timeline.advance(tl, 516)
+      assert_in_delta Timeline.value(tl, :x), 1.6, 0.1
+    end
 
-      test "should handle multiple loop delay overshoots" do
-        tl =
-          new_timeline(duration: 10_000)
-          |> Timeline.add(:x,
-            from: 0,
-            to: 100,
-            duration: 1000,
-            loop: 4,
-            loop_delay: 300,
-            ease: :linear
-          )
-          |> Timeline.play()
+    test "should handle multiple loop delay overshoots" do
+      tl =
+        new_timeline(duration: 10_000)
+        |> Timeline.add(:x,
+          from: 0,
+          to: 100,
+          duration: 1000,
+          loop: 4,
+          loop_delay: 300,
+          ease: :linear
+        )
+        |> Timeline.play()
 
-        tl = Timeline.advance(tl, 1000)
-        assert Timeline.value(tl, :x) == 100
+      tl = Timeline.advance(tl, 1000)
+      assert Timeline.value(tl, :x) == 100
 
-        # 333ms past end, delay is 300ms, so 33ms into next run
-        tl = Timeline.advance(tl, 333)
-        assert_in_delta Timeline.value(tl, :x), 3.3, 0.1
+      # 333ms past end, delay is 300ms, so 33ms into next run
+      tl = Timeline.advance(tl, 333)
+      assert_in_delta Timeline.value(tl, :x), 3.3, 0.1
 
-        tl = Timeline.advance(tl, 967)
-        assert Timeline.value(tl, :x) == 100
+      tl = Timeline.advance(tl, 967)
+      assert Timeline.value(tl, :x) == 100
 
-        tl = Timeline.advance(tl, 350)
-        assert_in_delta Timeline.value(tl, :x), 5, 0.1
-      end
+      tl = Timeline.advance(tl, 350)
+      assert_in_delta Timeline.value(tl, :x), 5, 0.1
+    end
 
-      test "should handle alternating animations with loop delay overshoot" do
-        tl =
-          new_timeline(duration: 8000)
-          |> Timeline.add(:x,
-            from: 0,
-            to: 100,
-            duration: 1000,
-            loop: 3,
-            alternate: true,
-            loop_delay: 400,
-            ease: :linear
-          )
-          |> Timeline.play()
+    test "should handle alternating animations with loop delay overshoot" do
+      tl =
+        new_timeline(duration: 8000)
+        |> Timeline.add(:x,
+          from: 0,
+          to: 100,
+          duration: 1000,
+          loop: 3,
+          alternate: true,
+          loop_delay: 400,
+          ease: :linear
+        )
+        |> Timeline.play()
 
-        tl = Timeline.advance(tl, 1000)
-        assert Timeline.value(tl, :x) == 100
+      tl = Timeline.advance(tl, 1000)
+      assert Timeline.value(tl, :x) == 100
 
-        # 450ms past end, delay 400ms, 50ms into reverse
-        tl = Timeline.advance(tl, 450)
-        assert Timeline.value(tl, :x) == 95
+      # 450ms past end, delay 400ms, 50ms into reverse
+      tl = Timeline.advance(tl, 450)
+      assert Timeline.value(tl, :x) == 95
 
-        tl = Timeline.advance(tl, 950)
-        assert Timeline.value(tl, :x) == 0
+      tl = Timeline.advance(tl, 950)
+      assert Timeline.value(tl, :x) == 0
 
-        # 425ms past end, delay 400ms, 25ms into forward
-        tl = Timeline.advance(tl, 425)
-        assert_in_delta Timeline.value(tl, :x), 2.5, 0.1
-      end
+      # 425ms past end, delay 400ms, 25ms into forward
+      tl = Timeline.advance(tl, 425)
+      assert_in_delta Timeline.value(tl, :x), 2.5, 0.1
+    end
   end
 
   describe "Timing Precision - Synced Timeline Precision" do
     test "should account for overshoot when starting synced timelines" do
-        sub_tl =
-          new_timeline(duration: 1000)
-          |> Timeline.add(:value, from: 0, to: 100, duration: 1000, ease: :linear)
+      sub_tl =
+        new_timeline(duration: 1000)
+        |> Timeline.add(:value, from: 0, to: 100, duration: 1000, ease: :linear)
 
-        main_tl =
-          new_timeline(duration: 3000)
-          |> Timeline.sync(sub_tl, 500)
-          |> Timeline.play()
+      main_tl =
+        new_timeline(duration: 3000)
+        |> Timeline.sync(sub_tl, 500)
+        |> Timeline.play()
 
-        # 533ms total, sub starts at 500ms => 33ms into sub
-        main_tl = Timeline.advance(main_tl, 533)
-        assert_in_delta Timeline.value(main_tl, :value), 3.3, 0.1
-      end
+      # 533ms total, sub starts at 500ms => 33ms into sub
+      main_tl = Timeline.advance(main_tl, 533)
+      assert_in_delta Timeline.value(main_tl, :value), 3.3, 0.1
+    end
 
-      test "should handle multiple synced timelines with different overshoot amounts" do
-        sub_tl1 =
-          new_timeline(duration: 1000)
-          |> Timeline.add(:value1, from: 0, to: 100, duration: 1000, ease: :linear)
+    test "should handle multiple synced timelines with different overshoot amounts" do
+      sub_tl1 =
+        new_timeline(duration: 1000)
+        |> Timeline.add(:value1, from: 0, to: 100, duration: 1000, ease: :linear)
 
-        sub_tl2 =
-          new_timeline(duration: 1500)
-          |> Timeline.add(:value2, from: 0, to: 200, duration: 1500, ease: :linear)
+      sub_tl2 =
+        new_timeline(duration: 1500)
+        |> Timeline.add(:value2, from: 0, to: 200, duration: 1500, ease: :linear)
 
-        main_tl =
-          new_timeline(duration: 5000)
-          |> Timeline.sync(sub_tl1, 300)
-          |> Timeline.sync(sub_tl2, 800)
-          |> Timeline.play()
+      main_tl =
+        new_timeline(duration: 5000)
+        |> Timeline.sync(sub_tl1, 300)
+        |> Timeline.sync(sub_tl2, 800)
+        |> Timeline.play()
 
-        # 850ms total: sub1 started at 300 => 550ms in, sub2 started at 800 => 50ms in
-        main_tl = Timeline.advance(main_tl, 850)
-        assert_in_delta Timeline.value(main_tl, :value1), 55, 0.1
-        assert_in_delta Timeline.value(main_tl, :value2), 6.67, 0.2
-      end
+      # 850ms total: sub1 started at 300 => 550ms in, sub2 started at 800 => 50ms in
+      main_tl = Timeline.advance(main_tl, 850)
+      assert_in_delta Timeline.value(main_tl, :value1), 55, 0.1
+      assert_in_delta Timeline.value(main_tl, :value2), 6.67, 0.2
+    end
   end
 
   describe "Timing Precision - Complex Precision Scenarios" do
     test "should handle alternating animation with main timeline loop and overshoot" do
-        tl =
-          new_timeline(duration: 3000, loop: true)
-          |> Timeline.add(:x,
-            from: 0,
-            to: 100,
-            duration: 800,
-            loop: 2,
-            alternate: true,
-            loop_delay: 200,
-            ease: :linear,
-            start_time: 500
-          )
-          |> Timeline.play()
+      tl =
+        new_timeline(duration: 3000, loop: true)
+        |> Timeline.add(:x,
+          from: 0,
+          to: 100,
+          duration: 800,
+          loop: 2,
+          alternate: true,
+          loop_delay: 200,
+          ease: :linear,
+          start_time: 500
+        )
+        |> Timeline.play()
 
-        # 3100ms: timeline loops at 3000, so we're at t=100 in second loop
-        tl = Timeline.advance(tl, 3100)
-        assert Timeline.value(tl, :x) == 0
+      # 3100ms: timeline loops at 3000, so we're at t=100 in second loop
+      tl = Timeline.advance(tl, 3100)
+      assert Timeline.value(tl, :x) == 0
 
-        # t=550 in second loop: 50ms past animation start
-        tl = Timeline.advance(tl, 450)
-        assert_in_delta Timeline.value(tl, :x), 6.25, 0.1
+      # t=550 in second loop: 50ms past animation start
+      tl = Timeline.advance(tl, 450)
+      assert_in_delta Timeline.value(tl, :x), 6.25, 0.1
 
-        tl = Timeline.advance(tl, 750 + 250)
-        assert_in_delta Timeline.value(tl, :x), 93.75, 0.1
-      end
+      tl = Timeline.advance(tl, 750 + 250)
+      assert_in_delta Timeline.value(tl, :x), 93.75, 0.1
+    end
 
-      test "should maintain precision across multiple frame updates at 30fps" do
-        tl =
-          new_timeline(duration: 2000)
-          |> Timeline.add(:x,
-            from: 0,
-            to: 100,
-            duration: 1000,
-            ease: :linear,
-            start_time: 50
-          )
-          |> Timeline.play()
+    test "should maintain precision across multiple frame updates at 30fps" do
+      tl =
+        new_timeline(duration: 2000)
+        |> Timeline.add(:x,
+          from: 0,
+          to: 100,
+          duration: 1000,
+          ease: :linear,
+          start_time: 50
+        )
+        |> Timeline.play()
 
-        frame_time = 33.33
+      frame_time = 33.33
 
-        tl = Timeline.advance(tl, frame_time)
-        assert Timeline.value(tl, :x) == 0
+      tl = Timeline.advance(tl, frame_time)
+      assert Timeline.value(tl, :x) == 0
 
-        tl = Timeline.advance(tl, frame_time)
-        assert_in_delta Timeline.value(tl, :x), 1.67, 0.1
+      tl = Timeline.advance(tl, frame_time)
+      assert_in_delta Timeline.value(tl, :x), 1.67, 0.1
 
-        tl = Timeline.advance(tl, frame_time)
-        assert_in_delta Timeline.value(tl, :x), 5, 0.1
+      tl = Timeline.advance(tl, frame_time)
+      assert_in_delta Timeline.value(tl, :x), 5, 0.1
 
-        # Advance 29 more frames
-        tl = Enum.reduce(1..29, tl, fn _, acc -> Timeline.advance(acc, frame_time) end)
-        assert_in_delta Timeline.value(tl, :x), 100, 1
-      end
+      # Advance 29 more frames
+      tl = Enum.reduce(1..29, tl, fn _, acc -> Timeline.advance(acc, frame_time) end)
+      assert_in_delta Timeline.value(tl, :x), 100, 1
+    end
   end
 
   # ── Edge Cases ────────────────────────────────────────────────────────
@@ -1802,7 +1802,10 @@ defmodule ElixirOpentui.Animation.TimelineTest do
         |> Timeline.play()
 
       tl = Timeline.advance(tl, 500)
-      assert Timeline.value(tl, :x) == nil
+
+      assert_raise ArgumentError, ~r/unknown timeline property/, fn ->
+        Timeline.value(tl, :x)
+      end
 
       tl = Timeline.once(tl, :x, from: 0, to: 100, duration: 500)
 
@@ -1903,9 +1906,15 @@ defmodule ElixirOpentui.Animation.TimelineTest do
       assert Timeline.current_time(tl) == 1000
     end
 
-    test "value returns nil for unknown properties" do
-      tl = new_timeline(duration: 1000)
-      assert Timeline.value(tl, :unknown) == nil
+    test "value/2 raises on unknown property" do
+      tl =
+        new_timeline()
+        |> Timeline.add(:x, from: 0, to: 1, duration: 100)
+        |> Timeline.play()
+
+      assert_raise ArgumentError, ~r/unknown timeline property/, fn ->
+        Timeline.value(tl, :nonexistent)
+      end
     end
 
     test "value returns from-value before animation starts" do

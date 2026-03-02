@@ -73,62 +73,6 @@ defmodule ElixirOpentui.Widgets.MarkdownTest do
       assert length(paragraphs) >= 1
     end
 
-    test "parses code blocks" do
-      md = "```elixir\ndefmodule Foo do\nend\n```"
-      blocks = Markdown.parse_markdown(md)
-      code_blocks = Enum.filter(blocks, &(&1.type == :code_block))
-
-      if length(code_blocks) > 0 do
-        block = hd(code_blocks)
-        assert block.language == "elixir"
-        assert block.content =~ "defmodule"
-      end
-    end
-
-    test "parses unordered lists" do
-      md = "- Apple\n- Banana\n- Cherry"
-      blocks = Markdown.parse_markdown(md)
-      lists = Enum.filter(blocks, &(&1.type == :list))
-
-      if length(lists) > 0 do
-        list = hd(lists)
-        assert list.ordered == false
-        assert length(list.items) == 3
-      end
-    end
-
-    test "parses ordered lists" do
-      md = "1. First\n2. Second\n3. Third"
-      blocks = Markdown.parse_markdown(md)
-      lists = Enum.filter(blocks, &(&1.type == :list))
-
-      if length(lists) > 0 do
-        list = hd(lists)
-        assert list.ordered == true
-        assert length(list.items) == 3
-      end
-    end
-
-    test "parses blockquotes" do
-      md = "> This is a quote"
-      blocks = Markdown.parse_markdown(md)
-      quotes = Enum.filter(blocks, &(&1.type == :blockquote))
-
-      if length(quotes) > 0 do
-        assert hd(quotes).content =~ "quote"
-      end
-    end
-
-    test "parses horizontal rules" do
-      md = "---"
-      blocks = Markdown.parse_markdown(md)
-      rules = Enum.filter(blocks, &(&1.type == :horizontal_rule))
-
-      if length(rules) > 0 do
-        assert hd(rules).type == :horizontal_rule
-      end
-    end
-
     test "handles empty content" do
       assert Markdown.parse_markdown("") == []
     end
@@ -139,6 +83,58 @@ defmodule ElixirOpentui.Widgets.MarkdownTest do
 
       types = Enum.map(blocks, & &1.type) |> Enum.uniq()
       assert :heading in types
+    end
+  end
+
+  @has_earmark Code.ensure_loaded?(Earmark)
+
+  describe "earmark parsing" do
+    @describetag skip: if(!@has_earmark, do: "Earmark not available")
+
+    test "parses code blocks" do
+      md = "```elixir\ndefmodule Foo do\nend\n```"
+      blocks = Markdown.parse_markdown(md)
+      code_blocks = Enum.filter(blocks, &(&1.type == :code_block))
+      assert length(code_blocks) > 0
+      block = hd(code_blocks)
+      assert block.language == "elixir"
+      assert block.content =~ "defmodule"
+    end
+
+    test "parses unordered lists" do
+      md = "- Apple\n- Banana\n- Cherry"
+      blocks = Markdown.parse_markdown(md)
+      lists = Enum.filter(blocks, &(&1.type == :list))
+      assert length(lists) > 0
+      list = hd(lists)
+      assert list.ordered == false
+      assert length(list.items) == 3
+    end
+
+    test "parses ordered lists" do
+      md = "1. First\n2. Second\n3. Third"
+      blocks = Markdown.parse_markdown(md)
+      lists = Enum.filter(blocks, &(&1.type == :list))
+      assert length(lists) > 0
+      list = hd(lists)
+      assert list.ordered == true
+      assert length(list.items) == 3
+    end
+
+    test "parses blockquotes" do
+      md = "> This is a quote"
+      blocks = Markdown.parse_markdown(md)
+      quotes = Enum.filter(blocks, &(&1.type == :blockquote))
+      assert length(quotes) > 0
+      assert hd(quotes).content =~ "quote"
+    end
+
+    test "parses horizontal rules" do
+      md = "---"
+      blocks = Markdown.parse_markdown(md)
+      rules = Enum.filter(blocks, &(&1.type == :horizontal_rule))
+      assert length(rules) > 0
+      assert hd(rules).type == :horizontal_rule
     end
   end
 

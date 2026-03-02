@@ -114,7 +114,7 @@ defmodule ElixirOpentui.BorderTest do
     end
 
     test "border: false ignores border_style" do
-      tree = Element.new(:box, [width: 10, height: 4, border: false, border_style: :double])
+      tree = Element.new(:box, width: 10, height: 4, border: false, border_style: :double)
       {tagged, layout} = Layout.compute(tree, 10, 4)
       buf = Buffer.new(10, 4)
       rows = Painter.paint(tagged, layout, buf) |> Buffer.to_strings()
@@ -186,8 +186,15 @@ defmodule ElixirOpentui.BorderTest do
 
   describe "border title right-alignment corner safety" do
     test "right-aligned title on narrow box preserves corners" do
-      tree = Element.new(:box, width: 8, height: 3, border: true,
-                         border_title: "Hi", border_title_align: :right)
+      tree =
+        Element.new(:box,
+          width: 8,
+          height: 3,
+          border: true,
+          border_title: "Hi",
+          border_title_align: :right
+        )
+
       {tagged, layout} = Layout.compute(tree, 8, 3)
       buf = Buffer.new(8, 3)
       rows = Painter.paint(tagged, layout, buf) |> Buffer.to_strings()
@@ -199,8 +206,15 @@ defmodule ElixirOpentui.BorderTest do
     end
 
     test "center-aligned title on narrow box preserves corners" do
-      tree = Element.new(:box, width: 8, height: 3, border: true,
-                         border_title: "Hi", border_title_align: :center)
+      tree =
+        Element.new(:box,
+          width: 8,
+          height: 3,
+          border: true,
+          border_title: "Hi",
+          border_title_align: :center
+        )
+
       {tagged, layout} = Layout.compute(tree, 8, 3)
       buf = Buffer.new(8, 3)
       rows = Painter.paint(tagged, layout, buf) |> Buffer.to_strings()

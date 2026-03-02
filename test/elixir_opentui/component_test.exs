@@ -1,7 +1,6 @@
 defmodule ElixirOpentui.ComponentTest do
   use ExUnit.Case, async: true
 
-
   defmodule Counter do
     use ElixirOpentui.Component
 
