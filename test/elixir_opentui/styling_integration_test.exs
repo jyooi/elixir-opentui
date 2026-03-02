@@ -5,8 +5,16 @@ defmodule ElixirOpentui.StylingIntegrationTest do
 
   describe "full pipeline: Element -> Layout -> Painter -> Buffer -> ANSI" do
     test "double border with title renders correct ANSI output" do
-      tree = Element.new(:box, width: 20, height: 5, border: true,
-               border_style: :double, border_title: "Test", bold: true)
+      tree =
+        Element.new(:box,
+          width: 20,
+          height: 5,
+          border: true,
+          border_style: :double,
+          border_title: "Test",
+          bold: true
+        )
+
       {tagged, layout} = Layout.compute(tree, 20, 5)
       buf = Buffer.new(20, 5)
       buf = Painter.paint(tagged, layout, buf)
@@ -17,8 +25,7 @@ defmodule ElixirOpentui.StylingIntegrationTest do
     end
 
     test "text element with bold/italic renders correct cell attrs" do
-      tree = Element.new(:text, width: 10, height: 1, content: "Hello",
-               bold: true, italic: true)
+      tree = Element.new(:text, width: 10, height: 1, content: "Hello", bold: true, italic: true)
       {tagged, layout} = Layout.compute(tree, 10, 1)
       buf = Buffer.new(10, 1)
       buf = Painter.paint(tagged, layout, buf)
@@ -32,9 +39,18 @@ defmodule ElixirOpentui.StylingIntegrationTest do
 
     test "focused input with cursor_color renders custom color" do
       cursor_color = {255, 128, 0, 255}
-      tree = Element.new(:input, id: :inp, width: 10, height: 1,
-               value: "test", cursor_pos: 0, scroll_offset: 0,
-               cursor_color: cursor_color)
+
+      tree =
+        Element.new(:input,
+          id: :inp,
+          width: 10,
+          height: 1,
+          value: "test",
+          cursor_pos: 0,
+          scroll_offset: 0,
+          cursor_color: cursor_color
+        )
+
       {tagged, layout} = Layout.compute(tree, 10, 1)
       buf = Buffer.new(10, 1)
       buf = Painter.paint(tagged, layout, buf, focus_id: :inp)
@@ -44,8 +60,7 @@ defmodule ElixirOpentui.StylingIntegrationTest do
     end
 
     test "rounded border renders correct corner chars" do
-      tree = Element.new(:box, width: 10, height: 4, border: true,
-               border_style: :rounded)
+      tree = Element.new(:box, width: 10, height: 4, border: true, border_style: :rounded)
       {tagged, layout} = Layout.compute(tree, 10, 4)
       buf = Buffer.new(10, 4)
       buf = Painter.paint(tagged, layout, buf)
@@ -58,8 +73,7 @@ defmodule ElixirOpentui.StylingIntegrationTest do
     end
 
     test "blink and hidden attrs propagate through pipeline" do
-      tree = Element.new(:text, width: 5, height: 1, content: "Hi",
-               blink: true, hidden: true)
+      tree = Element.new(:text, width: 5, height: 1, content: "Hi", blink: true, hidden: true)
       {tagged, layout} = Layout.compute(tree, 5, 1)
       buf = Buffer.new(5, 1)
       buf = Painter.paint(tagged, layout, buf)

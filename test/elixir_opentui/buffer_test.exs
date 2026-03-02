@@ -111,7 +111,8 @@ defmodule ElixirOpentui.BufferTest do
           "B",
           Color.rgba(255, 0, 0, 128),
           Color.rgba(255, 0, 0, 128),
-          bold: true, italic: true
+          bold: true,
+          italic: true
         )
 
       cell = Buffer.get_cell(buf, 0, 0)
@@ -125,7 +126,14 @@ defmodule ElixirOpentui.BufferTest do
       buf = Buffer.draw_char(buf, 0, 0, " ", Color.blue(), Color.blue())
 
       buf =
-        Buffer.draw_char_blend(buf, 0, 0, "X", Color.rgba(255, 0, 0, 128), Color.rgba(255, 0, 0, 128))
+        Buffer.draw_char_blend(
+          buf,
+          0,
+          0,
+          "X",
+          Color.rgba(255, 0, 0, 128),
+          Color.rgba(255, 0, 0, 128)
+        )
 
       cell = Buffer.get_cell(buf, 0, 0)
       assert cell.bold == false
@@ -264,7 +272,10 @@ defmodule ElixirOpentui.BufferTest do
 
     test "draw_char with attrs sets blink and hidden" do
       buf = Buffer.new(5, 3)
-      buf = Buffer.draw_char(buf, 0, 0, "X", Color.white(), Color.black(), blink: true, hidden: true)
+
+      buf =
+        Buffer.draw_char(buf, 0, 0, "X", Color.white(), Color.black(), blink: true, hidden: true)
+
       cell = Buffer.get_cell(buf, 0, 0)
       assert cell.char == "X"
       assert cell.blink == true
@@ -273,8 +284,18 @@ defmodule ElixirOpentui.BufferTest do
 
     test "draw_char with attrs sets all 8 attributes" do
       buf = Buffer.new(5, 3)
-      attrs = [bold: true, italic: true, underline: true, strikethrough: true,
-               dim: true, inverse: true, blink: true, hidden: true]
+
+      attrs = [
+        bold: true,
+        italic: true,
+        underline: true,
+        strikethrough: true,
+        dim: true,
+        inverse: true,
+        blink: true,
+        hidden: true
+      ]
+
       buf = Buffer.draw_char(buf, 0, 0, "A", Color.white(), Color.black(), attrs)
       cell = Buffer.get_cell(buf, 0, 0)
       assert cell.bold == true

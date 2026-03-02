@@ -16,7 +16,15 @@ defmodule ElixirOpentui.TestRenderer do
 
   @type t :: GenServer.server()
 
-  defstruct [:cols, :rows, :buffer, :prev_buffer, :layout_results, :element_tree, backend: :elixir]
+  defstruct [
+    :cols,
+    :rows,
+    :buffer,
+    :prev_buffer,
+    :layout_results,
+    :element_tree,
+    backend: :elixir
+  ]
 
   # --- Public API ---
 

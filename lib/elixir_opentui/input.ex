@@ -79,7 +79,15 @@ defmodule ElixirOpentui.Input do
 
   # Alt+key: \e followed by a regular char
   defp parse_loop(<<"\e", char, rest::binary>>, acc) when char >= 0x20 do
-    event = %{type: :key, key: <<char>>, ctrl: false, alt: true, shift: char in ?A..?Z, meta: false}
+    event = %{
+      type: :key,
+      key: <<char>>,
+      ctrl: false,
+      alt: true,
+      shift: char in ?A..?Z,
+      meta: false
+    }
+
     parse_loop(rest, [event | acc])
   end
 
@@ -90,7 +98,9 @@ defmodule ElixirOpentui.Input do
   end
 
   defp parse_loop(<<"\e", rest::binary>>, acc) do
-    parse_loop(rest, [%{type: :key, key: :escape, ctrl: false, alt: false, shift: false, meta: false} | acc])
+    parse_loop(rest, [
+      %{type: :key, key: :escape, ctrl: false, alt: false, shift: false, meta: false} | acc
+    ])
   end
 
   # Control characters
@@ -114,7 +124,9 @@ defmodule ElixirOpentui.Input do
 
   # Backspace / Delete
   defp parse_loop(<<127, rest::binary>>, acc) do
-    parse_loop(rest, [%{type: :key, key: :backspace, ctrl: false, alt: false, shift: false, meta: false} | acc])
+    parse_loop(rest, [
+      %{type: :key, key: :backspace, ctrl: false, alt: false, shift: false, meta: false} | acc
+    ])
   end
 
   # Regular UTF-8 character
@@ -153,7 +165,9 @@ defmodule ElixirOpentui.Input do
   defp csi_to_event(_params, "D"), do: key(:left)
   defp csi_to_event(_params, "H"), do: key(:home)
   defp csi_to_event(_params, "F"), do: key(:end)
-  defp csi_to_event(_params, "Z"), do: %{type: :key, key: :tab, ctrl: false, alt: false, shift: true, meta: false}
+
+  defp csi_to_event(_params, "Z"),
+    do: %{type: :key, key: :tab, ctrl: false, alt: false, shift: true, meta: false}
 
   # Tilde-terminated sequences: \e[N~
   defp csi_to_event(params, "~") do
@@ -264,7 +278,8 @@ defmodule ElixirOpentui.Input do
 
   defp collect_params_and_final(<<>>, _params), do: nil
 
-  defp collect_params_and_final(<<char, rest::binary>>, params) when char >= 0x40 and char <= 0x7E do
+  defp collect_params_and_final(<<char, rest::binary>>, params)
+       when char >= 0x40 and char <= 0x7E do
     param_strs =
       params
       |> Enum.reverse()
@@ -274,7 +289,8 @@ defmodule ElixirOpentui.Input do
     {param_strs, <<char>>, rest}
   end
 
-  defp collect_params_and_final(<<char, rest::binary>>, params) when char >= 0x20 and char <= 0x3F do
+  defp collect_params_and_final(<<char, rest::binary>>, params)
+       when char >= 0x20 and char <= 0x3F do
     collect_params_and_final(rest, [<<char>> | params])
   end
 

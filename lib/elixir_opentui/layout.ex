@@ -202,7 +202,21 @@ defmodule ElixirOpentui.Layout do
     # use their content size. Containers (box, panel, etc.) use 0 on the main
     # axis (so flex-grow has room) and available space on the cross axis
     # (controlled later by stretch/align).
-    has_intrinsic = child.type in [:text, :label, :input, :button, :checkbox, :select, :textarea]
+    has_intrinsic =
+      child.type in [
+        :text,
+        :label,
+        :input,
+        :button,
+        :checkbox,
+        :select,
+        :textarea,
+        :tab_select,
+        :line_number,
+        :code,
+        :diff,
+        :markdown
+      ]
 
     w =
       case style.width do
@@ -299,13 +313,34 @@ defmodule ElixirOpentui.Layout do
     if show_scroll_indicator, do: base_w + 1, else: base_w
   end
 
+  defp content_width(%Element{type: :tab_select, attrs: attrs}, avail) do
+    Map.get(attrs, :width, min(60, avail))
+  end
+
+  defp content_width(%Element{type: :line_number, attrs: attrs}, _avail) do
+    Map.get(attrs, :gutter_width, 4)
+  end
+
+  defp content_width(%Element{type: :code, attrs: attrs}, avail) do
+    Map.get(attrs, :width, avail)
+  end
+
+  defp content_width(%Element{type: :diff, attrs: attrs}, avail) do
+    Map.get(attrs, :width, avail)
+  end
+
+  defp content_width(%Element{type: :markdown, attrs: attrs}, avail) do
+    Map.get(attrs, :width, avail)
+  end
+
   defp content_width(_el, _avail), do: 0
 
   defp select_option_width(%{name: name}), do: String.length(name)
   defp select_option_width(opt), do: String.length(to_string(opt))
 
-  defp content_height(%Element{type: type}, _avail) when type in [:text, :label, :input, :button, :checkbox],
-    do: 1
+  defp content_height(%Element{type: type}, _avail)
+       when type in [:text, :label, :input, :button, :checkbox],
+       do: 1
 
   defp content_height(%Element{type: :textarea, attrs: attrs}, _avail) do
     Map.get(attrs, :height, 10)
@@ -315,8 +350,30 @@ defmodule ElixirOpentui.Layout do
     options = Map.get(attrs, :options, [])
     show_description = Map.get(attrs, :show_description, false)
     item_spacing = Map.get(attrs, :item_spacing, 0)
-    rows_per = 1 + (if show_description, do: 1, else: 0) + item_spacing
+    rows_per = 1 + if(show_description, do: 1, else: 0) + item_spacing
     max(1, length(options) * rows_per)
+  end
+
+  defp content_height(%Element{type: :tab_select, attrs: attrs}, _avail) do
+    show_underline = Map.get(attrs, :show_underline, true)
+    show_description = Map.get(attrs, :show_description, true)
+    1 + if(show_underline, do: 1, else: 0) + if show_description, do: 1, else: 0
+  end
+
+  defp content_height(%Element{type: :line_number, attrs: attrs}, _avail) do
+    Map.get(attrs, :visible_lines, Map.get(attrs, :line_count, 0))
+  end
+
+  defp content_height(%Element{type: :code, attrs: attrs}, _avail) do
+    Map.get(attrs, :visible_lines) || Map.get(attrs, :line_count, 0)
+  end
+
+  defp content_height(%Element{type: :diff, attrs: attrs}, _avail) do
+    Map.get(attrs, :visible_lines) || Map.get(attrs, :line_count, 0)
+  end
+
+  defp content_height(%Element{type: :markdown, attrs: attrs}, _avail) do
+    Map.get(attrs, :visible_lines) || Map.get(attrs, :block_count, 0)
   end
 
   defp content_height(_el, _avail), do: 0

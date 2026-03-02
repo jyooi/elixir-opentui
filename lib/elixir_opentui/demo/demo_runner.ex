@@ -124,15 +124,38 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     if elapsed > timeout do
       :timeout
     else
+      is_live = Map.get(state, :_live, false)
+      wait_ms = if is_live, do: 33, else: 100
+
       receive do
         {:byte, first_byte} ->
           data = accumulate_bytes(first_byte)
           events = Input.parse(data)
           handle_events(demo_mod, events, state, renderer, tty, input_pid, start_time, timeout)
       after
-        100 ->
-          loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+        wait_ms ->
+          if is_live and function_exported?(demo_mod, :handle_tick, 2) do
+            dt = wait_ms
+            {new_state, renderer, tty} = tick_and_render(demo_mod, dt, state, renderer, tty)
+            loop(demo_mod, new_state, renderer, tty, input_pid, start_time, timeout)
+          else
+            loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+          end
       end
+    end
+  end
+
+  defp tick_and_render(demo_mod, dt, state, renderer, tty) do
+    case demo_mod.handle_tick(dt, state) do
+      {:cont, new_state} ->
+        tree = demo_mod.render(new_state)
+        focus_id = demo_mod.focused_id(new_state)
+        {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
+        tty_write(tty, [ansi, "\e[?25l"])
+        {new_state, new_renderer, tty}
+
+      :quit ->
+        {state, renderer, tty}
     end
   end
 
@@ -140,7 +163,16 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
   end
 
-  defp handle_events(demo_mod, [event | rest], state, renderer, tty, input_pid, start_time, timeout) do
+  defp handle_events(
+         demo_mod,
+         [event | rest],
+         state,
+         renderer,
+         tty,
+         input_pid,
+         start_time,
+         timeout
+       ) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
         # Render after each event
@@ -148,7 +180,17 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         focus_id = demo_mod.focused_id(new_state)
         {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
         tty_write(tty, [ansi, "\e[?25l"])
-        handle_events(demo_mod, rest, new_state, new_renderer, tty, input_pid, start_time, timeout)
+
+        handle_events(
+          demo_mod,
+          rest,
+          new_state,
+          new_renderer,
+          tty,
+          input_pid,
+          start_time,
+          timeout
+        )
 
       :quit ->
         :ok

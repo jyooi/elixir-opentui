@@ -67,12 +67,15 @@ defmodule ElixirOpentui.ANSI do
   @doc "Set terminal cursor shape. Steady variants (no opts) or blink control."
   @spec cursor_shape(:block | :underline | :bar, keyword()) :: iodata()
   def cursor_shape(style, opts \\ [])
+
   def cursor_shape(:block, opts) do
     if Keyword.get(opts, :blink, false), do: "\e[1 q", else: "\e[2 q"
   end
+
   def cursor_shape(:underline, opts) do
     if Keyword.get(opts, :blink, false), do: "\e[3 q", else: "\e[4 q"
   end
+
   def cursor_shape(:bar, opts) do
     if Keyword.get(opts, :blink, false), do: "\e[5 q", else: "\e[6 q"
   end
@@ -92,15 +95,35 @@ defmodule ElixirOpentui.ANSI do
           boolean(),
           boolean()
         ) :: iodata()
-  def sgr(fg, bg, bold, italic, underline, strikethrough, dim \\ false, inverse \\ false, blink \\ false, hidden \\ false) do
+  def sgr(
+        fg,
+        bg,
+        bold,
+        italic,
+        underline,
+        strikethrough,
+        dim \\ false,
+        inverse \\ false,
+        blink \\ false,
+        hidden \\ false
+      ) do
     sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden)
   end
 
   @doc "Generate SGR sequence from a cell map."
   @spec sgr(map()) :: iodata()
-  def sgr(%{fg: fg, bg: bg, bold: bold, italic: italic, underline: underline,
-            strikethrough: strikethrough, dim: dim, inverse: inverse,
-            blink: blink, hidden: hidden}) do
+  def sgr(%{
+        fg: fg,
+        bg: bg,
+        bold: bold,
+        italic: italic,
+        underline: underline,
+        strikethrough: strikethrough,
+        dim: dim,
+        inverse: inverse,
+        blink: blink,
+        hidden: hidden
+      }) do
     sgr_parts(fg, bg, bold, italic, underline, strikethrough, dim, inverse, blink, hidden)
   end
 
@@ -194,8 +217,8 @@ defmodule ElixirOpentui.ANSI do
   end
 
   defp cell_style(cell) do
-    {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough,
-     cell.dim, cell.inverse, cell.blink, cell.hidden}
+    {cell.fg, cell.bg, cell.bold, cell.italic, cell.underline, cell.strikethrough, cell.dim,
+     cell.inverse, cell.blink, cell.hidden}
   end
 
   # Group consecutive horizontal changes into runs for efficient cursor movement.
