@@ -139,19 +139,19 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 
 ## Phase 11: Advanced Input — :yellow_circle: PARTIALLY DONE
 
-2 of 5 items done.
+4 of 5 items done.
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
 | 11a | Text selection (anchor/focus) | :white_check_mark: | NIF-backed in TextArea via EditorView; `painter.ex:366-466` renders selection highlighting (68+ tests) |
-| 11b | Clipboard via OSC 52 | :x: | No OSC 52 sequences in ansi.ex or terminal.ex; no copy/paste keybindings |
+| 11b | Clipboard via OSC 52 | :white_check_mark: | `ansi.ex` OSC 52 copy/paste sequences; `input.ex` OSC 52 response parsing; clipboard keybindings in TextArea |
 | 11c | Mouse movement tracking (mode 1003) | :white_check_mark: | `ansi.ex:52` enables `\e[?1003h`; `input.ex:241` decodes motion bit → :move |
-| 11d | Kitty keyboard protocol | :x: | No CSI u sequences, no progressive enhancement flags |
+| 11d | Kitty keyboard protocol | :white_check_mark: | `input.ex` CSI u parsing; `ansi.ex` push/pop kitty keyboard flags; `terminal.ex` integration |
 | 11e | Terminal capability detection | :x: | No capabilities.ex, no XTVERSION/DECRQM/env detection |
 
 ### TODO for Phase 11:
-- [ ] **11b. Clipboard via OSC 52** — Add OSC 52 read/write to `ansi.ex`, wire copy/paste keybindings in TextArea (~40 LOC)
-- [ ] **11d. Kitty keyboard protocol** — Add CSI u parsing to `input.ex`, push/pop flags in `terminal.ex` (~120 LOC)
+- [x] **11b. Clipboard via OSC 52** — Add OSC 52 read/write to `ansi.ex`, wire copy/paste keybindings in TextArea (~40 LOC)
+- [x] **11d. Kitty keyboard protocol** — Add CSI u parsing to `input.ex`, push/pop flags in `terminal.ex` (~120 LOC)
 - [ ] **11e. Terminal capability detection** — Create `capabilities.ex` with XTVERSION, DECRQM, env-based detection, progressive enhancement (~100 LOC)
 
 ---
@@ -214,11 +214,11 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 | Phase 8: Text System Upgrade | 5 | 5 | **100%** |
 | Phase 9: Advanced Widgets | 6 | 6 | **100%** |
 | Phase 10: Animation & Live Mode | 3 | 3 | **100%** |
-| Phase 11: Advanced Input | 2 | 5 | **40%** |
+| Phase 11: Advanced Input | 4 | 5 | **80%** |
 | Phase 12: DX & Polish | 0 | 4 | **~5%** |
 | Layout Gaps | 0 | 3 | **0%** |
 | Rendering Gaps | 2 | 2 | **100%** |
-| **TOTAL** | **60** | **72** | **~83%** |
+| **TOTAL** | **62** | **72** | **~86%** |
 
 ---
 
@@ -233,12 +233,12 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 - [x] 9d. Markdown widget (via Earmark)
 - [x] 9e. TabSelect widget
 - [x] 10a. Timeline API (easing, duration, loops)
-- [ ] 11b. Clipboard via OSC 52
+- [x] 11b. Clipboard via OSC 52
 
 ### Medium
 - [x] 9f. LineNumber widget
 - [x] 10c. Pause/resume/suspend
-- [ ] 11d. Kitty keyboard protocol
+- [x] 11d. Kitty keyboard protocol
 - [ ] 11e. Terminal capability detection
 - [ ] 12a. Publish to Hex.pm
 - [ ] 12c. Example apps
