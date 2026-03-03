@@ -1,0 +1,83 @@
+name: Precompile NIFs
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g., v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  precompile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "28"
+          elixir-version: "1.19"
+
+      - name: Fetch dependencies
+        run: mix deps.get
+
+      - name: Download Zig toolchain (IPv4)
+        run: mix setup
+
+      - name: Compile project
+        run: mix compile
+
+      - name: Precompile NIF
+        run: mix run scripts/precompile.exs lib/elixir_opentui/nif.ex 2>&1 | tee /tmp/nif_precompile.log
+
+      - name: Precompile EditBufferNIF
+        run: mix run scripts/precompile.exs lib/elixir_opentui/edit_buffer_nif.ex 2>&1 | tee /tmp/edit_buffer_precompile.log
+
+      - name: Collect and rename artifacts
+        run: |
+          mkdir -p artifacts
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION_NUM="${VERSION#v}"
+
+          # Precompile outputs files as: Elixir.Module.VERSION.TRIPLE.so
+          # We rename to: Elixir.Module.TRIPLE.so (version is in the release tag)
+          for f in lib/elixir_opentui/lib/*.so; do
+            [ -f "$f" ] || continue
+            base=$(basename "$f")
+            # Strip the version from the filename: Module.0.1.0.triple.so -> Module.triple.so
+            renamed=$(echo "$base" | sed "s/\.${VERSION_NUM}\././")
+            cp "$f" "artifacts/$renamed"
+          done
+
+          echo "=== Artifacts ==="
+          ls -la artifacts/
+          echo ""
+          echo "=== SHA256 Sums ==="
+          cd artifacts && sha256sum *.so
+
+      - name: Upload artifacts to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Create release if it doesn't exist
+          gh release view "$VERSION" || gh release create "$VERSION" --draft --title "$VERSION"
+
+          # Upload all .so files
+          gh release upload "$VERSION" artifacts/*.so --clobber
+
+      - name: Print shasum config
+        run: |
+          echo "=== Precompile logs ==="
+          echo ""
+          echo "--- NIF ---"
+          cat /tmp/nif_precompile.log
+          echo ""
+          echo "--- EditBufferNIF ---"
+          cat /tmp/edit_buffer_precompile.log
+          echo ""
+          echo "Copy the shasum keyword lists above into lib/elixir_opentui/precompiled.ex"

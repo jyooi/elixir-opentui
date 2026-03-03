@@ -8,7 +8,8 @@ defmodule ElixirOpentui.NIF do
 
   use Zig,
     otp_app: :elixir_opentui,
-    resources: [:FrameBuffer]
+    resources: [:FrameBuffer],
+    precompiled: ElixirOpentui.Precompiled.nif_precompiled()
 
   ~Z"""
   const std = @import("std");
