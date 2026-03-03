@@ -17,10 +17,12 @@ Terminal UI framework for Elixir with a Zig NIF backend.
 
 ## Releasing prebuilt NIFs
 
-1. Create a `release/vX.Y.Z` branch
-2. Trigger the **Precompile NIFs** workflow (`workflow_dispatch`) with the version tag
-3. Copy the shasum keyword list from CI output into `lib/elixir_opentui/precompiled.ex`
-4. Commit the updated shasums, tag with `vX.Y.Z`, push tag
-5. Force source compilation: `ZIGLER_PRECOMPILE_FORCE_RECOMPILE=true mix compile`
+1. Trigger the **Precompile NIFs** workflow (`workflow_dispatch`) with the version tag (e.g. `v0.1.0`)
+2. Workflow compiles 8 platforms, uploads to draft GitHub release, updates `precompiled.ex`, and opens a PR automatically
+3. Merge the auto-PR with updated shasums
+4. Tag: `git pull && git tag vX.Y.Z && git push origin vX.Y.Z`
+5. Undraft: `gh release edit vX.Y.Z --draft=false`
+6. Publish: `mix hex.publish && mix hex.publish docs`
+7. Force source compilation (for local testing): `ZIGLER_PRECOMPILE_FORCE_RECOMPILE=true mix compile`
 
 See `AGENTS.md` for domain-specific development guidance (widgets, demos, NIFs).

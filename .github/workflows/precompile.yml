@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   precompile:
@@ -70,14 +71,33 @@ jobs:
           # Upload all .so files
           gh release upload "$VERSION" artifacts/*.so --clobber
 
-      - name: Print shasum config
+      - name: Update precompiled.ex with shasums
+        run: elixir scripts/update_precompiled.exs
+
+      - name: Create PR with updated shasums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== Precompile logs ==="
-          echo ""
-          echo "--- NIF ---"
-          cat /tmp/nif_precompile.log
-          echo ""
-          echo "--- EditBufferNIF ---"
-          cat /tmp/edit_buffer_precompile.log
-          echo ""
-          echo "Copy the shasum keyword lists above into lib/elixir_opentui/precompiled.ex"
+          VERSION="${{ github.event.inputs.version }}"
+          BRANCH="release/${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add lib/elixir_opentui/precompiled.ex
+          git commit -m "chore: populate precompiled NIF shasums for ${VERSION}"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "Release ${VERSION}: precompiled NIF shasums" \
+            --body "Automated PR with precompiled NIF shasums for ${VERSION}.
+
+          ## Post-merge steps
+
+          1. Merge this PR
+          2. \`git pull && git tag ${VERSION} && git push origin ${VERSION}\`
+          3. \`gh release edit ${VERSION} --draft=false\`
+          4. \`mix hex.publish && mix hex.publish docs\`" \
+            --base main \
+            --head "$BRANCH"
