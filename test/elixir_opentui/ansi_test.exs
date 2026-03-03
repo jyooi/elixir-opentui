@@ -394,6 +394,33 @@ defmodule ElixirOpentui.ANSITest do
     end
   end
 
+  describe "clipboard (OSC 52)" do
+    test "generates correct OSC 52 sequence for system clipboard" do
+      result = IO.iodata_to_binary(ANSI.copy_to_clipboard("hello"))
+      assert result == "\e]52;c;#{Base.encode64("hello")}\a"
+    end
+
+    test "primary selection uses 'p'" do
+      result = IO.iodata_to_binary(ANSI.copy_to_clipboard("hello", "p"))
+      assert result == "\e]52;p;#{Base.encode64("hello")}\a"
+    end
+
+    test "empty text returns empty iodata" do
+      assert IO.iodata_to_binary(ANSI.copy_to_clipboard("")) == ""
+    end
+
+    test "unicode text is base64 encoded correctly" do
+      result = IO.iodata_to_binary(ANSI.copy_to_clipboard("héllo 世界"))
+      assert result == "\e]52;c;#{Base.encode64("héllo 世界")}\a"
+    end
+
+    test "multiline text" do
+      text = "line1\nline2\nline3"
+      result = IO.iodata_to_binary(ANSI.copy_to_clipboard(text))
+      assert result == "\e]52;c;#{Base.encode64(text)}\a"
+    end
+  end
+
   describe "bracketed paste sequences" do
     test "enable_paste" do
       assert IO.iodata_to_binary(ANSI.enable_paste()) == "\e[?2004h"

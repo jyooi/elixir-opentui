@@ -19,6 +19,7 @@ defmodule ElixirOpentui.Runtime do
   require Logger
 
   alias ElixirOpentui.{
+    ANSI,
     Renderer,
     EventManager,
     Element,
@@ -411,6 +412,14 @@ defmodule ElixirOpentui.Runtime do
   end
 
   def handle_info(:tick, %{control_state: :idle} = state) do
+    {:noreply, state}
+  end
+
+  def handle_info({:clipboard_copy, text}, state) do
+    if state.terminal do
+      Terminal.write(state.terminal, ANSI.copy_to_clipboard(text))
+    end
+
     {:noreply, state}
   end
 
