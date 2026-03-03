@@ -20,7 +20,7 @@ defmodule ElixirOpentui.Input do
     9 => :tab,
     13 => :enter,
     127 => :backspace,
-    # PUA functional keys (57344-57357 handled by @kitty_functional_keys)
+    # PUA functional keys (57348-57357 handled by @kitty_functional_keys)
     # PUA special keys
     57358 => :caps_lock,
     57359 => :scroll_lock,
@@ -114,10 +114,6 @@ defmodule ElixirOpentui.Input do
   }
 
   @kitty_functional_keys %{
-    57344 => :escape,
-    57345 => :enter,
-    57346 => :tab,
-    57347 => :backspace,
     57348 => :insert,
     57349 => :delete,
     57350 => :left,

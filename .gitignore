@@ -25,4 +25,6 @@ elixir_opentui-*.tar
 # Zig build cache
 zig/opentui/.zig-cache/
 
+pipe:*
+
 .expert

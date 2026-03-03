@@ -194,7 +194,7 @@ defmodule ElixirOpentui.Terminal do
 
     write_stdout(output)
     restore_mode()
-    {:reply, :ok, %{state | suspended: true, raw_mode: false}}
+    {:reply, :ok, %{state | suspended: true, raw_mode: false, detecting: false}}
   end
 
   def handle_call(:suspend, _from, state) do
