@@ -509,6 +509,91 @@ defmodule ElixirOpentui.LayoutTest do
     end
   end
 
+  describe "frame_buffer intrinsic size" do
+    test "uses buffer dimensions" do
+      canvas = ElixirOpentui.Canvas.new(20, 10)
+
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:frame_buffer, id: :fb, buffer: canvas)
+          ]
+        )
+
+      results = layout(tree)
+      fb_rect = rect_for(results, :fb)
+      assert fb_rect.w == 20
+      assert fb_rect.h == 10
+    end
+
+    test "falls back to attrs width/height without buffer" do
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:frame_buffer, id: :fb, width: 15, height: 8)
+          ]
+        )
+
+      results = layout(tree)
+      fb_rect = rect_for(results, :fb)
+      assert fb_rect.w == 15
+      assert fb_rect.h == 8
+    end
+  end
+
+  describe "ascii_font intrinsic size" do
+    test "computed from text and font" do
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:ascii_font, id: :af, text: "AB", font: :tiny)
+          ]
+        )
+
+      results = layout(tree)
+      af_rect = rect_for(results, :af)
+      # A=3 + letterspace=1 + B=3 = 7
+      assert af_rect.w == 7
+      assert af_rect.h == 2
+    end
+
+    test "block font height is 6" do
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:ascii_font, id: :af, text: "A", font: :block)
+          ]
+        )
+
+      results = layout(tree)
+      af_rect = rect_for(results, :af)
+      assert af_rect.h == 6
+    end
+
+    test "participates in flex layout" do
+      tree =
+        Element.new(:box, [id: :root, width: 80, height: 24, flex_direction: :row], [
+          Element.new(:ascii_font, id: :title, text: "HI", font: :tiny),
+          Element.new(:box, id: :content, flex_grow: 1)
+        ])
+
+      results = layout(tree)
+      title_rect = rect_for(results, :title)
+      content_rect = rect_for(results, :content)
+      # Title takes intrinsic width, content gets the rest
+      assert content_rect.x == title_rect.w
+      assert content_rect.w == 80 - title_rect.w
+    end
+  end
+
   describe "complex layouts" do
     test "sidebar + main content" do
       tree =

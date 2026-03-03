@@ -25,6 +25,8 @@ defmodule ElixirOpentui.Element do
           | :code
           | :markdown
           | :diff
+          | :frame_buffer
+          | :ascii_font
           | :component
 
   @type t :: %__MODULE__{
