@@ -1,3 +1,6 @@
+# LEGACY: See demo/claude_animation_demo.exs for the widget-based version.
+# This file drives NativeBuffer directly; kept for reference.
+#
 # CLAUDE Animation Demo
 # Run: mix run demo/claude_animation.exs
 #

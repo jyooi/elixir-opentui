@@ -12,6 +12,35 @@ defmodule ElixirOpentui.Demo.DemoRunnerTest do
     end
   end
 
+  describe "configurable tick interval" do
+    test "source uses _tick_interval from state" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      assert source =~ "_tick_interval"
+      assert source =~ "Map.get(state, :_tick_interval, 33)"
+    end
+
+    test "source uses real wall-clock dt" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      assert source =~ "System.monotonic_time(:millisecond)"
+      assert source =~ "_last_tick"
+      # Should NOT have the old hardcoded dt = wait_ms
+      refute source =~ "dt = wait_ms"
+    end
+
+    test "initializes _last_tick before loop" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      assert source =~ "Map.put_new(state, :_last_tick, System.monotonic_time(:millisecond))"
+    end
+
+    test "compensates sleep for render time" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      # Should subtract elapsed time from tick_interval
+      assert source =~ "tick_interval - time_spent"
+      # Should clamp to minimum 1ms
+      assert source =~ "max(1,"
+    end
+  end
+
   describe "restore_terminal cleanup sequences" do
     test "writes unconditional keyboard + mouse + screen cleanup to tty" do
       # Replicate the expected sequence from restore_terminal and verify
