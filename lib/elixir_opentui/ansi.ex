@@ -99,6 +99,20 @@ defmodule ElixirOpentui.ANSI do
   @spec default_kitty_flags() :: non_neg_integer()
   def default_kitty_flags, do: 5
 
+  # --- Synchronized output (mode 2026) ---
+
+  @doc "Begin synchronized update — terminal buffers output until end_sync_update."
+  @spec begin_sync_update() :: iodata()
+  def begin_sync_update, do: "\e[?2026h"
+
+  @doc "End synchronized update — terminal flushes buffered output."
+  @spec end_sync_update() :: iodata()
+  def end_sync_update, do: "\e[?2026l"
+
+  @doc "Query DECRQM for a private mode. Response: \\e[?{mode};{status}$y"
+  @spec query_decrqm(non_neg_integer()) :: iodata()
+  def query_decrqm(mode), do: ["\e[?", Integer.to_string(mode), "$p"]
+
   # --- Clipboard (OSC 52) ---
 
   @doc """

@@ -137,9 +137,9 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 
 ---
 
-## Phase 11: Advanced Input — :yellow_circle: PARTIALLY DONE
+## Phase 11: Advanced Input — :white_check_mark: COMPLETE
 
-4 of 5 items done.
+All 5 items done.
 
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
@@ -147,12 +147,12 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 | 11b | Clipboard via OSC 52 | :white_check_mark: | `ansi.ex` OSC 52 copy/paste sequences; `input.ex` OSC 52 response parsing; clipboard keybindings in TextArea |
 | 11c | Mouse movement tracking (mode 1003) | :white_check_mark: | `ansi.ex:52` enables `\e[?1003h`; `input.ex:241` decodes motion bit → :move |
 | 11d | Kitty keyboard protocol | :white_check_mark: | `input.ex` CSI u parsing; `ansi.ex` push/pop kitty keyboard flags; `terminal.ex` integration |
-| 11e | Terminal capability detection | :x: | No capabilities.ex, no XTVERSION/DECRQM/env detection |
+| 11e | Terminal capability detection | :white_check_mark: | `capabilities.ex` — XTVERSION/DECRQM/env-based detection, progressive enhancement |
 
 ### TODO for Phase 11:
 - [x] **11b. Clipboard via OSC 52** — Add OSC 52 read/write to `ansi.ex`, wire copy/paste keybindings in TextArea (~40 LOC)
 - [x] **11d. Kitty keyboard protocol** — Add CSI u parsing to `input.ex`, push/pop flags in `terminal.ex` (~120 LOC)
-- [ ] **11e. Terminal capability detection** — Create `capabilities.ex` with XTVERSION, DECRQM, env-based detection, progressive enhancement (~100 LOC)
+- [x] **11e. Terminal capability detection** — Create `capabilities.ex` with XTVERSION, DECRQM, env-based detection, progressive enhancement (~100 LOC)
 
 ---
 
@@ -214,11 +214,11 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 | Phase 8: Text System Upgrade | 5 | 5 | **100%** |
 | Phase 9: Advanced Widgets | 6 | 6 | **100%** |
 | Phase 10: Animation & Live Mode | 3 | 3 | **100%** |
-| Phase 11: Advanced Input | 4 | 5 | **80%** |
+| Phase 11: Advanced Input | 5 | 5 | **100%** |
 | Phase 12: DX & Polish | 0 | 4 | **~5%** |
 | Layout Gaps | 0 | 3 | **0%** |
 | Rendering Gaps | 2 | 2 | **100%** |
-| **TOTAL** | **62** | **72** | **~86%** |
+| **TOTAL** | **63** | **72** | **~88%** |
 
 ---
 
@@ -239,7 +239,7 @@ All 3 items done (88 timeline + 18 runtime tick + 104 easing = 210 tests).
 - [x] 9f. LineNumber widget
 - [x] 10c. Pause/resume/suspend
 - [x] 11d. Kitty keyboard protocol
-- [ ] 11e. Terminal capability detection
+- [x] 11e. Terminal capability detection
 - [ ] 12a. Publish to Hex.pm
 - [ ] 12c. Example apps
 - [ ] 12d. Per-component keybinding customization

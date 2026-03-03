@@ -10,17 +10,19 @@ defmodule ElixirOpentui.Terminal do
 
   use GenServer
 
-  alias ElixirOpentui.{ANSI, Input}
+  alias ElixirOpentui.{ANSI, Capabilities, Input}
 
   @type t :: %{
           cols: non_neg_integer(),
           rows: non_neg_integer(),
           raw_mode: boolean(),
+          suspended: boolean(),
           listeners: [pid()],
           kitty_keyboard: boolean(),
           kitty_flags: non_neg_integer(),
           modify_other_keys: boolean(),
-          detecting: boolean()
+          detecting: boolean(),
+          capabilities: Capabilities.t()
         }
 
   defstruct cols: 80,
@@ -31,7 +33,8 @@ defmodule ElixirOpentui.Terminal do
             kitty_keyboard: false,
             kitty_flags: 0,
             modify_other_keys: false,
-            detecting: false
+            detecting: false,
+            capabilities: %ElixirOpentui.Capabilities{}
 
   # --- Public API ---
 
@@ -88,6 +91,12 @@ defmodule ElixirOpentui.Terminal do
     GenServer.call(server, :resume)
   end
 
+  @doc "Get current terminal capabilities."
+  @spec capabilities(GenServer.server()) :: Capabilities.t()
+  def capabilities(server) do
+    GenServer.call(server, :capabilities)
+  end
+
   @doc "Query terminal size using ANSI escape / ioctl."
   @spec detect_size() :: {non_neg_integer(), non_neg_integer()}
   def detect_size do
@@ -131,21 +140,27 @@ defmodule ElixirOpentui.Terminal do
     {:reply, {state.cols, state.rows}, state}
   end
 
+  def handle_call(:capabilities, _from, state) do
+    {:reply, state.capabilities, state}
+  end
+
   def handle_call(:enter, _from, state) do
     setup_raw_mode()
     :os.set_signal(:sigtstp, :ignore)
+    caps = Capabilities.detect_env()
 
     output = [
       ANSI.enter_alt_screen(),
       ANSI.hide_cursor(),
       ANSI.enable_mouse(),
       ANSI.enable_paste(),
-      ANSI.query_kitty_keyboard()
+      ANSI.query_kitty_keyboard(),
+      ANSI.query_decrqm(2026)
     ]
 
     write_stdout(output)
     Process.send_after(self(), :keyboard_detect_timeout, 100)
-    {:reply, :ok, %{state | raw_mode: true, detecting: true}}
+    {:reply, :ok, %{state | raw_mode: true, detecting: true, capabilities: caps}}
   end
 
   def handle_call(:leave, _from, state) do
@@ -313,12 +328,26 @@ defmodule ElixirOpentui.Terminal do
 
   # --- Private helpers ---
 
-  defp handle_capability_event(%{capability: :kitty_keyboard, value: _flags}, state) do
+  defp handle_capability_event(%{capability: :kitty_keyboard, value: _flags} = event, state) do
     # Clean up modifyOtherKeys if it was enabled during the detection timeout
     if state.modify_other_keys, do: write_stdout(ANSI.disable_modify_other_keys())
     flags = ANSI.default_kitty_flags()
     write_stdout(ANSI.push_kitty_keyboard(flags))
-    %{state | kitty_keyboard: true, kitty_flags: flags, detecting: false, modify_other_keys: false}
+    caps = Capabilities.apply_capability(state.capabilities, event)
+
+    %{
+      state
+      | kitty_keyboard: true,
+        kitty_flags: flags,
+        detecting: false,
+        modify_other_keys: false,
+        capabilities: caps
+    }
+  end
+
+  defp handle_capability_event(%{capability: :decrqm} = event, state) do
+    caps = Capabilities.apply_capability(state.capabilities, event)
+    %{state | capabilities: caps}
   end
 
   defp handle_capability_event(_event, state), do: state

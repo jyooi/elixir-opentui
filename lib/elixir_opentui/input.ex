@@ -160,7 +160,11 @@ defmodule ElixirOpentui.Input do
         }
 
   @type paste_event :: %{type: :paste, data: String.t()}
-  @type capability_event :: %{type: :capability, capability: atom(), value: term()}
+  @type capability_event :: %{
+          :type => :capability,
+          :capability => atom(),
+          optional(atom()) => term()
+        }
 
   @type event :: key_event() | mouse_event() | paste_event() | capability_event()
 
@@ -342,6 +346,15 @@ defmodule ElixirOpentui.Input do
   defp csi_to_event(params, "~") do
     code_str = List.first(params) || "0"
     tilde_code_to_event(code_str)
+  end
+
+  # DECRQM response: \e[?{mode};{status}$y
+  # The $ (0x24) is collected as a param byte by the CSI parser, so after ;
+  # split the params are ["?{mode}", "{status}$"]. We strip the trailing $.
+  defp csi_to_event(["?" <> mode_str, status_str], "y") do
+    mode = to_integer(mode_str, 0)
+    status = status_str |> String.trim_trailing("$") |> to_integer(0)
+    %{type: :capability, capability: :decrqm, mode: mode, status: status}
   end
 
   defp csi_to_event(_, _), do: key(:unknown)
