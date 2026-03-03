@@ -362,4 +362,45 @@ defmodule ElixirOpentui.ANSITest do
       assert String.contains?(result, "hello")
     end
   end
+
+  describe "Kitty keyboard protocol sequences" do
+    test "query_kitty_keyboard" do
+      assert IO.iodata_to_binary(ANSI.query_kitty_keyboard()) == "\e[?u"
+    end
+
+    test "push_kitty_keyboard with default flags" do
+      assert IO.iodata_to_binary(ANSI.push_kitty_keyboard()) == "\e[>5u"
+    end
+
+    test "push_kitty_keyboard with custom flags" do
+      assert IO.iodata_to_binary(ANSI.push_kitty_keyboard(1)) == "\e[>1u"
+      assert IO.iodata_to_binary(ANSI.push_kitty_keyboard(31)) == "\e[>31u"
+    end
+
+    test "pop_kitty_keyboard" do
+      assert IO.iodata_to_binary(ANSI.pop_kitty_keyboard()) == "\e[<u"
+    end
+
+    test "enable_modify_other_keys" do
+      assert IO.iodata_to_binary(ANSI.enable_modify_other_keys()) == "\e[>4;2m"
+    end
+
+    test "disable_modify_other_keys" do
+      assert IO.iodata_to_binary(ANSI.disable_modify_other_keys()) == "\e[>4;0m"
+    end
+
+    test "default_kitty_flags returns 5" do
+      assert ANSI.default_kitty_flags() == 5
+    end
+  end
+
+  describe "bracketed paste sequences" do
+    test "enable_paste" do
+      assert IO.iodata_to_binary(ANSI.enable_paste()) == "\e[?2004h"
+    end
+
+    test "disable_paste" do
+      assert IO.iodata_to_binary(ANSI.disable_paste()) == "\e[?2004l"
+    end
+  end
 end
