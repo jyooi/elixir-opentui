@@ -301,6 +301,76 @@ defmodule ElixirOpentui.LayoutTest do
       assert a_rect.x == 15
       assert b_rect.x == 55
     end
+
+    test "space_evenly with multiple children" do
+      tree =
+        Element.new(
+          :box,
+          [
+            id: :root,
+            width: 80,
+            height: 24,
+            flex_direction: :row,
+            justify_content: :space_evenly
+          ],
+          [
+            Element.new(:box, id: :a, width: 10, height: 24),
+            Element.new(:box, id: :b, width: 10, height: 24),
+            Element.new(:box, id: :c, width: 10, height: 24)
+          ]
+        )
+
+      results = layout(tree)
+      # 80 - 30 = 50 free, 4 gaps (count+1) => 12 each
+      assert rect_for(results, :a).x == 12
+      assert rect_for(results, :b).x == 34
+      assert rect_for(results, :c).x == 56
+    end
+
+    test "space_evenly with single child" do
+      tree =
+        Element.new(
+          :box,
+          [
+            id: :root,
+            width: 80,
+            height: 24,
+            flex_direction: :row,
+            justify_content: :space_evenly
+          ],
+          [
+            Element.new(:box, id: :child, width: 20, height: 24)
+          ]
+        )
+
+      results = layout(tree)
+      # 80 - 20 = 60 free, 2 gaps => 30 each
+      assert rect_for(results, :child).x == 30
+    end
+
+    test "space_evenly in column direction" do
+      tree =
+        Element.new(
+          :box,
+          [
+            id: :root,
+            width: 80,
+            height: 24,
+            justify_content: :space_evenly
+          ],
+          [
+            Element.new(:box, id: :a, width: 80, height: 2),
+            Element.new(:box, id: :b, width: 80, height: 2),
+            Element.new(:box, id: :c, width: 80, height: 2)
+          ]
+        )
+
+      results = layout(tree)
+      # 24 - 6 = 18 free, 4 gaps => 4 each
+      assert rect_for(results, :a).y == 4
+      assert rect_for(results, :b).y == 10
+      assert rect_for(results, :c).y == 16
+    end
   end
 
   describe "align_items" do

@@ -6,15 +6,16 @@ defmodule ElixirOpentui.Layout do
   a map of `%{element_ref => %Rect{x, y, w, h}}` results.
 
   Implements the TUI-relevant subset of CSS Flexbox:
-  - flex_direction: :row | :column
+  - flex_direction: :row | :column | :row_reverse | :column_reverse
   - flex_grow, flex_shrink, flex_basis
-  - justify_content: :flex_start | :flex_end | :center | :space_between | :space_around
+  - flex_wrap: :no_wrap | :wrap | :wrap_reverse
+  - justify_content: :flex_start | :flex_end | :center | :space_between | :space_around | :space_evenly
   - align_items, align_self: :flex_start | :flex_end | :center | :stretch
   - width, height (fixed, :auto, {:percent, p})
   - padding, margin, gap
   - position: :relative | :absolute (with top/left/right/bottom)
 
-  NOT implemented (not used in TUI): flex-wrap, align-content, order, CSS grid.
+  NOT implemented (not used in TUI): align-content, order, CSS grid.
 
   Three-pass algorithm:
   1. Measure (bottom-up): compute intrinsic sizes
@@ -49,6 +50,11 @@ defmodule ElixirOpentui.Layout do
     {tagged_root, results}
   end
 
+  # --- Direction helpers ---
+
+  defp is_row?(dir), do: dir in [:row, :row_reverse]
+  defp is_reverse?(dir), do: dir in [:row_reverse, :column_reverse]
+
   # --- Pass 1+2+3 combined in recursive descent ---
 
   defp layout_node(%Element{} = node, avail_w, avail_h, parent_x, parent_y, results) do
@@ -72,20 +78,39 @@ defmodule ElixirOpentui.Layout do
     # Measure flow children to get intrinsic sizes
     measured = measure_children(flow_children, style.flex_direction, inner_w, inner_h)
 
-    # Flex resolve: distribute space
-    resolved = flex_resolve(measured, style, inner_w, inner_h)
+    # Flex resolve + position flow children
+    # Branch: single-line (no_wrap) vs multi-line (wrap / wrap_reverse)
+    {results, resolved_lines} =
+      if style.flex_wrap == :no_wrap do
+        resolved = flex_resolve(measured, style, inner_w, inner_h)
 
-    # Position flow children
-    {results, _} =
-      position_flow_children(
-        resolved,
-        style,
-        inner_w,
-        inner_h,
-        parent_x + inner_offset_x,
-        parent_y + inner_offset_y,
-        results
-      )
+        {results, _} =
+          position_flow_children(
+            resolved,
+            style,
+            inner_w,
+            inner_h,
+            parent_x + inner_offset_x,
+            parent_y + inner_offset_y,
+            results
+          )
+
+        line_cross = Enum.reduce(resolved, 0, fn m, acc -> max(acc, m.resolved_cross) end)
+        {results, [{resolved, line_cross}]}
+      else
+        avail_main = if is_row?(style.flex_direction), do: inner_w, else: inner_h
+        lines = split_into_lines(measured, avail_main, style.gap)
+
+        layout_wrapped_lines(
+          lines,
+          style,
+          inner_w,
+          inner_h,
+          parent_x + inner_offset_x,
+          parent_y + inner_offset_y,
+          results
+        )
+      end
 
     # Position absolute children
     results =
@@ -100,10 +125,9 @@ defmodule ElixirOpentui.Layout do
 
     # If height/width was :auto, recompute based on children
     {node_w, node_h} =
-      auto_size_from_children(
-        node,
+      auto_size_from_lines(
         style,
-        resolved,
+        resolved_lines,
         node_w,
         node_h,
         pad_left,
@@ -170,23 +194,21 @@ defmodule ElixirOpentui.Layout do
       {margin_top, margin_right, margin_bottom, margin_left} = style.margin
 
       main_size =
-        case flex_dir do
-          :row -> cw + margin_left + margin_right
-          :column -> ch + margin_top + margin_bottom
-        end
+        if is_row?(flex_dir),
+          do: cw + margin_left + margin_right,
+          else: ch + margin_top + margin_bottom
 
       cross_size =
-        case flex_dir do
-          :row -> ch + margin_top + margin_bottom
-          :column -> cw + margin_left + margin_right
-        end
+        if is_row?(flex_dir),
+          do: ch + margin_top + margin_bottom,
+          else: cw + margin_left + margin_right
 
       %{
         element: child,
         intrinsic_main: main_size,
         intrinsic_cross: cross_size,
-        content_main: if(flex_dir == :row, do: cw, else: ch),
-        content_cross: if(flex_dir == :row, do: ch, else: cw),
+        content_main: if(is_row?(flex_dir), do: cw, else: ch),
+        content_cross: if(is_row?(flex_dir), do: ch, else: cw),
         resolved_main: main_size,
         resolved_cross: cross_size,
         flex_grow: style.flex_grow,
@@ -226,10 +248,7 @@ defmodule ElixirOpentui.Layout do
           if has_intrinsic do
             content_width(child, avail_w)
           else
-            case flex_dir do
-              :row -> 0
-              :column -> avail_w
-            end
+            if is_row?(flex_dir), do: 0, else: avail_w
           end
 
         {:percent, p} ->
@@ -248,10 +267,7 @@ defmodule ElixirOpentui.Layout do
           if has_intrinsic do
             content_height(child, avail_h)
           else
-            case flex_dir do
-              :column -> 0
-              :row -> avail_h
-            end
+            if is_row?(flex_dir), do: avail_h, else: 0
           end
 
         {:percent, p} ->
@@ -412,7 +428,7 @@ defmodule ElixirOpentui.Layout do
   defp flex_resolve([], _style, _avail_w, _avail_h), do: []
 
   defp flex_resolve(measured, style, avail_w, avail_h) do
-    avail_main = if style.flex_direction == :row, do: avail_w, else: avail_h
+    avail_main = if is_row?(style.flex_direction), do: avail_w, else: avail_h
     gap = style.gap
     total_gaps = max(0, Kernel.length(measured) - 1) * gap
 
@@ -443,14 +459,12 @@ defmodule ElixirOpentui.Layout do
           extra = round(remaining * m.flex_grow / total_grow)
           new_main = m.content_main + extra
 
-          case flex_dir do
-            :row ->
-              {_mt, mr, _mb, ml} = m.margin
-              %{m | resolved_main: new_main + ml + mr, content_main: new_main}
-
-            :column ->
-              {mt, _mr, mb, _ml} = m.margin
-              %{m | resolved_main: new_main + mt + mb, content_main: new_main}
+          if is_row?(flex_dir) do
+            {_mt, mr, _mb, ml} = m.margin
+            %{m | resolved_main: new_main + ml + mr, content_main: new_main}
+          else
+            {mt, _mr, mb, _ml} = m.margin
+            %{m | resolved_main: new_main + mt + mb, content_main: new_main}
           end
         else
           m
@@ -473,14 +487,12 @@ defmodule ElixirOpentui.Layout do
           shrink_amount = round(overflow * (m.flex_shrink * m.content_main) / total_shrink)
           new_main = max(0, m.content_main - shrink_amount)
 
-          case flex_dir do
-            :row ->
-              {_mt, mr, _mb, ml} = m.margin
-              %{m | resolved_main: new_main + ml + mr, content_main: new_main}
-
-            :column ->
-              {mt, _mr, mb, _ml} = m.margin
-              %{m | resolved_main: new_main + mt + mb, content_main: new_main}
+          if is_row?(flex_dir) do
+            {_mt, mr, _mb, ml} = m.margin
+            %{m | resolved_main: new_main + ml + mr, content_main: new_main}
+          else
+            {mt, _mr, mb, _ml} = m.margin
+            %{m | resolved_main: new_main + mt + mb, content_main: new_main}
           end
         else
           m
@@ -494,8 +506,8 @@ defmodule ElixirOpentui.Layout do
   defp position_flow_children(resolved, style, avail_w, avail_h, base_x, base_y, results) do
     gap = style.gap
     flex_dir = style.flex_direction
-    avail_main = if flex_dir == :row, do: avail_w, else: avail_h
-    avail_cross = if flex_dir == :row, do: avail_h, else: avail_w
+    avail_main = if is_row?(flex_dir), do: avail_w, else: avail_h
+    avail_cross = if is_row?(flex_dir), do: avail_h, else: avail_w
 
     total_main =
       resolved
@@ -526,18 +538,16 @@ defmodule ElixirOpentui.Layout do
             flex_dir
           )
 
-        # Calculate absolute position
+        # Calculate absolute position (as if non-reversed)
         {child_x, child_y} =
-          case flex_dir do
-            :row ->
-              {base_x + main_offset + ml, base_y + cross_offset}
-
-            :column ->
-              {base_x + cross_offset, base_y + main_offset + mt}
+          if is_row?(flex_dir) do
+            {base_x + main_offset + ml, base_y + cross_offset}
+          else
+            {base_x + cross_offset, base_y + main_offset + mt}
           end
 
-        child_w = if flex_dir == :row, do: m.content_main, else: m.content_cross
-        child_h = if flex_dir == :row, do: m.content_cross, else: m.content_main
+        child_w = if is_row?(flex_dir), do: m.content_main, else: m.content_cross
+        child_h = if is_row?(flex_dir), do: m.content_cross, else: m.content_main
 
         # Stretch cross-axis if applicable
         {child_w, child_h} =
@@ -553,6 +563,18 @@ defmodule ElixirOpentui.Layout do
             ml,
             mr
           )
+
+        # Mirror main-axis position for reverse directions
+        {child_x, child_y} =
+          if is_reverse?(flex_dir) do
+            if is_row?(flex_dir) do
+              {base_x + avail_main - (child_x - base_x) - child_w, child_y}
+            else
+              {child_x, base_y + avail_main - (child_y - base_y) - child_h}
+            end
+          else
+            {child_x, child_y}
+          end
 
         # Recursively layout this child's subtree
         {res, _child_rect} = layout_node(m.element, child_w, child_h, child_x, child_y, res)
@@ -580,12 +602,19 @@ defmodule ElixirOpentui.Layout do
   end
 
   defp justify(:space_around, _free, _count), do: {0, 0}
+
+  defp justify(:space_evenly, free, count) when count > 0 do
+    gap = div(free, count + 1)
+    {gap, gap}
+  end
+
+  defp justify(:space_evenly, _free, _count), do: {0, 0}
   defp justify(_, _free, _count), do: {0, 0}
 
   defp align_cross(align_items, align_self, content_cross, avail_cross, mt, mb, ml, mr, flex_dir) do
     effective_align = if align_self == :auto, do: align_items, else: align_self
-    margin_before = if flex_dir == :row, do: mt, else: ml
-    margin_after = if flex_dir == :row, do: mb, else: mr
+    margin_before = if is_row?(flex_dir), do: mt, else: ml
+    margin_after = if is_row?(flex_dir), do: mb, else: mr
     total_cross = content_cross + margin_before + margin_after
 
     case effective_align do
@@ -601,9 +630,10 @@ defmodule ElixirOpentui.Layout do
     effective_align = if align_self == :auto, do: align_items, else: align_self
 
     if effective_align == :stretch do
-      case flex_dir do
-        :row -> {w, max(0, avail_cross - mt - mb)}
-        :column -> {max(0, avail_cross - ml - mr), h}
+      if is_row?(flex_dir) do
+        {w, max(0, avail_cross - mt - mb)}
+      else
+        {max(0, avail_cross - ml - mr), h}
       end
     else
       {w, h}
@@ -634,23 +664,119 @@ defmodule ElixirOpentui.Layout do
     end)
   end
 
-  defp auto_size_from_children(_node, style, resolved, w, h, pad_l, pad_r, pad_t, pad_b, border) do
+  # --- Flex-wrap: line splitting ---
+
+  defp split_into_lines(measured, avail_main, gap) do
+    {lines, current_line, _used} =
+      Enum.reduce(measured, {[], [], 0}, fn m, {lines, current_line, used_main} ->
+        gap_cost = if current_line == [], do: 0, else: gap
+        needed = used_main + gap_cost + m.intrinsic_main
+
+        if current_line != [] and needed > avail_main do
+          # Start a new line with this child
+          {[Enum.reverse(current_line) | lines], [m], m.intrinsic_main}
+        else
+          # Add to current line
+          {lines, [m | current_line], used_main + gap_cost + m.intrinsic_main}
+        end
+      end)
+
+    all_lines =
+      if current_line != [] do
+        [Enum.reverse(current_line) | lines]
+      else
+        lines
+      end
+
+    Enum.reverse(all_lines)
+  end
+
+  # --- Flex-wrap: per-line resolve and position ---
+
+  defp layout_wrapped_lines(lines, style, inner_w, inner_h, base_x, base_y, results) do
+    flex_dir = style.flex_direction
+
+    # Phase 1: Resolve each line independently and compute per-line cross sizes
+    resolved_lines =
+      Enum.map(lines, fn line ->
+        resolved = flex_resolve(line, style, inner_w, inner_h)
+        line_cross = Enum.reduce(resolved, 0, fn m, acc -> max(acc, m.resolved_cross) end)
+        {resolved, line_cross}
+      end)
+
+    # Phase 2: For wrap_reverse, reverse line stacking order
+    ordered_lines =
+      if style.flex_wrap == :wrap_reverse do
+        Enum.reverse(resolved_lines)
+      else
+        resolved_lines
+      end
+
+    # Phase 3: Position each line's children, stacking lines along cross axis
+    {results, _cross_offset} =
+      Enum.reduce(ordered_lines, {results, 0}, fn {resolved, line_cross}, {res, cross_offset} ->
+        {line_base_x, line_base_y} =
+          if is_row?(flex_dir) do
+            {base_x, base_y + cross_offset}
+          else
+            {base_x + cross_offset, base_y}
+          end
+
+        {line_avail_w, line_avail_h} =
+          if is_row?(flex_dir) do
+            {inner_w, line_cross}
+          else
+            {line_cross, inner_h}
+          end
+
+        {res, _} =
+          position_flow_children(resolved, style, line_avail_w, line_avail_h, line_base_x, line_base_y, res)
+
+        {res, cross_offset + line_cross}
+      end)
+
+    {results, resolved_lines}
+  end
+
+  # --- Auto-sizing (supports multi-line) ---
+
+  defp auto_size_from_lines(style, resolved_lines, w, h, pad_l, pad_r, pad_t, pad_b, border) do
+    all_resolved = Enum.flat_map(resolved_lines, fn {resolved, _line_cross} -> resolved end)
+
     # Only shrink-to-content when there ARE children; otherwise keep the
     # available space passed by the parent (flex-grow scenario).
-    if (style.width == :auto or style.height == :auto) and resolved != [] do
+    if (style.width == :auto or style.height == :auto) and all_resolved != [] do
       {auto_w, auto_h} =
-        case style.flex_direction do
-          :row ->
-            content_w = Enum.reduce(resolved, 0, fn m, acc -> acc + m.resolved_main end)
-            gap_w = max(0, Kernel.length(resolved) - 1) * style.gap
-            max_h = Enum.reduce(resolved, 0, fn m, acc -> max(acc, m.resolved_cross) end)
-            {content_w + gap_w + pad_l + pad_r + border * 2, max_h + pad_t + pad_b + border * 2}
+        if is_row?(style.flex_direction) do
+          # Main axis = width: widest line
+          max_line_main =
+            Enum.reduce(resolved_lines, 0, fn {resolved, _lc}, acc ->
+              line_main = Enum.reduce(resolved, 0, fn m, a -> a + m.resolved_main end)
+              line_gaps = max(0, length(resolved) - 1) * style.gap
+              max(acc, line_main + line_gaps)
+            end)
 
-          :column ->
-            content_h = Enum.reduce(resolved, 0, fn m, acc -> acc + m.resolved_main end)
-            gap_h = max(0, Kernel.length(resolved) - 1) * style.gap
-            max_w = Enum.reduce(resolved, 0, fn m, acc -> max(acc, m.resolved_cross) end)
-            {max_w + pad_l + pad_r + border * 2, content_h + gap_h + pad_t + pad_b + border * 2}
+          # Cross axis = height: sum of line cross sizes
+          total_cross =
+            Enum.reduce(resolved_lines, 0, fn {_resolved, lc}, acc -> acc + lc end)
+
+          {max_line_main + pad_l + pad_r + border * 2,
+           total_cross + pad_t + pad_b + border * 2}
+        else
+          # Main axis = height: tallest line
+          max_line_main =
+            Enum.reduce(resolved_lines, 0, fn {resolved, _lc}, acc ->
+              line_main = Enum.reduce(resolved, 0, fn m, a -> a + m.resolved_main end)
+              line_gaps = max(0, length(resolved) - 1) * style.gap
+              max(acc, line_main + line_gaps)
+            end)
+
+          # Cross axis = width: sum of line cross sizes
+          total_cross =
+            Enum.reduce(resolved_lines, 0, fn {_resolved, lc}, acc -> acc + lc end)
+
+          {total_cross + pad_l + pad_r + border * 2,
+           max_line_main + pad_t + pad_b + border * 2}
         end
 
       w = if style.width == :auto, do: auto_w, else: w
