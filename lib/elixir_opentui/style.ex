@@ -1,16 +1,17 @@
 defmodule ElixirOpentui.Style do
   @moduledoc """
   Style properties for layout computation, mirroring the Flexbox subset
-  used by ElixirOpentui (no flex-wrap, no CSS grid, no float).
+  used by ElixirOpentui (no CSS grid, no float).
   """
 
   alias ElixirOpentui.Color
 
   @type dimension :: non_neg_integer() | :auto | {:percent, float()}
-  @type flex_direction :: :row | :column
-  @type justify_content :: :flex_start | :flex_end | :center | :space_between | :space_around
+  @type flex_direction :: :row | :column | :row_reverse | :column_reverse
+  @type justify_content :: :flex_start | :flex_end | :center | :space_between | :space_around | :space_evenly
   @type align_items :: :flex_start | :flex_end | :center | :stretch
   @type align_self :: :auto | :flex_start | :flex_end | :center | :stretch
+  @type flex_wrap :: :no_wrap | :wrap | :wrap_reverse
   @type position_type :: :relative | :absolute
 
   @type border_style :: :single | :double | :rounded | :heavy
@@ -24,6 +25,7 @@ defmodule ElixirOpentui.Style do
           justify_content: justify_content(),
           align_items: align_items(),
           align_self: align_self(),
+          flex_wrap: flex_wrap(),
           width: dimension(),
           height: dimension(),
           min_width: dimension(),
@@ -69,6 +71,7 @@ defmodule ElixirOpentui.Style do
             justify_content: :flex_start,
             align_items: :stretch,
             align_self: :auto,
+            flex_wrap: :no_wrap,
             width: :auto,
             height: :auto,
             min_width: :auto,
