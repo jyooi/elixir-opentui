@@ -510,8 +510,30 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   end
 
   defp handle_events(demo_mod, [], state, renderer, ctx, input_pid, start_time, timeout) do
-    state = Map.put(state, :_last_tick, System.monotonic_time(:millisecond))
-    loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
+    is_live = Map.get(state, :_live, false)
+    tick_interval = Map.get(state, :_tick_interval, 33)
+
+    if is_live and function_exported?(demo_mod, :handle_tick, 2) do
+      now = System.monotonic_time(:millisecond)
+      time_since_tick = now - Map.get(state, :_last_tick, now)
+
+      if time_since_tick >= tick_interval do
+        dt = min(time_since_tick, 500)
+
+        case tick_and_render(demo_mod, dt, state, renderer, ctx) do
+          {new_state, new_renderer, ctx} ->
+            new_state = Map.put(new_state, :_last_tick, now)
+            loop(demo_mod, new_state, new_renderer, ctx, input_pid, start_time, timeout)
+
+          :ok ->
+            :ok
+        end
+      else
+        loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
+      end
+    else
+      loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
+    end
   end
 
   defp handle_events(
@@ -526,11 +548,19 @@ defmodule ElixirOpentui.Demo.DemoRunner do
        ) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
-        # Render after each event
-        tree = demo_mod.render(new_state)
-        focus_id = demo_mod.focused_id(new_state)
-        {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-        write_frame(ctx, ansi)
+        # Live demos defer rendering to the next tick to avoid redundant
+        # renders under sustained input (key hold). Non-live demos render
+        # immediately since they have no tick loop.
+        {new_renderer, ctx} =
+          if Map.get(new_state, :_live, false) do
+            {renderer, ctx}
+          else
+            tree = demo_mod.render(new_state)
+            focus_id = demo_mod.focused_id(new_state)
+            {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
+            write_frame(ctx, ansi)
+            {new_renderer, ctx}
+          end
 
         handle_events(
           demo_mod,
