@@ -49,7 +49,7 @@ defmodule ElixirOpentui.MixProject do
         "GitHub" => @source_url,
         "OpenTUI (upstream Zig)" => "https://github.com/anomalyco/opentui"
       },
-      files: ~w(lib zig .formatter.exs mix.exs README.md LICENSE)
+      files: ~w(lib zig .formatter.exs mix.exs README.md LICENSE CHANGELOG.md)
     ]
   end
 

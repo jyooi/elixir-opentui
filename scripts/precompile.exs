@@ -78,3 +78,8 @@ Precompilation complete. Shasums:
 
 Copy into the appropriate function in lib/elixir_opentui/precompiled.ex
 """)
+
+basename = file |> Path.basename(".ex") |> String.downcase()
+shasum_file = "/tmp/shasums_#{basename}.exs"
+File.write!(shasum_file, inspect(Enum.reverse(results), limit: :infinity))
+IO.puts("Wrote machine-readable shasums to #{shasum_file}")
