@@ -10,7 +10,8 @@ defmodule ElixirOpentui.EditBufferNIF do
     otp_app: :elixir_opentui,
     resources: [:EditBufferResource, :EditorViewResource],
     dependencies: [opentui: "./zig/opentui"],
-    extra_modules: [opentui_api: {:opentui, :opentui}]
+    extra_modules: [opentui_api: {:opentui, :opentui}],
+    precompiled: ElixirOpentui.Precompiled.edit_buffer_nif_precompiled()
 
   ~Z"""
   const std = @import("std");
