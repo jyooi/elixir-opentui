@@ -411,6 +411,10 @@ defmodule ElixirOpentui.Demo.DemoRunner do
             timeout
           )
 
+        {:clipboard_copy, text} ->
+          tty_write(tty, ANSI.copy_to_clipboard(text))
+          loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+
         {:EXIT, _pid, _reason} ->
           # Linked input reader (or other process) died — exit the loop
           # gracefully so the after block can run cleanup.
