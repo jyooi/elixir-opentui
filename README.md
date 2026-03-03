@@ -4,6 +4,13 @@ A terminal UI framework for Elixir with a high-performance Zig NIF backend.
 Build rich, interactive terminal applications using an Elm-inspired
 init/handle_event/render architecture and a declarative View DSL.
 
+This project is a port of [OpenTUI](https://github.com/anomalyco/opentui) to idiomatic
+Elixir. The Zig NIF backend uses OpenTUI's Zig implementation directly — the rope data
+structure, text buffer, editor view, grapheme handling, and frame buffer are all vendored
+from their codebase. Huge thanks to the OpenTUI team at [Anomaly](https://github.com/anomalyco)
+for building and open-sourcing such a solid foundation. This project wouldn't exist
+without their work.
+
 <!-- TODO: Add asciinema recording or screenshot of widget_gallery demo -->
 
 ## What it looks like
@@ -176,15 +183,6 @@ end
 **Layout**: `width`, `height`, `min_width`, `max_width`, `flex_grow`, `flex_shrink`, `flex_basis`, `padding`, `margin`, `gap`, `direction` (`:row`/`:column`), `justify_content`, `align_items`, `align_self`
 
 **Visual**: `fg`, `bg`, `opacity`, `bold`, `italic`, `underline`, `dim`, `inverse`, `border`, `border_style` (`:single`/`:double`/`:rounded`/`:heavy`)
-
-## Acknowledgements
-
-This project is a port of [OpenTUI](https://github.com/anomalyco/opentui) to idiomatic
-Elixir. The Zig NIF backend uses OpenTUI's Zig implementation directly — the rope data
-structure, text buffer, editor view, grapheme handling, and frame buffer are all vendored
-from their codebase. Huge thanks to the OpenTUI team at [Anomaly](https://github.com/anomalyco)
-for building and open-sourcing such a solid foundation. This project wouldn't exist
-without their work.
 
 ## Project status
 
