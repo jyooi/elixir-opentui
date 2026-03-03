@@ -187,6 +187,42 @@ defmodule ElixirOpentui.LayoutReverseTest do
       assert rect_for(results, :b).w == 20
       assert rect_for(results, :c).w == 10
     end
+
+    test "asymmetric horizontal margins are mirrored correctly" do
+      # margin: {top, right, bottom, left} = {0, 8, 0, 2}
+      # In row_reverse, the child should be offset from the RIGHT edge by mr=8,
+      # not by ml=2 as it would be in normal row direction.
+      tree =
+        Element.new(:box, [id: :root, width: 80, height: 24, flex_direction: :row_reverse], [
+          Element.new(:box, id: :child, width: 20, height: 10, margin: {0, 8, 0, 2})
+        ])
+
+      results = layout(tree)
+
+      # Forward: child_x = 0 + 2 (ml) = 2, child occupies [2..22)
+      # Mirror:  child_x = 80 - 2 - 20 - (8 - 2) = 52
+      # Meaning: right edge at 52 + 20 = 72, leaving mr=8 from right edge (80)
+      assert rect_for(results, :child).x == 52
+    end
+
+    test "multiple children with different asymmetric margins in row_reverse" do
+      tree =
+        Element.new(:box, [id: :root, width: 80, height: 24, flex_direction: :row_reverse], [
+          Element.new(:box, id: :a, width: 10, height: 10, margin: {0, 5, 0, 1}),
+          Element.new(:box, id: :b, width: 10, height: 10, margin: {0, 3, 0, 7})
+        ])
+
+      results = layout(tree)
+
+      # Forward layout:
+      #   A: ml=1, so child_x=1, occupies [1..11), resolved_main = 1+10+5 = 16
+      #   B: ml=7, so child_x=16+7=23, occupies [23..33), resolved_main = 7+10+3 = 20
+      # Mirror:
+      #   A: 80 - 1 - 10 - (5 - 1) = 65
+      #   B: 80 - 23 - 10 - (3 - 7) = 51  (i.e. +4 correction)
+      assert rect_for(results, :a).x == 65
+      assert rect_for(results, :b).x == 51
+    end
   end
 
   describe "flex_direction: :column_reverse" do
@@ -306,6 +342,23 @@ defmodule ElixirOpentui.LayoutReverseTest do
 
       results = layout(tree)
       assert rect_for(results, :child).y == 10
+    end
+
+    test "asymmetric vertical margins are mirrored correctly" do
+      # margin: {top, right, bottom, left} = {3, 0, 7, 0}
+      # In column_reverse, the child should be offset from the BOTTOM edge by mb=7,
+      # not by mt=3 as it would be in normal column direction.
+      tree =
+        Element.new(:box, [id: :root, width: 80, height: 24, flex_direction: :column_reverse], [
+          Element.new(:box, id: :child, width: 20, height: 4, margin: {3, 0, 7, 0})
+        ])
+
+      results = layout(tree)
+
+      # Forward: child_y = 0 + 3 (mt) = 3, child occupies [3..7)
+      # Mirror:  child_y = 24 - 3 - 4 - (7 - 3) = 13
+      # Meaning: bottom edge at 13 + 4 = 17, leaving mb=7 from bottom edge (24)
+      assert rect_for(results, :child).y == 13
     end
 
     test "gap works with reversed positions" do
