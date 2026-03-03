@@ -12,6 +12,7 @@ defmodule ElixirOpentui.MixProject do
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
+      aliases: aliases(),
       package: package(),
       description: "A terminal UI framework for Elixir with a high-performance Zig NIF backend.",
       name: "ElixirOpentui",
@@ -27,6 +28,18 @@ defmodule ElixirOpentui.MixProject do
     [
       extra_applications: [:logger]
     ]
+  end
+
+  defp aliases do
+    [
+      setup: &setup/1
+    ]
+  end
+
+  defp setup(_args) do
+    Application.ensure_all_started(:inets)
+    :httpc.set_options(ipfamily: :inet)
+    Mix.Task.run("zig.get")
   end
 
   defp package do
