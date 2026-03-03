@@ -120,7 +120,9 @@ defmodule ElixirOpentui.ASCIIFontTest do
       rows = ASCIIFont.render_to_segments("A", :block)
       assert length(rows) == 6
 
-      all_indices = rows |> Enum.flat_map(fn row -> Enum.map(row, &elem(&1, 1)) end) |> Enum.uniq()
+      all_indices =
+        rows |> Enum.flat_map(fn row -> Enum.map(row, &elem(&1, 1)) end) |> Enum.uniq()
+
       assert 0 in all_indices
       assert 1 in all_indices
     end

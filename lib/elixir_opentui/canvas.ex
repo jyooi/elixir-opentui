@@ -41,7 +41,16 @@ defmodule ElixirOpentui.Canvas do
   end
 
   @doc "Fill a rectangle with the given character and colors."
-  @spec fill_rect(t(), integer(), integer(), non_neg_integer(), non_neg_integer(), String.t(), Color.t(), Color.t()) ::
+  @spec fill_rect(
+          t(),
+          integer(),
+          integer(),
+          non_neg_integer(),
+          non_neg_integer(),
+          String.t(),
+          Color.t(),
+          Color.t()
+        ) ::
           t()
   def fill_rect(%__MODULE__{} = canvas, _x, _y, w, _h, _char, _fg, _bg) when w <= 0, do: canvas
   def fill_rect(%__MODULE__{} = canvas, _x, _y, _w, h, _char, _fg, _bg) when h <= 0, do: canvas
