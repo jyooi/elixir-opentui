@@ -97,8 +97,10 @@ defmodule ElixirOpentui.Painter do
             buf
           end
 
+        sorted_children = Enum.sort_by(el.children, & &1.style.z_index, &<=/2)
+
         buf =
-          Enum.reduce(el.children, buf, fn child, b ->
+          Enum.reduce(sorted_children, buf, fn child, b ->
             paint_node(child, layout, b, opacity, focus_id)
           end)
 

@@ -52,6 +52,7 @@ defmodule ElixirOpentui.Element do
     :flex_grow,
     :flex_shrink,
     :flex_basis,
+    :flex_wrap,
     :justify_content,
     :align_items,
     :align_self,
@@ -116,7 +117,8 @@ defmodule ElixirOpentui.Element do
     direction: :flex_direction,
     grow: :flex_grow,
     shrink: :flex_shrink,
-    basis: :flex_basis
+    basis: :flex_basis,
+    wrap: :flex_wrap
   }
 
   defp normalize_aliases(attrs) do
