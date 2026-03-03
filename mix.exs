@@ -48,8 +48,19 @@ defmodule ElixirOpentui.MixProject do
       groups_for_modules: [
         Widgets: ~r/Widgets\./,
         Animation: ~r/Animation\./,
-        Core: [ElixirOpentui.Element, ElixirOpentui.View, ElixirOpentui.Component, ElixirOpentui.Style],
-        Rendering: [ElixirOpentui.Renderer, ElixirOpentui.Buffer, ElixirOpentui.NativeBuffer, ElixirOpentui.Painter, ElixirOpentui.ANSI],
+        Core: [
+          ElixirOpentui.Element,
+          ElixirOpentui.View,
+          ElixirOpentui.Component,
+          ElixirOpentui.Style
+        ],
+        Rendering: [
+          ElixirOpentui.Renderer,
+          ElixirOpentui.Buffer,
+          ElixirOpentui.NativeBuffer,
+          ElixirOpentui.Painter,
+          ElixirOpentui.ANSI
+        ],
         Layout: [ElixirOpentui.Layout],
         Terminal: [ElixirOpentui.Terminal, ElixirOpentui.Input, ElixirOpentui.Capabilities]
       ]

@@ -186,10 +186,10 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     # Write multiple times to cover tmux's re-enable timing window.
     cmd =
       "sleep 1 && " <>
-      "test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
-      "sleep 0.5 && test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
-      "sleep 0.5 && test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
-      "rm -f #{tmp}"
+        "test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
+        "sleep 0.5 && test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
+        "sleep 0.5 && test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
+        "rm -f #{tmp}"
 
     port = Port.open({:spawn, "sh -c '#{cmd} &'"}, [:binary, :nouse_stdio])
     # Unlink so the port's exit doesn't send {:EXIT, ...} to the demo loop.
@@ -228,9 +228,9 @@ defmodule ElixirOpentui.Demo.DemoRunner do
 
     cmd =
       "sleep 0.3 && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
-      "sleep 0.3 && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
-      "sleep 0.3 && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
-      "rm -f #{tmp}"
+        "sleep 0.3 && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
+        "sleep 0.3 && cat #{tmp} > #{tty_path} 2>/dev/null && " <>
+        "rm -f #{tmp}"
 
     port = Port.open({:spawn, "sh -c '#{cmd} &'"}, [:binary, :nouse_stdio])
     :erlang.unlink(port)

@@ -8,7 +8,8 @@ defmodule ElixirOpentui.Style do
 
   @type dimension :: non_neg_integer() | :auto | {:percent, float()}
   @type flex_direction :: :row | :column | :row_reverse | :column_reverse
-  @type justify_content :: :flex_start | :flex_end | :center | :space_between | :space_around | :space_evenly
+  @type justify_content ::
+          :flex_start | :flex_end | :center | :space_between | :space_around | :space_evenly
   @type align_items :: :flex_start | :flex_end | :center | :stretch
   @type align_self :: :auto | :flex_start | :flex_end | :center | :stretch
   @type flex_wrap :: :no_wrap | :wrap | :wrap_reverse

@@ -40,11 +40,15 @@ defmodule ElixirOpentui.LayoutWrapTest do
   describe "flex_wrap: :wrap with row direction" do
     test "two children fit, third wraps to second line" do
       tree =
-        Element.new(:box, [id: :root, width: 50, height: 24, flex_direction: :row, flex_wrap: :wrap], [
-          Element.new(:box, id: :a, width: 20, height: 5),
-          Element.new(:box, id: :b, width: 20, height: 8),
-          Element.new(:box, id: :c, width: 20, height: 6)
-        ])
+        Element.new(
+          :box,
+          [id: :root, width: 50, height: 24, flex_direction: :row, flex_wrap: :wrap],
+          [
+            Element.new(:box, id: :a, width: 20, height: 5),
+            Element.new(:box, id: :b, width: 20, height: 8),
+            Element.new(:box, id: :c, width: 20, height: 6)
+          ]
+        )
 
       results = layout(tree, 50, 24)
 
@@ -62,11 +66,15 @@ defmodule ElixirOpentui.LayoutWrapTest do
 
     test "all children fit on one line" do
       tree =
-        Element.new(:box, [id: :root, width: 80, height: 24, flex_direction: :row, flex_wrap: :wrap], [
-          Element.new(:box, id: :a, width: 20, height: 10),
-          Element.new(:box, id: :b, width: 20, height: 10),
-          Element.new(:box, id: :c, width: 20, height: 10)
-        ])
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, flex_wrap: :wrap],
+          [
+            Element.new(:box, id: :a, width: 20, height: 10),
+            Element.new(:box, id: :b, width: 20, height: 10),
+            Element.new(:box, id: :c, width: 20, height: 10)
+          ]
+        )
 
       results = layout(tree)
       # All fit: same as no-wrap
@@ -80,11 +88,15 @@ defmodule ElixirOpentui.LayoutWrapTest do
 
     test "each child on its own line when container is narrow" do
       tree =
-        Element.new(:box, [id: :root, width: 15, height: 30, flex_direction: :row, flex_wrap: :wrap], [
-          Element.new(:box, id: :a, width: 20, height: 4),
-          Element.new(:box, id: :b, width: 20, height: 6),
-          Element.new(:box, id: :c, width: 20, height: 3)
-        ])
+        Element.new(
+          :box,
+          [id: :root, width: 15, height: 30, flex_direction: :row, flex_wrap: :wrap],
+          [
+            Element.new(:box, id: :a, width: 20, height: 4),
+            Element.new(:box, id: :b, width: 20, height: 6),
+            Element.new(:box, id: :c, width: 20, height: 3)
+          ]
+        )
 
       results = layout(tree, 15, 30)
 
@@ -103,11 +115,15 @@ defmodule ElixirOpentui.LayoutWrapTest do
   describe "flex_wrap: :wrap with column direction" do
     test "children wrap to next column" do
       tree =
-        Element.new(:box, [id: :root, width: 80, height: 20, flex_direction: :column, flex_wrap: :wrap], [
-          Element.new(:box, id: :a, width: 15, height: 8),
-          Element.new(:box, id: :b, width: 20, height: 8),
-          Element.new(:box, id: :c, width: 10, height: 8)
-        ])
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 20, flex_direction: :column, flex_wrap: :wrap],
+          [
+            Element.new(:box, id: :a, width: 15, height: 8),
+            Element.new(:box, id: :b, width: 20, height: 8),
+            Element.new(:box, id: :c, width: 10, height: 8)
+          ]
+        )
 
       results = layout(tree, 80, 20)
 
@@ -131,7 +147,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 30, flex_direction: :row, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            width: 50,
+            height: 30,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 3),
             Element.new(:box, id: :b, width: 20, height: 7),
@@ -153,7 +176,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 30, flex_direction: :row, flex_wrap: :wrap, align_items: :stretch],
+          [
+            id: :root,
+            width: 50,
+            height: 30,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :stretch
+          ],
           [
             Element.new(:text, id: :a, width: 20, content: "hi"),
             Element.new(:box, id: :b, width: 20, height: 7),
@@ -272,7 +302,15 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 30, height: 24, flex_direction: :row, flex_wrap: :wrap, gap: 5, align_items: :flex_start],
+          [
+            id: :root,
+            width: 30,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            gap: 5,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 4),
             Element.new(:box, id: :b, width: 20, height: 6)
@@ -295,7 +333,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 24, flex_direction: :row, flex_wrap: :wrap, justify_content: :center],
+          [
+            id: :root,
+            width: 50,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            justify_content: :center
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 5),
             Element.new(:box, id: :b, width: 20, height: 5),
@@ -318,7 +363,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 60, height: 24, flex_direction: :row, flex_wrap: :wrap, justify_content: :space_between],
+          [
+            id: :root,
+            width: 60,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            justify_content: :space_between
+          ],
           [
             Element.new(:box, id: :a, width: 10, height: 5),
             Element.new(:box, id: :b, width: 10, height: 5),
@@ -342,7 +394,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 30, flex_direction: :row, flex_wrap: :wrap, align_items: :center],
+          [
+            id: :root,
+            width: 50,
+            height: 30,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :center
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 2),
             Element.new(:box, id: :b, width: 20, height: 8),
@@ -362,7 +421,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 30, flex_direction: :row, flex_wrap: :wrap, align_items: :flex_end],
+          [
+            id: :root,
+            width: 50,
+            height: 30,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :flex_end
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 2),
             Element.new(:box, id: :b, width: 20, height: 8),
@@ -390,7 +456,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 30, flex_direction: :row, flex_wrap: :wrap_reverse, align_items: :flex_start],
+          [
+            id: :root,
+            width: 50,
+            height: 30,
+            flex_direction: :row,
+            flex_wrap: :wrap_reverse,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 5),
             Element.new(:box, id: :b, width: 20, height: 5),
@@ -415,7 +488,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 80, height: 20, flex_direction: :column, flex_wrap: :wrap_reverse, align_items: :flex_start],
+          [
+            id: :root,
+            width: 80,
+            height: 20,
+            flex_direction: :column,
+            flex_wrap: :wrap_reverse,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 10, height: 8),
             Element.new(:box, id: :b, width: 15, height: 8),
@@ -441,7 +521,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 30, flex_direction: :row_reverse, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            width: 50,
+            height: 30,
+            flex_direction: :row_reverse,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 5),
             Element.new(:box, id: :b, width: 20, height: 5),
@@ -471,7 +558,13 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, flex_direction: :row, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            width: 50,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 30, height: 5),
             Element.new(:box, id: :b, width: 30, height: 8),
@@ -496,7 +589,13 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, height: 15, flex_direction: :column, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            height: 15,
+            flex_direction: :column,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 10, height: 8),
             Element.new(:box, id: :b, width: 15, height: 8),
@@ -543,7 +642,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 30, height: 24, flex_direction: :row, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            width: 30,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 10, height: 5),
             Element.new(:box, id: :b, width: 50, height: 5),
@@ -570,7 +676,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 50, height: 24, flex_direction: :row, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            width: 50,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 20, height: 5, margin: 3),
             Element.new(:box, id: :b, width: 20, height: 5)
@@ -590,7 +703,14 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree2 =
         Element.new(
           :box,
-          [id: :root, width: 40, height: 24, flex_direction: :row, flex_wrap: :wrap, align_items: :flex_start],
+          [
+            id: :root,
+            width: 40,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a2, width: 20, height: 5, margin: 3),
             Element.new(:box, id: :b2, width: 20, height: 5)
@@ -610,8 +730,16 @@ defmodule ElixirOpentui.LayoutWrapTest do
       tree =
         Element.new(
           :box,
-          [id: :root, width: 40, height: 24, flex_direction: :row, flex_wrap: :wrap,
-           border: true, padding: 1, align_items: :flex_start],
+          [
+            id: :root,
+            width: 40,
+            height: 24,
+            flex_direction: :row,
+            flex_wrap: :wrap,
+            border: true,
+            padding: 1,
+            align_items: :flex_start
+          ],
           [
             Element.new(:box, id: :a, width: 15, height: 4),
             Element.new(:box, id: :b, width: 15, height: 4),

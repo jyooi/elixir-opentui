@@ -1652,7 +1652,15 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
 
     test "cut triggers on_change" do
-      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10, on_change: :changed})
+      state =
+        TextArea.init(%{
+          id: :ta,
+          value: "hello world",
+          width: 40,
+          height: 10,
+          on_change: :changed
+        })
+
       state = select_right_n(state, 5)
       _state = TextArea.update(:key, key_event("x", meta: true), state)
       assert_received {:clipboard_copy, "hello"}
@@ -1660,7 +1668,15 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
 
     test "copy does not trigger on_change" do
-      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10, on_change: :changed})
+      state =
+        TextArea.init(%{
+          id: :ta,
+          value: "hello world",
+          width: 40,
+          height: 10,
+          on_change: :changed
+        })
+
       state = select_right_n(state, 5)
       _state = TextArea.update(:key, key_event("c", meta: true), state)
       assert_received {:clipboard_copy, "hello"}
