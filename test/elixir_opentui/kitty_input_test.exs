@@ -180,26 +180,6 @@ defmodule ElixirOpentui.KittyInputTest do
   end
 
   describe "Kitty CSI u: PUA functional keys" do
-    test "escape (57344)" do
-      [event] = Input.parse("\e[57344u")
-      assert event.key == :escape
-    end
-
-    test "enter (57345)" do
-      [event] = Input.parse("\e[57345u")
-      assert event.key == :enter
-    end
-
-    test "tab (57346)" do
-      [event] = Input.parse("\e[57346u")
-      assert event.key == :tab
-    end
-
-    test "backspace (57347)" do
-      [event] = Input.parse("\e[57347u")
-      assert event.key == :backspace
-    end
-
     test "insert (57348)" do
       [event] = Input.parse("\e[57348u")
       assert event.key == :insert

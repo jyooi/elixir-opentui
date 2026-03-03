@@ -68,14 +68,17 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       tty_write(tty, [ansi, ANSI.hide_cursor()])
 
       # Process any input events that arrived during the detection window
-      {state, renderer} =
-        process_buffered_events(demo_mod, buffered_events, state, renderer, tty)
+      case process_buffered_events(demo_mod, buffered_events, state, renderer, tty) do
+        {state, renderer} ->
+          start_time = System.monotonic_time(:millisecond)
+          result = loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+          stop_input_reader(input_pid)
+          result
 
-      start_time = System.monotonic_time(:millisecond)
-      result = loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
-
-      stop_input_reader(input_pid)
-      result
+        :ok ->
+          stop_input_reader(input_pid)
+          :ok
+      end
     after
       restore_terminal(tty)
       :file.close(tty)
@@ -202,19 +205,16 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     _, _ -> :ok
   end
 
-  # Spawn an additional deferred cleanup for the after-block path.
-  # This handles the tmux re-enable that happens AFTER the BEAM exits
-  # on normal exit (where the after block did run).
+  # Spawn a deferred mouse-disable for the after-block path.
+  # Only writes disable_mouse() — the minimum needed for the tmux case
+  # where tmux re-enables mouse tracking after the pane child exits.
+  # All other terminal state (keyboard protocol, cursor, reset) was
+  # already restored by restore_terminal/1 and the stderr fallback.
+  # Keeping this minimal avoids injecting visible garbage into the
+  # user's shell prompt. (The armed cleanup in arm_deferred_mouse_cleanup/1
+  # retains full sequences because it fires when the after block didn't run.)
   defp spawn_deferred_mouse_cleanup do
-    disable_seq =
-      IO.iodata_to_binary([
-        ANSI.disable_mouse(),
-        ANSI.set_kitty_keyboard(0),
-        ANSI.pop_kitty_keyboard(),
-        ANSI.disable_modify_other_keys(),
-        ANSI.show_cursor(),
-        ANSI.reset()
-      ])
+    disable_seq = IO.iodata_to_binary(ANSI.disable_mouse())
 
     tty_path = resolve_tty_path()
     tmp = "/tmp/.elixir_opentui_cleanup2_#{:os.getpid()}"
@@ -330,7 +330,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         process_buffered_events(demo_mod, rest, new_state, new_renderer, tty)
 
       :quit ->
-        {state, renderer}
+        :ok
     end
   end
 
@@ -419,8 +419,14 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         wait_ms ->
           if is_live and function_exported?(demo_mod, :handle_tick, 2) do
             dt = wait_ms
-            {new_state, renderer, tty} = tick_and_render(demo_mod, dt, state, renderer, tty)
-            loop(demo_mod, new_state, renderer, tty, input_pid, start_time, timeout)
+
+            case tick_and_render(demo_mod, dt, state, renderer, tty) do
+              {new_state, new_renderer, tty} ->
+                loop(demo_mod, new_state, new_renderer, tty, input_pid, start_time, timeout)
+
+              :ok ->
+                :ok
+            end
           else
             loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
           end
@@ -438,7 +444,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         {new_state, new_renderer, tty}
 
       :quit ->
-        {state, renderer, tty}
+        :ok
     end
   end
 
