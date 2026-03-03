@@ -99,6 +99,22 @@ defmodule ElixirOpentui.ANSI do
   @spec default_kitty_flags() :: non_neg_integer()
   def default_kitty_flags, do: 5
 
+  # --- Clipboard (OSC 52) ---
+
+  @doc """
+  Generate OSC 52 sequence to copy text to the system clipboard.
+
+  The terminal intercepts this sequence and copies the decoded text.
+  Uses BEL (\\a) terminator — more compatible than ST (\\e\\\\) which
+  breaks in screen and older tmux versions.
+  """
+  @spec copy_to_clipboard(String.t(), String.t()) :: iodata()
+  def copy_to_clipboard(text, selection \\ "c")
+  def copy_to_clipboard("", _selection), do: []
+  def copy_to_clipboard(text, selection) do
+    ["\e]52;", selection, ";", Base.encode64(text), "\a"]
+  end
+
   # --- Cursor shape ---
 
   @doc "Set terminal cursor shape. Steady variants (no opts) or blink control."

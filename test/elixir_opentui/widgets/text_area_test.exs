@@ -1610,4 +1610,61 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert get_text(state) == "hello"
     end
   end
+
+  describe "clipboard (copy/cut)" do
+    test "copy sends {:clipboard_copy, text} with selected text" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
+      # Select "hello"
+      state = select_right_n(state, 5)
+      # Copy
+      _state = TextArea.update(:key, key_event("c", meta: true), state)
+      assert_received {:clipboard_copy, "hello"}
+    end
+
+    test "copy preserves text and selection" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
+      state = select_right_n(state, 5)
+      new_state = TextArea.update(:key, key_event("c", meta: true), state)
+      assert get_text(new_state) == "hello world"
+      # Selection should still be present
+      assert new_state.selection != nil
+    end
+
+    test "copy without selection sends no message" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
+      _state = TextArea.update(:key, key_event("c", meta: true), state)
+      refute_received {:clipboard_copy, _}
+    end
+
+    test "cut sends {:clipboard_copy, text} and removes selected text" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
+      state = select_right_n(state, 5)
+      state = TextArea.update(:key, key_event("x", meta: true), state)
+      assert_received {:clipboard_copy, "hello"}
+      assert get_text(state) == " world"
+    end
+
+    test "cut without selection is no-op" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
+      state = TextArea.update(:key, key_event("x", meta: true), state)
+      refute_received {:clipboard_copy, _}
+      assert get_text(state) == "hello world"
+    end
+
+    test "cut triggers on_change" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10, on_change: :changed})
+      state = select_right_n(state, 5)
+      _state = TextArea.update(:key, key_event("x", meta: true), state)
+      assert_received {:clipboard_copy, "hello"}
+      assert_received {:changed, " world"}
+    end
+
+    test "copy does not trigger on_change" do
+      state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10, on_change: :changed})
+      state = select_right_n(state, 5)
+      _state = TextArea.update(:key, key_event("c", meta: true), state)
+      assert_received {:clipboard_copy, "hello"}
+      refute_received {:changed, _}
+    end
+  end
 end
