@@ -25,6 +25,9 @@ elixir_opentui-*.tar
 # Zig build cache
 zig/opentui/.zig-cache/
 
+# Precompile artifacts (produced by scripts/precompile.exs)
+/lib/elixir_opentui/lib/
+
 pipe:*
 
 .expert
