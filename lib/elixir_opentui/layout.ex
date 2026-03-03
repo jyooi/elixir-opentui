@@ -730,7 +730,15 @@ defmodule ElixirOpentui.Layout do
           end
 
         {res, _} =
-          position_flow_children(resolved, style, line_avail_w, line_avail_h, line_base_x, line_base_y, res)
+          position_flow_children(
+            resolved,
+            style,
+            line_avail_w,
+            line_avail_h,
+            line_base_x,
+            line_base_y,
+            res
+          )
 
         {res, cross_offset + line_cross}
       end)
@@ -760,8 +768,7 @@ defmodule ElixirOpentui.Layout do
           total_cross =
             Enum.reduce(resolved_lines, 0, fn {_resolved, lc}, acc -> acc + lc end)
 
-          {max_line_main + pad_l + pad_r + border * 2,
-           total_cross + pad_t + pad_b + border * 2}
+          {max_line_main + pad_l + pad_r + border * 2, total_cross + pad_t + pad_b + border * 2}
         else
           # Main axis = height: tallest line
           max_line_main =
@@ -775,8 +782,7 @@ defmodule ElixirOpentui.Layout do
           total_cross =
             Enum.reduce(resolved_lines, 0, fn {_resolved, lc}, acc -> acc + lc end)
 
-          {total_cross + pad_l + pad_r + border * 2,
-           max_line_main + pad_t + pad_b + border * 2}
+          {total_cross + pad_l + pad_r + border * 2, max_line_main + pad_t + pad_b + border * 2}
         end
 
       w = if style.width == :auto, do: auto_w, else: w

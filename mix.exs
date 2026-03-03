@@ -1,15 +1,23 @@
 defmodule ElixirOpentui.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @source_url "https://github.com/jyooi/elixir-opentui"
+
   def project do
     [
       app: :elixir_opentui,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      package: package(),
+      description: "A terminal UI framework for Elixir with a high-performance Zig NIF backend.",
+      name: "ElixirOpentui",
+      source_url: @source_url,
+      docs: docs()
     ]
   end
 
@@ -34,9 +42,47 @@ defmodule ElixirOpentui.MixProject do
     Mix.Task.run("zig.get")
   end
 
-  # Run "mix help deps" to learn about dependencies.
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url,
+        "OpenTUI (upstream Zig)" => "https://github.com/anomalyco/opentui"
+      },
+      files: ~w(lib zig .formatter.exs mix.exs README.md LICENSE)
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md", "guides/getting-started.md"],
+      source_ref: "v#{@version}",
+      groups_for_modules: [
+        Widgets: ~r/Widgets\./,
+        Animation: ~r/Animation\./,
+        Core: [
+          ElixirOpentui.Element,
+          ElixirOpentui.View,
+          ElixirOpentui.Component,
+          ElixirOpentui.Style
+        ],
+        Rendering: [
+          ElixirOpentui.Renderer,
+          ElixirOpentui.Buffer,
+          ElixirOpentui.NativeBuffer,
+          ElixirOpentui.Painter,
+          ElixirOpentui.ANSI
+        ],
+        Layout: [ElixirOpentui.Layout],
+        Terminal: [ElixirOpentui.Terminal, ElixirOpentui.Input, ElixirOpentui.Capabilities]
+      ]
+    ]
+  end
+
   defp deps do
     [
+      {:ex_doc, "~> 0.35", only: :dev, runtime: false},
       {:zigler, "~> 0.15.2", runtime: false},
       {:makeup, "~> 1.2", optional: true},
       {:makeup_elixir, "~> 1.0", optional: true},

@@ -125,6 +125,7 @@ defmodule ElixirOpentui.ANSI do
   @spec copy_to_clipboard(String.t(), String.t()) :: iodata()
   def copy_to_clipboard(text, selection \\ "c")
   def copy_to_clipboard("", _selection), do: []
+
   def copy_to_clipboard(text, selection) do
     ["\e]52;", selection, ";", Base.encode64(text), "\a"]
   end
