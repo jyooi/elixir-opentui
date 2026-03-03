@@ -8,6 +8,7 @@ on:
 
 env:
   MIX_ENV: test
+  ZIGLER_PRECOMPILE_FORCE_RECOMPILE: "true"
 
 jobs:
   build-and-test:
