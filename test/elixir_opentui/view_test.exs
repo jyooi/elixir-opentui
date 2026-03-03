@@ -47,6 +47,20 @@ defmodule ElixirOpentui.ViewTest do
       assert el.type == :select
       assert el.attrs.options == ["admin", "user"]
     end
+
+    test "frame_buffer creates frame_buffer element" do
+      canvas = %ElixirOpentui.Canvas{width: 10, height: 5, cells: %{}}
+      el = frame_buffer(buffer: canvas)
+      assert el.type == :frame_buffer
+      assert el.attrs.buffer == canvas
+    end
+
+    test "ascii_font creates ascii_font element" do
+      el = ascii_font(text: "HI", font: :tiny)
+      assert el.type == :ascii_font
+      assert el.attrs.text == "HI"
+      assert el.attrs.font == :tiny
+    end
   end
 
   describe "nesting with do blocks" do

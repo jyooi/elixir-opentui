@@ -34,7 +34,9 @@ defmodule ElixirOpentui.View do
     :line_number,
     :code,
     :markdown,
-    :diff
+    :diff,
+    :frame_buffer,
+    :ascii_font
   ]
 
   for type <- @element_types do

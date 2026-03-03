@@ -70,6 +70,9 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       # Process any input events that arrived during the detection window
       case process_buffered_events(demo_mod, buffered_events, state, renderer, tty) do
         {state, renderer} ->
+          # Initialize _last_tick before entering the loop so the first
+          # frame gets dt ≈ tick_interval, not dt = 0.
+          state = Map.put_new(state, :_last_tick, System.monotonic_time(:millisecond))
           start_time = System.monotonic_time(:millisecond)
           result = loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
           stop_input_reader(input_pid)
@@ -312,8 +315,8 @@ defmodule ElixirOpentui.Demo.DemoRunner do
 
   defp filter_press_events(events) do
     Enum.filter(events, fn
-      %{event_type: :repeat} -> false
       %{event_type: :release} -> false
+      %{event_type: :repeat} -> false
       _ -> true
     end)
   end
@@ -386,7 +389,16 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       :timeout
     else
       is_live = Map.get(state, :_live, false)
-      wait_ms = if is_live, do: 33, else: 100
+      tick_interval = Map.get(state, :_tick_interval, 33)
+
+      wait_ms =
+        if is_live do
+          now = System.monotonic_time(:millisecond)
+          time_spent = now - Map.get(state, :_last_tick, now)
+          max(1, tick_interval - time_spent)
+        else
+          100
+        end
 
       receive do
         {:byte, first_byte} ->
@@ -395,8 +407,8 @@ defmodule ElixirOpentui.Demo.DemoRunner do
 
           press_events =
             Enum.filter(events, fn
-              %{event_type: :repeat} -> false
               %{event_type: :release} -> false
+              %{event_type: :repeat} -> false
               _ -> true
             end)
 
@@ -422,10 +434,12 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       after
         wait_ms ->
           if is_live and function_exported?(demo_mod, :handle_tick, 2) do
-            dt = wait_ms
+            now = System.monotonic_time(:millisecond)
+            dt = min(now - Map.get(state, :_last_tick, now), 500)
 
             case tick_and_render(demo_mod, dt, state, renderer, tty) do
               {new_state, new_renderer, tty} ->
+                new_state = Map.put(new_state, :_last_tick, now)
                 loop(demo_mod, new_state, new_renderer, tty, input_pid, start_time, timeout)
 
               :ok ->
@@ -453,6 +467,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   end
 
   defp handle_events(demo_mod, [], state, renderer, tty, input_pid, start_time, timeout) do
+    state = Map.put(state, :_last_tick, System.monotonic_time(:millisecond))
     loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
   end
 
