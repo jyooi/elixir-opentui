@@ -316,6 +316,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   defp filter_press_events(events) do
     Enum.filter(events, fn
       %{event_type: :release} -> false
+      %{event_type: :repeat} -> false
       _ -> true
     end)
   end
@@ -407,6 +408,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
           press_events =
             Enum.filter(events, fn
               %{event_type: :release} -> false
+              %{event_type: :repeat} -> false
               _ -> true
             end)
 
@@ -429,7 +431,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         wait_ms ->
           if is_live and function_exported?(demo_mod, :handle_tick, 2) do
             now = System.monotonic_time(:millisecond)
-            dt = now - Map.get(state, :_last_tick, now)
+            dt = min(now - Map.get(state, :_last_tick, now), 500)
 
             case tick_and_render(demo_mod, dt, state, renderer, tty) do
               {new_state, new_renderer, tty} ->
@@ -461,6 +463,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   end
 
   defp handle_events(demo_mod, [], state, renderer, tty, input_pid, start_time, timeout) do
+    state = Map.put(state, :_last_tick, System.monotonic_time(:millisecond))
     loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
   end
 
