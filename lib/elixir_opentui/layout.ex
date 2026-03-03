@@ -568,9 +568,9 @@ defmodule ElixirOpentui.Layout do
         {child_x, child_y} =
           if is_reverse?(flex_dir) do
             if is_row?(flex_dir) do
-              {base_x + avail_main - (child_x - base_x) - child_w, child_y}
+              {base_x + avail_main - (child_x - base_x) - child_w - (mr - ml), child_y}
             else
-              {child_x, base_y + avail_main - (child_y - base_y) - child_h}
+              {child_x, base_y + avail_main - (child_y - base_y) - child_h - (mb - mt)}
             end
           else
             {child_x, child_y}
