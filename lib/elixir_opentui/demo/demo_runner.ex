@@ -9,6 +9,8 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   the terminal to raw mode and read input via `IO.getn/2`.
 
   Supports Kitty keyboard protocol auto-detection with modifyOtherKeys fallback.
+  Detects synchronized output (mode 2026) support and wraps frames in BSU/ESU
+  when available to eliminate flicker.
 
   ## Demo Module Protocol
 
@@ -20,7 +22,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   - `focused_id(state)` — returns the focused widget id or nil
   """
 
-  alias ElixirOpentui.{ANSI, Input, Renderer}
+  alias ElixirOpentui.{ANSI, Capabilities, Input, Renderer}
 
   @doc "Run a demo module. Blocks until the demo exits or times out."
   def run(demo_mod, opts \\ []) do
@@ -56,7 +58,8 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       setup_terminal(tty)
 
       input_pid = start_input_reader()
-      {_caps, buffered_events} = detect_keyboard_caps(tty)
+      {caps, buffered_events} = detect_capabilities(tty)
+      ctx = %{tty: tty, caps: caps}
 
       state = demo_mod.init(cols, rows)
       renderer = Renderer.new(cols, rows)
@@ -65,16 +68,16 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       tree = demo_mod.render(state)
       focus_id = demo_mod.focused_id(state)
       {renderer, ansi} = Renderer.render_full(renderer, tree, focus_id: focus_id)
-      tty_write(tty, [ansi, ANSI.hide_cursor()])
+      write_frame(ctx, ansi)
 
       # Process any input events that arrived during the detection window
-      case process_buffered_events(demo_mod, buffered_events, state, renderer, tty) do
+      case process_buffered_events(demo_mod, buffered_events, state, renderer, ctx) do
         {state, renderer} ->
           # Initialize _last_tick before entering the loop so the first
           # frame gets dt ≈ tick_interval, not dt = 0.
           state = Map.put_new(state, :_last_tick, System.monotonic_time(:millisecond))
           start_time = System.monotonic_time(:millisecond)
-          result = loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+          result = loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
           stop_input_reader(input_pid)
           result
 
@@ -288,28 +291,40 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     end
   end
 
-  defp detect_keyboard_caps(tty) do
-    tty_write(tty, ANSI.query_kitty_keyboard())
+  defp detect_capabilities(tty) do
+    caps = Capabilities.detect_env()
+
+    # Send both queries in one write (pipelined — single round-trip window)
+    tty_write(tty, [ANSI.query_kitty_keyboard(), ANSI.query_decrqm(2026)])
+
+    # We always wait the full detection window because we can't know how many
+    # responses to expect. A terminal supporting kitty but not DECRQM sends one
+    # response; one supporting both sends two. Use absolute deadline to prevent
+    # creeping timeout — each recursive call computes remaining = max(0, deadline - now).
+    deadline = System.monotonic_time(:millisecond) + 100
+    {caps, buffered} = receive_capability_responses(caps, [], deadline)
+
+    if caps.kitty_keyboard do
+      tty_write(tty, ANSI.push_kitty_keyboard(ANSI.default_kitty_flags()))
+    else
+      tty_write(tty, ANSI.enable_modify_other_keys())
+    end
+
+    {caps, filter_press_events(buffered)}
+  end
+
+  defp receive_capability_responses(caps, buffered, deadline) do
+    remaining = max(0, deadline - System.monotonic_time(:millisecond))
 
     receive do
       {:byte, first_byte} ->
         data = accumulate_bytes(first_byte)
         events = Input.parse(data)
         {cap_events, other_events} = Enum.split_with(events, &(&1.type == :capability))
-
-        case Enum.find(cap_events, &(&1.capability == :kitty_keyboard)) do
-          %{} ->
-            tty_write(tty, ANSI.push_kitty_keyboard(ANSI.default_kitty_flags()))
-            {%{kitty: true, mok: false}, filter_press_events(other_events)}
-
-          nil ->
-            tty_write(tty, ANSI.enable_modify_other_keys())
-            {%{kitty: false, mok: true}, filter_press_events(other_events)}
-        end
+        caps = Enum.reduce(cap_events, caps, &Capabilities.apply_capability(&2, &1))
+        receive_capability_responses(caps, buffered ++ other_events, deadline)
     after
-      100 ->
-        tty_write(tty, ANSI.enable_modify_other_keys())
-        {%{kitty: false, mok: true}, []}
+      remaining -> {caps, buffered}
     end
   end
 
@@ -321,19 +336,36 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     end)
   end
 
-  defp process_buffered_events(_demo_mod, [], state, renderer, _tty), do: {state, renderer}
+  defp process_buffered_events(_demo_mod, [], state, renderer, _ctx), do: {state, renderer}
 
-  defp process_buffered_events(demo_mod, [event | rest], state, renderer, tty) do
+  defp process_buffered_events(demo_mod, [event | rest], state, renderer, ctx) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
         tree = demo_mod.render(new_state)
         focus_id = demo_mod.focused_id(new_state)
         {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-        tty_write(tty, [ansi, ANSI.hide_cursor()])
-        process_buffered_events(demo_mod, rest, new_state, new_renderer, tty)
+        write_frame(ctx, ansi)
+        process_buffered_events(demo_mod, rest, new_state, new_renderer, ctx)
 
       :quit ->
         :ok
+    end
+  end
+
+  # Write a rendered frame, wrapping in synchronized update (BSU/ESU) when
+  # the terminal supports mode 2026. This eliminates flicker by buffering
+  # all output until the ESU sequence, then flushing it as a single
+  # atomic screen update.
+  #
+  # TODO: Add sync output wrapping to Terminal.write/2 (the GenServer path)
+  # once a use case for it exists. Currently only DemoRunner renders frames.
+  defp write_frame(ctx, ansi) do
+    %{tty: tty, caps: caps} = ctx
+
+    if Capabilities.synchronized_output?(caps) do
+      tty_write(tty, [ANSI.begin_sync_update(), ansi, ANSI.hide_cursor(), ANSI.end_sync_update()])
+    else
+      tty_write(tty, [ansi, ANSI.hide_cursor()])
     end
   end
 
@@ -382,7 +414,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
     end
   end
 
-  defp loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout) do
+  defp loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout) do
     elapsed = System.monotonic_time(:millisecond) - start_time
 
     if elapsed > timeout do
@@ -405,8 +437,19 @@ defmodule ElixirOpentui.Demo.DemoRunner do
           data = accumulate_bytes(first_byte)
           events = Input.parse(data)
 
+          # Filter capability events — late responses should update caps, not reach app code
+          {cap_events, input_events} = Enum.split_with(events, &(&1.type == :capability))
+
+          ctx =
+            if cap_events != [] do
+              caps = Enum.reduce(cap_events, ctx.caps, &Capabilities.apply_capability(&2, &1))
+              %{ctx | caps: caps}
+            else
+              ctx
+            end
+
           press_events =
-            Enum.filter(events, fn
+            Enum.filter(input_events, fn
               %{event_type: :release} -> false
               %{event_type: :repeat} -> false
               _ -> true
@@ -417,15 +460,15 @@ defmodule ElixirOpentui.Demo.DemoRunner do
             press_events,
             state,
             renderer,
-            tty,
+            ctx,
             input_pid,
             start_time,
             timeout
           )
 
         {:clipboard_copy, text} ->
-          tty_write(tty, ANSI.copy_to_clipboard(text))
-          loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+          tty_write(ctx.tty, ANSI.copy_to_clipboard(text))
+          loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
 
         {:EXIT, _pid, _reason} ->
           # Linked input reader (or other process) died — exit the loop
@@ -437,38 +480,38 @@ defmodule ElixirOpentui.Demo.DemoRunner do
             now = System.monotonic_time(:millisecond)
             dt = min(now - Map.get(state, :_last_tick, now), 500)
 
-            case tick_and_render(demo_mod, dt, state, renderer, tty) do
-              {new_state, new_renderer, tty} ->
+            case tick_and_render(demo_mod, dt, state, renderer, ctx) do
+              {new_state, new_renderer, ctx} ->
                 new_state = Map.put(new_state, :_last_tick, now)
-                loop(demo_mod, new_state, new_renderer, tty, input_pid, start_time, timeout)
+                loop(demo_mod, new_state, new_renderer, ctx, input_pid, start_time, timeout)
 
               :ok ->
                 :ok
             end
           else
-            loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+            loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
           end
       end
     end
   end
 
-  defp tick_and_render(demo_mod, dt, state, renderer, tty) do
+  defp tick_and_render(demo_mod, dt, state, renderer, ctx) do
     case demo_mod.handle_tick(dt, state) do
       {:cont, new_state} ->
         tree = demo_mod.render(new_state)
         focus_id = demo_mod.focused_id(new_state)
         {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-        tty_write(tty, [ansi, ANSI.hide_cursor()])
-        {new_state, new_renderer, tty}
+        write_frame(ctx, ansi)
+        {new_state, new_renderer, ctx}
 
       :quit ->
         :ok
     end
   end
 
-  defp handle_events(demo_mod, [], state, renderer, tty, input_pid, start_time, timeout) do
+  defp handle_events(demo_mod, [], state, renderer, ctx, input_pid, start_time, timeout) do
     state = Map.put(state, :_last_tick, System.monotonic_time(:millisecond))
-    loop(demo_mod, state, renderer, tty, input_pid, start_time, timeout)
+    loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
   end
 
   defp handle_events(
@@ -476,7 +519,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
          [event | rest],
          state,
          renderer,
-         tty,
+         ctx,
          input_pid,
          start_time,
          timeout
@@ -487,14 +530,14 @@ defmodule ElixirOpentui.Demo.DemoRunner do
         tree = demo_mod.render(new_state)
         focus_id = demo_mod.focused_id(new_state)
         {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-        tty_write(tty, [ansi, ANSI.hide_cursor()])
+        write_frame(ctx, ansi)
 
         handle_events(
           demo_mod,
           rest,
           new_state,
           new_renderer,
-          tty,
+          ctx,
           input_pid,
           start_time,
           timeout
