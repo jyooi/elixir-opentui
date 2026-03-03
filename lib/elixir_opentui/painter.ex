@@ -832,6 +832,83 @@ defmodule ElixirOpentui.Painter do
     end)
   end
 
+  # --- Frame Buffer (Canvas) ---
+
+  defp paint_content(buf, %Element{type: :frame_buffer} = el, x, y, w, h, opacity, _focused) do
+    mod = buffer_mod(buf)
+
+    case Map.get(el.attrs, :buffer) do
+      %ElixirOpentui.Canvas{cells: cells} ->
+        Enum.reduce(cells, buf, fn {{cx, cy}, {char, cell_fg, cell_bg}}, b ->
+          if cx >= 0 and cx < w and cy >= 0 and cy < h do
+            fg = Color.with_opacity(cell_fg, opacity)
+            bg = Color.with_opacity(cell_bg, opacity)
+            mod.draw_char(b, x + cx, y + cy, char, fg, bg)
+          else
+            b
+          end
+        end)
+
+      _ ->
+        buf
+    end
+  end
+
+  # --- ASCII Font ---
+
+  defp paint_content(buf, %Element{type: :ascii_font} = el, x, y, w, h, opacity, _focused) do
+    mod = buffer_mod(buf)
+    text = Map.get(el.attrs, :text, "")
+    font = Map.get(el.attrs, :font, :tiny)
+
+    if text == "" do
+      buf
+    else
+      primary_fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+      bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+
+      secondary_fg =
+        case Map.get(el.attrs, :secondary_fg) do
+          nil ->
+            # Dim the primary color to ~50% brightness as default secondary
+            {r, g, b, a} = primary_fg
+            Color.with_opacity({div(r, 2), div(g, 2), div(b, 2), a}, 1.0)
+
+          color ->
+            Color.with_opacity(color, opacity)
+        end
+
+      buf = mod.fill_rect(buf, x, y, w, h, " ", primary_fg, bg)
+
+      rows = ElixirOpentui.ASCIIFont.render_to_segments(text, font)
+
+      rows
+      |> Enum.with_index()
+      |> Enum.reduce(buf, fn {segments, row_idx}, b ->
+        if row_idx >= h do
+          b
+        else
+          {b, _col} =
+            Enum.reduce(segments, {b, 0}, fn {seg_text, color_idx}, {bb, col} ->
+              seg_fg = if color_idx == 0, do: primary_fg, else: secondary_fg
+
+              seg_text
+              |> String.graphemes()
+              |> Enum.reduce({bb, col}, fn char, {bbb, c} ->
+                if c < w and char != " " do
+                  {mod.draw_char(bbb, x + c, y + row_idx, char, seg_fg, bg), c + 1}
+                else
+                  {bbb, c + 1}
+                end
+              end)
+            end)
+
+          b
+        end
+      end)
+    end
+  end
+
   defp paint_content(buf, _el, _x, _y, _w, _h, _opacity, _focused), do: buf
 
   # --- Select helpers ---

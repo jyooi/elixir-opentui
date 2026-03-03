@@ -215,7 +215,9 @@ defmodule ElixirOpentui.Layout do
         :line_number,
         :code,
         :diff,
-        :markdown
+        :markdown,
+        :frame_buffer,
+        :ascii_font
       ]
 
     w =
@@ -333,6 +335,21 @@ defmodule ElixirOpentui.Layout do
     Map.get(attrs, :width, avail)
   end
 
+  defp content_width(%Element{type: :frame_buffer, attrs: attrs}, _avail) do
+    case Map.get(attrs, :buffer) do
+      %{width: w} -> w
+      _ -> Map.get(attrs, :width, 0)
+    end
+  end
+
+  defp content_width(%Element{type: :ascii_font, attrs: attrs}, _avail) do
+    text = Map.get(attrs, :text, "")
+    font = Map.get(attrs, :font, :tiny)
+
+    {w, _h} = ElixirOpentui.ASCIIFont.dimensions(text, font)
+    w
+  end
+
   defp content_width(_el, _avail), do: 0
 
   defp select_option_width(%{name: name}), do: String.length(name)
@@ -374,6 +391,18 @@ defmodule ElixirOpentui.Layout do
 
   defp content_height(%Element{type: :markdown, attrs: attrs}, _avail) do
     Map.get(attrs, :visible_lines) || Map.get(attrs, :block_count, 0)
+  end
+
+  defp content_height(%Element{type: :frame_buffer, attrs: attrs}, _avail) do
+    case Map.get(attrs, :buffer) do
+      %{height: h} -> h
+      _ -> Map.get(attrs, :height, 0)
+    end
+  end
+
+  defp content_height(%Element{type: :ascii_font, attrs: attrs}, _avail) do
+    font = Map.get(attrs, :font, :tiny)
+    ElixirOpentui.ASCIIFont.font_height(font)
   end
 
   defp content_height(_el, _avail), do: 0
