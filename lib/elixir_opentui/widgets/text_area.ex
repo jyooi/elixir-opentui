@@ -192,6 +192,9 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {".", true, false, false, false} -> :redo
       {"z", false, false, false, true} -> :undo
       {"z", false, false, true, true} -> :redo
+      # Clipboard (Super/Cmd — matches select_all convention)
+      {"c", false, false, false, true} -> :copy
+      {"x", false, false, false, true} -> :cut
       # Select all
       {"a", false, false, false, true} -> :select_all
       # Character input - printable single chars without ctrl/alt/meta/super
@@ -509,6 +512,26 @@ defmodule ElixirOpentui.Widgets.TextArea do
     state = %{state | selection: %{anchor: 0, focus: display_width}}
     EditBufferNIF.view_set_selection(state.editor_view, 0, display_width)
     sync_scroll(state)
+  end
+
+  # Clipboard
+  defp execute_action(:copy, _event, state) do
+    if has_selection?(state) do
+      text = EditBufferNIF.view_get_selected_text(state.editor_view)
+      send(self(), {:clipboard_copy, text})
+    end
+
+    state
+  end
+
+  defp execute_action(:cut, _event, state) do
+    if has_selection?(state) do
+      text = EditBufferNIF.view_get_selected_text(state.editor_view)
+      send(self(), {:clipboard_copy, text})
+      delete_selection(state) |> emit_change()
+    else
+      state
+    end
   end
 
   # Character input
