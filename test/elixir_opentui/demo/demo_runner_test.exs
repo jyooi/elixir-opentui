@@ -41,6 +41,32 @@ defmodule ElixirOpentui.Demo.DemoRunnerTest do
     end
   end
 
+  describe "tick starvation fix" do
+    test "empty-events base case does NOT reset _last_tick" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+
+      # Extract the empty-events clause (matches on [])
+      # It should NOT contain the old false _last_tick reset pattern
+      refute source =~ ~r/handle_events.*\[\].*do\s*\n\s*state = Map\.put\(state, :_last_tick/s,
+             "handle_events([], ...) must not reset _last_tick unconditionally"
+    end
+
+    test "empty-events base case checks tick due and fires inline" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      # The base case should check time_since_tick >= tick_interval
+      assert source =~ "time_since_tick >= tick_interval"
+      # And call tick_and_render inline when overdue
+      assert source =~ "tick_and_render(demo_mod, dt, state, renderer, ctx)"
+    end
+
+    test "live demos skip per-event rendering" do
+      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      # The event-processing clause should check _live and skip rendering
+      assert source =~ ~r/if Map\.get\(new_state, :_live, false\) do\s*\n\s*\{renderer, ctx\}/s,
+             "live demos should skip rendering in handle_events event clause"
+    end
+  end
+
   describe "restore_terminal cleanup sequences" do
     test "writes unconditional keyboard + mouse + screen cleanup to tty" do
       # Replicate the expected sequence from restore_terminal and verify
