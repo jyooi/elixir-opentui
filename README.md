@@ -48,7 +48,7 @@ ElixirOpentui.Demo.DemoRunner.run(Counter)
 Save that as `counter.exs` and run it with `mix run counter.exs`. You get a bordered panel
 with a live counter you can increment and decrement with the arrow keys.
 
-## A demo game i ask claude to build it with NativeBuffer 
+## A demo pong game by using ElixirOpentui Canvas (claude build) 
 ![output](https://github.com/user-attachments/assets/b7424542-5fd4-4d0b-b13b-420f13f8364c)
 
 ## Features
