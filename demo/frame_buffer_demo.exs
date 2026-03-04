@@ -107,10 +107,8 @@ defmodule FrameBufferDemo do
 
     # Title colors from hue
     hue = Timeline.value(state.timeline, :hue)
-    {tr, tg, tb} = hsl_to_rgb(hue, 0.8, 0.65)
-    title_fg = Color.rgb(tr, tg, tb)
-    {sr, sg, sb} = hsl_to_rgb(hue + 30.0, 0.5, 0.4)
-    secondary_fg = Color.rgb(sr, sg, sb)
+    title_fg = Color.hsl(hue, 0.8, 0.65)
+    secondary_fg = Color.hsl(hue + 30.0, 0.5, 0.4)
 
     font_name = Atom.to_string(font) |> String.upcase()
     status = if state.paused, do: "PAUSED", else: "RUNNING"
@@ -206,8 +204,7 @@ defmodule FrameBufferDemo do
 
             # Wave color shifts with position
             wave_hue = rem(trunc(x * 3 + state.elapsed * 0.1), 360)
-            {wr, wg, wb} = hsl_to_rgb(wave_hue / 1.0, 0.6, 0.45)
-            fg = Color.rgb(wr, wg, wb)
+            fg = Color.hsl(wave_hue / 1.0, 0.6, 0.45)
             Canvas.set_cell(c, x, y_pos, char, fg, bg)
           else
             c
@@ -220,34 +217,6 @@ defmodule FrameBufferDemo do
     canvas
   end
 
-  # HSL to RGB conversion (h: 0-360, s: 0-1, l: 0-1)
-  defp hsl_to_rgb(h, s, l) do
-    h = h / 1.0
-    h = h - Float.floor(h / 360.0) * 360.0
-    c = (1.0 - abs(2.0 * l - 1.0)) * s
-    x = c * (1.0 - abs(rem_float(h / 60.0, 2.0) - 1.0))
-    m = l - c / 2.0
-
-    {r1, g1, b1} =
-      cond do
-        h < 60 -> {c, x, 0.0}
-        h < 120 -> {x, c, 0.0}
-        h < 180 -> {0.0, c, x}
-        h < 240 -> {0.0, x, c}
-        h < 300 -> {x, 0.0, c}
-        true -> {c, 0.0, x}
-      end
-
-    {
-      trunc((r1 + m) * 255) |> max(0) |> min(255),
-      trunc((g1 + m) * 255) |> max(0) |> min(255),
-      trunc((b1 + m) * 255) |> max(0) |> min(255)
-    }
-  end
-
-  defp rem_float(a, b) do
-    a - Float.floor(a / b) * b
-  end
 end
 
 ElixirOpentui.Demo.DemoRunner.run(FrameBufferDemo)

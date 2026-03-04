@@ -100,6 +100,37 @@ defmodule ElixirOpentui.Color do
 
   def from_hex(_), do: {:error, :invalid_hex}
 
+  @doc """
+  Create an opaque RGB color from HSL values.
+
+  Hue is in degrees (0-360, wraps), saturation and lightness are 0.0-1.0.
+  Returns an `{r, g, b, 255}` tuple.
+  """
+  @spec hsl(number(), float(), float()) :: t()
+  def hsl(h, s, l) do
+    h = h / 1.0
+    h = h - Float.floor(h / 360.0) * 360.0
+    c = (1.0 - abs(2.0 * l - 1.0)) * s
+    x = c * (1.0 - abs(rem_float(h / 60.0, 2.0) - 1.0))
+    m = l - c / 2.0
+
+    {r1, g1, b1} =
+      cond do
+        h < 60 -> {c, x, 0.0}
+        h < 120 -> {x, c, 0.0}
+        h < 180 -> {0.0, c, x}
+        h < 240 -> {0.0, x, c}
+        h < 300 -> {x, 0.0, c}
+        true -> {c, 0.0, x}
+      end
+
+    rgb(
+      trunc((r1 + m) * 255) |> clamp(),
+      trunc((g1 + m) * 255) |> clamp(),
+      trunc((b1 + m) * 255) |> clamp()
+    )
+  end
+
   @doc "Convert to ANSI 24-bit foreground escape sequence."
   @spec to_ansi_fg(t()) :: iodata()
   def to_ansi_fg({r, g, b, _a}) do
@@ -115,4 +146,8 @@ defmodule ElixirOpentui.Color do
   defp clamp(v) when v < 0, do: 0
   defp clamp(v) when v > 255, do: 255
   defp clamp(v), do: v
+
+  defp rem_float(a, b) do
+    a - Float.floor(a / b) * b
+  end
 end

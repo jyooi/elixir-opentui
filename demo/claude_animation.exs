@@ -4,7 +4,7 @@
 # Drives NativeBuffer directly to showcase the full NIF render pipeline:
 #   NativeBuffer → batch binary protocol → Zig diff → ANSI → stdout
 
-alias ElixirOpentui.NativeBuffer
+alias ElixirOpentui.{Color, NativeBuffer}
 
 # --- Font: 7×7 pixel letters ---
 
@@ -64,35 +64,6 @@ font = %{
     ~c"#######"
   ]
 }
-
-# --- Color utilities ---
-
-hsl_to_rgb = fn h, s, l ->
-  h = :math.fmod(h + 0.0, 360.0)
-  h = if h < 0, do: h + 360.0, else: h
-  s = max(0.0, min(1.0, s + 0.0))
-  l = max(0.0, min(1.0, l + 0.0))
-
-  c = (1.0 - abs(2.0 * l - 1.0)) * s
-  hp = h / 60.0
-  x = c * (1.0 - abs(:math.fmod(hp, 2.0) - 1.0))
-  m = l - c / 2.0
-
-  {r1, g1, b1} =
-    cond do
-      hp < 1.0 -> {c, x, 0.0}
-      hp < 2.0 -> {x, c, 0.0}
-      hp < 3.0 -> {0.0, c, x}
-      hp < 4.0 -> {0.0, x, c}
-      hp < 5.0 -> {x, 0.0, c}
-      true     -> {c, 0.0, x}
-    end
-
-  r = min(255, max(0, trunc((r1 + m) * 255)))
-  g = min(255, max(0, trunc((g1 + m) * 255)))
-  b = min(255, max(0, trunc((b1 + m) * 255)))
-  {r, g, b}
-end
 
 black = {0, 0, 0, 255}
 
@@ -280,7 +251,7 @@ animate = fn animate, buf, frame, particles ->
                 if ch == ?# do
                   abs_x = lx + rx
                   hue = rem(trunc(abs_x * 8 + t * 60), 360)
-                  {r, g, b} = hsl_to_rgb.(hue, 1.0, 0.55)
+                  {r, g, b, _} = Color.hsl(hue, 1.0, 0.55)
 
                   # Apply letter opacity
                   r = trunc(r * letter_opacity)
@@ -336,7 +307,7 @@ animate = fn animate, buf, frame, particles ->
 
           if ix >= 0 and ix < cols and iy >= 0 and iy < rows do
             opacity = life / max_life
-            {r, g, b} = hsl_to_rgb.(hue, 1.0, 0.6)
+            {r, g, b, _} = Color.hsl(hue, 1.0, 0.6)
             r = trunc(r * opacity)
             g = trunc(g * opacity)
             b = trunc(b * opacity)
@@ -355,7 +326,7 @@ animate = fn animate, buf, frame, particles ->
 
           Enum.reduce(0..(line_w - 1), buf, fn i, buf ->
             hue = rem(trunc(i * 10 + t * 80), 360)
-            {r, g, b} = hsl_to_rgb.(hue, 1.0, 0.5)
+            {r, g, b, _} = Color.hsl(hue, 1.0, 0.5)
             r = trunc(r * line_opacity)
             g = trunc(g * line_opacity)
             b = trunc(b * line_opacity)

@@ -240,8 +240,7 @@ defmodule SpaceDodge do
     canvas = build_canvas(state)
 
     score_hue = Timeline.value(state.timeline, :score_hue)
-    {sr, sg, sb} = hsl_to_rgb(score_hue, 0.8, 0.65)
-    score_fg = Color.rgb(sr, sg, sb)
+    score_fg = Color.hsl(score_hue, 0.8, 0.65)
 
     speed_label = Float.round(state.speed_mult, 1)
     dim_fg = Color.rgb(80, 80, 100)
@@ -362,8 +361,7 @@ defmodule SpaceDodge do
 
   defp draw_asteroids(canvas, asteroids, sx, sy) do
     Enum.reduce(asteroids, canvas, fn ast, c ->
-      {hr, hg, hb} = hsl_to_rgb(ast.hue, 0.5, 0.45)
-      fg = Color.rgb(hr, hg, hb)
+      fg = Color.hsl(ast.hue, 0.5, 0.45)
       ax = trunc(ast.x) + sx
       ay = trunc(ast.y) + sy
 
@@ -408,7 +406,7 @@ defmodule SpaceDodge do
       if px >= 0 and px < w and py >= 0 and py < h do
         life_ratio = p.life / p.max_life
         brightness = trunc(p.base_brightness * life_ratio) |> max(0) |> min(255)
-        {pr, pg, pb} = hsl_to_rgb(p.hue, 0.8, max(0.2, 0.6 * life_ratio))
+        {pr, pg, pb, _} = Color.hsl(p.hue, 0.8, max(0.2, 0.6 * life_ratio))
         fg = Color.rgb(max(pr, brightness), pg, pb)
         Canvas.set_cell(c, px, py, p.char, fg, @space_bg)
       else
@@ -436,7 +434,7 @@ defmodule SpaceDodge do
             # Engine row (bottom) — animated color
             dy == 2 ->
               b = trunc(200 * engine_pulse) |> min(255)
-              {er, eg, eb} = hsl_to_rgb(engine_hue, 0.9, 0.55)
+              {er, eg, eb, _} = Color.hsl(engine_hue, 0.9, 0.55)
               Color.rgb(max(er, b), eg, eb)
 
             # Cockpit (top) — bright cyan
@@ -625,31 +623,7 @@ defmodule SpaceDodge do
     end)
   end
 
-  # --- Color helpers ---
-
-  defp hsl_to_rgb(h, s, l) do
-    h = h / 1.0
-    h = h - Float.floor(h / 360.0) * 360.0
-    c = (1.0 - abs(2.0 * l - 1.0)) * s
-    x = c * (1.0 - abs(rem_float(h / 60.0, 2.0) - 1.0))
-    m = l - c / 2.0
-
-    {r1, g1, b1} =
-      cond do
-        h < 60 -> {c, x, 0.0}
-        h < 120 -> {x, c, 0.0}
-        h < 180 -> {0.0, c, x}
-        h < 240 -> {0.0, x, c}
-        h < 300 -> {x, 0.0, c}
-        true -> {c, 0.0, x}
-      end
-
-    {
-      trunc((r1 + m) * 255) |> max(0) |> min(255),
-      trunc((g1 + m) * 255) |> max(0) |> min(255),
-      trunc((b1 + m) * 255) |> max(0) |> min(255)
-    }
-  end
+  # --- Helpers ---
 
   defp rem_float(a, b) do
     a - Float.floor(a / b) * b
