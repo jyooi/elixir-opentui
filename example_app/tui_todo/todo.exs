@@ -57,16 +57,16 @@ defmodule TodoApp do
 
   # ── Event Handling ──────────────────────────────────────────────
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
   # Tab / Shift+Tab: cycle focus between input, filter tabs, and todo list
-  def handle_event(%{type: :key, key: :tab, shift: true}, state) do
+  def handle_event(%{type: :key, key: :tab, shift: true, meta: false}, state) do
     max_idx = max_focus_idx(state)
     new_idx = rem(state.focus_idx - 1 + max_idx + 1, max_idx + 1)
     {:cont, %{state | focus_idx: new_idx}}
   end
 
-  def handle_event(%{type: :key, key: :tab}, state) do
+  def handle_event(%{type: :key, key: :tab, meta: false}, state) do
     max_idx = max_focus_idx(state)
     new_idx = rem(state.focus_idx + 1, max_idx + 1)
     {:cont, %{state | focus_idx: new_idx}}

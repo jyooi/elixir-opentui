@@ -23,14 +23,14 @@ defmodule TextInputDemo do
     }
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
-  def handle_event(%{type: :key, key: :tab, shift: true}, state) do
+  def handle_event(%{type: :key, key: :tab, shift: true, meta: false}, state) do
     new_idx = rem(state.focus_idx - 1 + length(@field_ids), length(@field_ids))
     {:cont, %{state | focus_idx: new_idx}}
   end
 
-  def handle_event(%{type: :key, key: :tab}, state) do
+  def handle_event(%{type: :key, key: :tab, meta: false}, state) do
     new_idx = rem(state.focus_idx + 1, length(@field_ids))
     {:cont, %{state | focus_idx: new_idx}}
   end

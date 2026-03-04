@@ -200,7 +200,7 @@ defmodule DiffDemo do
     }
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
   # V to toggle view (like OpenTUI)
   def handle_event(%{type: :key, key: "v", ctrl: false, meta: false}, state) do

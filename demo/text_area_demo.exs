@@ -27,7 +27,7 @@ defmodule TextAreaDemo do
     }
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
   def handle_event(%{type: :key} = event, state) do
     new_ta = TextArea.update(:key, event, state.textarea)

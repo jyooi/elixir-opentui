@@ -45,35 +45,35 @@ defmodule LineNumberDemo do
     }
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
   def handle_event(%{type: :key, key: "n", ctrl: false, meta: false}, state) do
     {:cont, %{state | show_line_numbers: !state.show_line_numbers}}
   end
 
-  def handle_event(%{type: :key, key: :up}, state) do
+  def handle_event(%{type: :key, key: :up, meta: false}, state) do
     {:cont, %{state | scroll_offset: max(0, state.scroll_offset - 1)}}
   end
 
-  def handle_event(%{type: :key, key: :down}, state) do
+  def handle_event(%{type: :key, key: :down, meta: false}, state) do
     max_scroll = max(0, @total_lines - @viewport)
     {:cont, %{state | scroll_offset: min(max_scroll, state.scroll_offset + 1)}}
   end
 
-  def handle_event(%{type: :key, key: :page_up}, state) do
+  def handle_event(%{type: :key, key: :page_up, meta: false}, state) do
     {:cont, %{state | scroll_offset: max(0, state.scroll_offset - @viewport)}}
   end
 
-  def handle_event(%{type: :key, key: :page_down}, state) do
+  def handle_event(%{type: :key, key: :page_down, meta: false}, state) do
     max_scroll = max(0, @total_lines - @viewport)
     {:cont, %{state | scroll_offset: min(max_scroll, state.scroll_offset + @viewport)}}
   end
 
-  def handle_event(%{type: :key, key: :home}, state) do
+  def handle_event(%{type: :key, key: :home, meta: false}, state) do
     {:cont, %{state | scroll_offset: 0}}
   end
 
-  def handle_event(%{type: :key, key: :end}, state) do
+  def handle_event(%{type: :key, key: :end, meta: false}, state) do
     max_scroll = max(0, @total_lines - @viewport)
     {:cont, %{state | scroll_offset: max_scroll}}
   end

@@ -38,7 +38,7 @@ defmodule TabSelectDemo do
     }
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
   def handle_event(%{type: :key} = event, state) do
     new_tabs = TabSelect.update(:key, event, state.tabs)

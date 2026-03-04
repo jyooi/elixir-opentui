@@ -26,24 +26,24 @@ defmodule CheckboxDemo do
     %{cols: cols, rows: rows, focus_idx: 0, fields: fields}
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
-  def handle_event(%{type: :key, key: :tab, shift: true}, state) do
+  def handle_event(%{type: :key, key: :tab, shift: true, meta: false}, state) do
     new_idx = rem(state.focus_idx - 1 + length(@items), length(@items))
     {:cont, %{state | focus_idx: new_idx}}
   end
 
-  def handle_event(%{type: :key, key: :tab}, state) do
+  def handle_event(%{type: :key, key: :tab, meta: false}, state) do
     new_idx = rem(state.focus_idx + 1, length(@items))
     {:cont, %{state | focus_idx: new_idx}}
   end
 
-  def handle_event(%{type: :key, key: :down}, state) do
+  def handle_event(%{type: :key, key: :down, meta: false}, state) do
     new_idx = min(state.focus_idx + 1, length(@items) - 1)
     {:cont, %{state | focus_idx: new_idx}}
   end
 
-  def handle_event(%{type: :key, key: :up}, state) do
+  def handle_event(%{type: :key, key: :up, meta: false}, state) do
     new_idx = max(state.focus_idx - 1, 0)
     {:cont, %{state | focus_idx: new_idx}}
   end

@@ -17,10 +17,10 @@ defmodule AnimationDemo do
     %{cols: cols, rows: rows, timeline: tl, _live: true}
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
-  def handle_event(%{type: :key, key: "q"}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
+  def handle_event(%{type: :key, key: "q", meta: false}, _state), do: :quit
 
-  def handle_event(%{type: :key, key: "f"}, state) do
+  def handle_event(%{type: :key, key: "f", meta: false}, state) do
     current = Timeline.value(state.timeline, :opacity)
     target = if current > 0.5, do: 0.0, else: 1.0
 

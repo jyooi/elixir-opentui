@@ -515,7 +515,7 @@ defmodule CodeDemo do
     }
   end
 
-  def handle_event(%{type: :key, key: "c", ctrl: true}, _state), do: :quit
+  def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
   # Left/Right to cycle examples
   def handle_event(%{type: :key, key: :left, ctrl: false, meta: false}, state) do
