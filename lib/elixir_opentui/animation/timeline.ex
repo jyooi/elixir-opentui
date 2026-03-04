@@ -24,7 +24,16 @@ defmodule ElixirOpentui.Animation.Timeline do
             delay: non_neg_integer(),
             loop: boolean() | pos_integer(),
             alternate: boolean(),
-            loop_count: non_neg_integer()
+            loop_count: non_neg_integer(),
+            loop_delay: non_neg_integer(),
+            on_start: (-> any()) | nil,
+            on_complete: (-> any()) | nil,
+            on_loop: (-> any()) | nil,
+            on_update: (-> any()) | nil,
+            once: boolean(),
+            started: boolean(),
+            completed: boolean(),
+            prev_elapsed: float()
           }
           | %{
               type: :callback,
@@ -51,6 +60,7 @@ defmodule ElixirOpentui.Animation.Timeline do
           on_complete: (-> any()) | nil,
           on_loop: (-> any()) | nil,
           on_update: (-> any()) | nil,
+          on_pause: (-> any()) | nil,
           started: boolean()
         }
 

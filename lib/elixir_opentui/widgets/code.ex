@@ -40,8 +40,7 @@ defmodule ElixirOpentui.Widgets.Code do
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
       streaming: Map.get(props, :streaming, false),
-      line_count: length(String.split(content, "\n")),
-      _pending: []
+      line_count: length(String.split(content, "\n"))
     }
   end
 
@@ -88,11 +87,11 @@ defmodule ElixirOpentui.Widgets.Code do
 
   @impl true
   def render(state) do
-    alias ElixirOpentui.Element
+    import ElixirOpentui.View, only: [code: 1]
 
     lines = String.split(state.content, "\n")
 
-    Element.new(:code,
+    code(
       id: state.id,
       content: state.content,
       filetype: state.filetype,
@@ -129,6 +128,7 @@ defmodule ElixirOpentui.Widgets.Code do
   Returns a list of `{token_type, metadata, text}` tuples, or the raw
   content string if no lexer is available for the filetype.
   """
+  @spec highlight(String.t() | nil, String.t() | nil) :: list() | nil
   def highlight(content, filetype) when is_binary(content) do
     case get_lexer(filetype) do
       nil -> nil

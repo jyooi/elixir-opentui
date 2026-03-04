@@ -36,8 +36,7 @@ defmodule ElixirOpentui.Widgets.Diff do
       visible_lines: Map.get(props, :visible_lines),
       filetype: Map.get(props, :filetype),
       unified_line_count: length(build_unified_lines(parsed)),
-      split_line_count: length(build_split_lines(parsed)),
-      _pending: []
+      split_line_count: length(build_split_lines(parsed))
     }
   end
 
@@ -75,7 +74,7 @@ defmodule ElixirOpentui.Widgets.Diff do
 
   @impl true
   def render(state) do
-    alias ElixirOpentui.Element
+    import ElixirOpentui.View, only: [diff: 1]
 
     lines =
       case state.view do
@@ -83,7 +82,7 @@ defmodule ElixirOpentui.Widgets.Diff do
         :split -> build_split_lines(state.parsed)
       end
 
-    Element.new(:diff,
+    diff(
       id: state.id,
       diff: state.diff,
       view: state.view,
@@ -123,6 +122,7 @@ defmodule ElixirOpentui.Widgets.Diff do
   - `:new_start` — starting line in new file
   - `:lines` — list of `%{type, content, old_line, new_line}` maps
   """
+  @spec parse_diff(String.t()) :: [map()]
   def parse_diff(""), do: []
 
   def parse_diff(diff_text) when is_binary(diff_text) do
@@ -217,6 +217,7 @@ defmodule ElixirOpentui.Widgets.Diff do
   end
 
   @doc "Build display lines from parsed diff state for the current view mode."
+  @spec build_lines(map()) :: [map()]
   def build_lines(state) do
     case state.view do
       :unified -> build_unified_lines(state.parsed)

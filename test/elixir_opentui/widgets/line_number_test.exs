@@ -16,7 +16,6 @@ defmodule ElixirOpentui.Widgets.LineNumberTest do
       assert state.hide_line_numbers == MapSet.new()
       assert state.line_numbers == %{}
       assert state.show_line_numbers == true
-      assert state._pending == []
     end
 
     test "initializes with custom settings" do

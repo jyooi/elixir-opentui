@@ -1,8 +1,4 @@
 defmodule ElixirOpentuiTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest ElixirOpentui
-
-  test "greets the world" do
-    assert ElixirOpentui.hello() == :world
-  end
 end

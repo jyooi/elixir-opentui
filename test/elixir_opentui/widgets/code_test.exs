@@ -31,7 +31,6 @@ defmodule ElixirOpentui.Widgets.CodeTest do
       assert state.wrap_mode == :none
       assert state.scroll_offset == 0
       assert state.streaming == false
-      assert state._pending == []
     end
 
     test "initializes with filetype" do

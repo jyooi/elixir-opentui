@@ -25,7 +25,6 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       assert state.view == :unified
       assert state.show_line_numbers == true
       assert state.scroll_offset == 0
-      assert state._pending == []
     end
 
     test "initializes with split view" do

@@ -2,6 +2,13 @@ defmodule ElixirOpentui.BufferBehaviour do
   @moduledoc """
   Behaviour defining the buffer interface for both pure-Elixir (Buffer)
   and NIF-backed (NativeBuffer) implementations.
+
+  ## Coordinate Convention (two-tier)
+
+  Coordinates (x, y) are `integer()` — Painter may pass negative values for
+  off-screen elements; buffer implementations clip internally via scissor rects.
+
+  Dimensions (w, h) are `non_neg_integer()` — widths and heights are never negative.
   """
 
   alias ElixirOpentui.Color
@@ -62,8 +69,8 @@ defmodule ElixirOpentui.BufferBehaviour do
               buf :: term(),
               x :: integer(),
               y :: integer(),
-              w :: integer(),
-              h :: integer(),
+              w :: non_neg_integer(),
+              h :: non_neg_integer(),
               char :: String.t(),
               fg :: Color.t(),
               bg :: Color.t()
@@ -72,8 +79,8 @@ defmodule ElixirOpentui.BufferBehaviour do
               buf :: term(),
               x :: integer(),
               y :: integer(),
-              w :: integer(),
-              h :: integer(),
+              w :: non_neg_integer(),
+              h :: non_neg_integer(),
               char :: String.t(),
               fg :: Color.t(),
               bg :: Color.t(),
@@ -83,8 +90,8 @@ defmodule ElixirOpentui.BufferBehaviour do
               buf :: term(),
               x :: integer(),
               y :: integer(),
-              w :: integer(),
-              h :: integer(),
+              w :: non_neg_integer(),
+              h :: non_neg_integer(),
               hit_id :: term()
             ) :: term()
   @callback get_cell(buf :: term(), x :: integer(), y :: integer()) :: map() | nil
@@ -93,8 +100,8 @@ defmodule ElixirOpentui.BufferBehaviour do
               buf :: term(),
               x :: integer(),
               y :: integer(),
-              w :: integer(),
-              h :: integer()
+              w :: non_neg_integer(),
+              h :: non_neg_integer()
             ) :: term()
   @callback pop_scissor(buf :: term()) :: term()
   @callback clear(buf :: term()) :: term()

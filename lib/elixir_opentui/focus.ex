@@ -20,7 +20,7 @@ defmodule ElixirOpentui.Focus do
 
   defstruct focused_id: nil, focusable_ids: [], focus_order: []
 
-  @focusable_types [:input, :button, :select, :checkbox, :scroll_box, :textarea]
+  @focusable_types [:input, :button, :select, :checkbox, :scroll_box, :textarea, :tab_select]
 
   @doc "Build focus state from an element tree."
   @spec from_tree(Element.t()) :: t()

@@ -23,7 +23,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   # Wrap mode constants consolidated in EditBufferNIF.wrap_mode_int/1
 
-  # ── Component callbacks ──────────────────────────────────────────────
+  # --- Component callbacks ---
 
   @impl true
   def init(props) do
@@ -52,7 +52,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
       selection: nil,
       scroll_y: 0,
       scroll_x: 0,
-      wrap: wrap
+      wrap: wrap,
+      _pending: []
     }
   end
 
@@ -110,7 +111,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     )
   end
 
-  # ── Key handling ─────────────────────────────────────────────────────
+  # --- Key handling ---
 
   defp handle_key(event, state) do
     action = resolve_action(event)
@@ -203,7 +204,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
     end
   end
 
-  # ── Action execution ─────────────────────────────────────────────────
+  # --- Action execution ---
 
   defp execute_action(:noop, _event, state), do: state
 
@@ -543,26 +544,26 @@ defmodule ElixirOpentui.Widgets.TextArea do
     |> emit_change()
   end
 
-  # ── Mouse handling ───────────────────────────────────────────────────
+  # --- Mouse handling ---
 
-  defp handle_mouse(%{action: :scroll, direction: dir}, state) do
+  defp handle_mouse(%{action: :scroll_up}, state) do
+    {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(state.editor_view)
+    new_oy = max(0, oy - 3)
+    EditBufferNIF.view_set_viewport(state.editor_view, 0, new_oy, state.width, state.height)
+    %{state | scroll_y: new_oy}
+  end
+
+  defp handle_mouse(%{action: :scroll_down}, state) do
     {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(state.editor_view)
     total = EditBufferNIF.view_get_total_virtual_line_count(state.editor_view)
-
-    new_oy =
-      case dir do
-        :up -> max(0, oy - 3)
-        :down -> min(max(0, total - state.height), oy + 3)
-        _ -> oy
-      end
-
+    new_oy = min(max(0, total - state.height), oy + 3)
     EditBufferNIF.view_set_viewport(state.editor_view, 0, new_oy, state.width, state.height)
     %{state | scroll_y: new_oy}
   end
 
   defp handle_mouse(_event, state), do: state
 
-  # ── Selection helpers ────────────────────────────────────────────────
+  # --- Selection helpers ---
 
   defp has_selection?(%{selection: nil}), do: false
   defp has_selection?(%{selection: %{anchor: a, focus: f}}) when a == f, do: false
@@ -651,7 +652,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp delete_range_by_offsets(state, _from, _to), do: state
 
-  # ── Viewport helpers ─────────────────────────────────────────────────
+  # --- Viewport helpers ---
 
   defp sync_scroll(state) do
     case EditBufferNIF.view_get_viewport(state.editor_view) do
@@ -678,21 +679,19 @@ defmodule ElixirOpentui.Widgets.TextArea do
     %{start_row: sr, start_col: sc, end_row: er, end_col: ec}
   end
 
-  # ── Change/Submit emission ───────────────────────────────────────────
+  # --- Change/Submit emission ---
 
   defp emit_change(%{on_change: nil} = state), do: state
 
   defp emit_change(%{on_change: tag} = state) do
     text = EditBufferNIF.get_text(state.edit_buffer)
-    send(self(), {tag, text})
-    state
+    %{state | _pending: [{tag, text} | state._pending]}
   end
 
   defp emit_submit(%{on_submit: nil} = state), do: state
 
   defp emit_submit(%{on_submit: tag} = state) do
     text = EditBufferNIF.get_text(state.edit_buffer)
-    send(self(), {tag, text})
-    state
+    %{state | _pending: [{tag, text} | state._pending]}
   end
 end

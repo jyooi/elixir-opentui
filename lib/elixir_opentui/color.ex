@@ -71,7 +71,7 @@ defmodule ElixirOpentui.Color do
   end
 
   @doc "Parse a hex color string like '#FF0000' or '#FF0000FF'."
-  @spec from_hex(String.t()) :: {:ok, t()} | :error
+  @spec from_hex(String.t()) :: {:ok, t()} | {:error, :invalid_hex}
   def from_hex("#" <> hex) do
     case byte_size(hex) do
       6 ->
@@ -80,7 +80,7 @@ defmodule ElixirOpentui.Color do
              {b, ""} <- Integer.parse(String.slice(hex, 4, 2), 16) do
           {:ok, {r, g, b, 255}}
         else
-          _ -> :error
+          _ -> {:error, :invalid_hex}
         end
 
       8 ->
@@ -90,15 +90,15 @@ defmodule ElixirOpentui.Color do
              {a, ""} <- Integer.parse(String.slice(hex, 6, 2), 16) do
           {:ok, {r, g, b, a}}
         else
-          _ -> :error
+          _ -> {:error, :invalid_hex}
         end
 
       _ ->
-        :error
+        {:error, :invalid_hex}
     end
   end
 
-  def from_hex(_), do: :error
+  def from_hex(_), do: {:error, :invalid_hex}
 
   @doc "Convert to ANSI 24-bit foreground escape sequence."
   @spec to_ansi_fg(t()) :: iodata()

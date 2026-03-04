@@ -134,7 +134,13 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   end
 
   defp restore_terminal(tty) do
-    tty_write(tty, [
+    tty_write(tty, restore_terminal_sequences())
+  end
+
+  @doc false
+  @spec restore_terminal_sequences() :: [iodata()]
+  def restore_terminal_sequences do
+    [
       # Disable Kitty keyboard: set flags to 0 first (belt-and-suspenders),
       # then pop the stack entry. The set ensures enhancements are off even
       # if the pop doesn't take effect (e.g. Ghostty state machine edge case
@@ -150,7 +156,7 @@ defmodule ElixirOpentui.Demo.DemoRunner do
       # Safety net: some terminals restore saved private modes on alt screen exit,
       # which can re-enable mouse tracking. Send disable again after leaving.
       ANSI.disable_mouse()
-    ])
+    ]
   end
 
   # Arm a deferred mouse cleanup process BEFORE the demo loop starts.

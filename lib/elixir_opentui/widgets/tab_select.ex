@@ -82,9 +82,9 @@ defmodule ElixirOpentui.Widgets.TabSelect do
 
   @impl true
   def render(state) do
-    alias ElixirOpentui.Element
+    import ElixirOpentui.View, only: [tab_select: 1]
 
-    Element.new(:tab_select,
+    tab_select(
       id: state.id,
       options: state.options,
       selected: state.selected,

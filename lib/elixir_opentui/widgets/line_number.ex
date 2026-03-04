@@ -39,8 +39,7 @@ defmodule ElixirOpentui.Widgets.LineNumber do
       hide_line_numbers: Map.get(props, :hide_line_numbers, MapSet.new()),
       line_numbers: Map.get(props, :line_numbers, %{}),
       show_line_numbers: Map.get(props, :show_line_numbers, true),
-      line_sources: Map.get(props, :line_sources),
-      _pending: []
+      line_sources: Map.get(props, :line_sources)
     }
   end
 
@@ -101,9 +100,9 @@ defmodule ElixirOpentui.Widgets.LineNumber do
 
   @impl true
   def render(state) do
-    alias ElixirOpentui.Element
+    import ElixirOpentui.View, only: [line_number: 1]
 
-    Element.new(:line_number,
+    line_number(
       id: state.id,
       line_count: state.line_count,
       scroll_offset: state.scroll_offset,
@@ -124,6 +123,7 @@ defmodule ElixirOpentui.Widgets.LineNumber do
   @doc """
   Calculate the gutter width based on line count and configuration.
   """
+  @spec calculate_gutter_width(map()) :: non_neg_integer()
   def calculate_gutter_width(state) do
     max_line_num = max_display_line_number(state)
     digits = if max_line_num > 0, do: digits_count(max_line_num), else: 1

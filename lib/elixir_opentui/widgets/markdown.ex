@@ -29,8 +29,7 @@ defmodule ElixirOpentui.Widgets.Markdown do
       id: Map.get(props, :id),
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
-      code_filetype: Map.get(props, :code_filetype),
-      _pending: []
+      code_filetype: Map.get(props, :code_filetype)
     }
   end
 
@@ -59,9 +58,9 @@ defmodule ElixirOpentui.Widgets.Markdown do
 
   @impl true
   def render(state) do
-    alias ElixirOpentui.Element
+    import ElixirOpentui.View, only: [markdown: 1]
 
-    Element.new(:markdown,
+    markdown(
       id: state.id,
       content: state.content,
       blocks: state.blocks,
@@ -110,6 +109,7 @@ defmodule ElixirOpentui.Widgets.Markdown do
   Each block has a `:type` and type-specific fields. Falls back to
   a simple line-based parser if Earmark is not available.
   """
+  @spec parse_markdown(String.t() | nil) :: [map()]
   def parse_markdown(content) when is_binary(content) do
     if earmark_available?() do
       parse_with_earmark(content)

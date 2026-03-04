@@ -21,7 +21,7 @@ defmodule ElixirOpentui.EventManager do
           handlers: %{optional(term()) => handler()},
           global_handlers: [handler()],
           tree: Element.t() | nil,
-          buffer: Buffer.t() | nil
+          buffer: Buffer.t() | NativeBuffer.t() | nil
         }
 
   defstruct focus: %Focus{},

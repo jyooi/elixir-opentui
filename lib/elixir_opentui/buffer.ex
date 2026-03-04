@@ -32,7 +32,7 @@ defmodule ElixirOpentui.Buffer do
           cells: :array.array(cell()),
           default_fg: Color.t(),
           default_bg: Color.t(),
-          scissor_stack: [{integer(), integer(), integer(), integer()}]
+          scissor_stack: [{integer(), integer(), non_neg_integer(), non_neg_integer()}]
         }
 
   defstruct cols: 0, rows: 0, cells: nil, default_fg: nil, default_bg: nil, scissor_stack: []
@@ -52,7 +52,7 @@ defmodule ElixirOpentui.Buffer do
   end
 
   @doc "Get the cell at (x, y). Returns nil if out of bounds."
-  @spec get_cell(t(), non_neg_integer(), non_neg_integer()) :: cell() | nil
+  @spec get_cell(t(), integer(), integer()) :: cell() | nil
   def get_cell(%__MODULE__{cols: cols, rows: rows, cells: cells}, x, y)
       when x >= 0 and x < cols and y >= 0 and y < rows do
     :array.get(y * cols + x, cells)
@@ -61,7 +61,7 @@ defmodule ElixirOpentui.Buffer do
   def get_cell(_, _, _), do: nil
 
   @doc "Set a cell at (x, y). No-op if out of bounds or outside scissor rect."
-  @spec put_cell(t(), non_neg_integer(), non_neg_integer(), cell()) :: t()
+  @spec put_cell(t(), integer(), integer(), cell()) :: t()
   def put_cell(%__MODULE__{} = buf, x, y, cell) do
     if in_scissor?(buf, x, y) do
       %{buf | cells: :array.set(y * buf.cols + x, cell, buf.cells)}
@@ -94,8 +94,8 @@ defmodule ElixirOpentui.Buffer do
   @doc "Write a character at (x, y) with fg/bg colors and optional text attributes."
   @spec draw_char(
           t(),
-          non_neg_integer(),
-          non_neg_integer(),
+          integer(),
+          integer(),
           String.t(),
           Color.t(),
           Color.t(),
@@ -111,8 +111,8 @@ defmodule ElixirOpentui.Buffer do
   @doc "Write a character with alpha blending over existing cell."
   @spec draw_char_blend(
           t(),
-          non_neg_integer(),
-          non_neg_integer(),
+          integer(),
+          integer(),
           String.t(),
           Color.t(),
           Color.t(),
@@ -133,8 +133,8 @@ defmodule ElixirOpentui.Buffer do
   @doc "Write a string horizontally starting at (x, y) with optional text attributes."
   @spec draw_text(
           t(),
-          non_neg_integer(),
-          non_neg_integer(),
+          integer(),
+          integer(),
           String.t(),
           Color.t(),
           Color.t(),
@@ -153,8 +153,8 @@ defmodule ElixirOpentui.Buffer do
   @doc "Fill a rectangular region with a character, colors, and optional text attributes."
   @spec fill_rect(
           t(),
-          non_neg_integer(),
-          non_neg_integer(),
+          integer(),
+          integer(),
           non_neg_integer(),
           non_neg_integer(),
           String.t(),
@@ -173,8 +173,8 @@ defmodule ElixirOpentui.Buffer do
   @doc "Set hit_id for a rectangular region (for mouse event targeting)."
   @spec set_hit_region(
           t(),
-          non_neg_integer(),
-          non_neg_integer(),
+          integer(),
+          integer(),
           non_neg_integer(),
           non_neg_integer(),
           term()
@@ -192,7 +192,7 @@ defmodule ElixirOpentui.Buffer do
   end
 
   @doc "Get the hit_id at coordinates (x, y)."
-  @spec get_hit_id(t(), non_neg_integer(), non_neg_integer()) :: term()
+  @spec get_hit_id(t(), integer(), integer()) :: term()
   def get_hit_id(buf, x, y) do
     case get_cell(buf, x, y) do
       nil -> nil

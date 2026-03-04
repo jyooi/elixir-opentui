@@ -6,7 +6,7 @@ defmodule ElixirOpentui.ASCIIFont do
   Font data is sourced from the MIT-licensed cfonts project.
   """
 
-  @type font_name :: :tiny | :block | :shade | :slick | :huge | :grid | :pallet | :pixel
+  @type font_name :: :tiny | :block | :pixel
 
   @font_modules %{
     tiny: ElixirOpentui.ASCIIFont.Tiny,

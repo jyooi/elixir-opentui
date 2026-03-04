@@ -44,7 +44,6 @@ defmodule ElixirOpentui.Widgets.MarkdownTest do
       state = Markdown.init(%{content: @sample_markdown, id: :md})
       assert state.content == @sample_markdown
       assert state.scroll_offset == 0
-      assert state._pending == []
     end
 
     test "initializes empty" do

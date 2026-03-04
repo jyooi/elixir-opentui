@@ -63,9 +63,9 @@ defmodule ElixirOpentui.Widgets.Select do
 
   @impl true
   def render(state) do
-    alias ElixirOpentui.Element
+    import ElixirOpentui.View, only: [select: 1]
 
-    Element.new(:select,
+    select(
       id: state.id,
       options: state.options,
       selected: state.selected,

@@ -13,6 +13,7 @@ defmodule ElixirOpentui.EditBuffer do
           ref: reference()
         }
 
+  @enforce_keys [:ref]
   defstruct [:ref]
 
   @doc "Create a new empty EditBuffer."

@@ -72,9 +72,9 @@ defmodule ElixirOpentui.ColorTest do
     end
 
     test "invalid hex" do
-      assert Color.from_hex("not-a-hex") == :error
-      assert Color.from_hex("#GG0000") == :error
-      assert Color.from_hex("#FF") == :error
+      assert Color.from_hex("not-a-hex") == {:error, :invalid_hex}
+      assert Color.from_hex("#GG0000") == {:error, :invalid_hex}
+      assert Color.from_hex("#FF") == {:error, :invalid_hex}
     end
   end
 

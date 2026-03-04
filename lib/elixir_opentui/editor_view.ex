@@ -15,6 +15,7 @@ defmodule ElixirOpentui.EditorView do
           edit_buffer: EditBuffer.t()
         }
 
+  @enforce_keys [:ref, :edit_buffer]
   defstruct [:ref, :edit_buffer]
 
   @type visual_cursor :: {

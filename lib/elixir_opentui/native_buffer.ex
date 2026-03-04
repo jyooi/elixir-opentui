@@ -20,7 +20,8 @@ defmodule ElixirOpentui.NativeBuffer do
           hit_reverse: %{non_neg_integer() => atom()},
           next_hit: non_neg_integer(),
           default_fg: Color.t(),
-          default_bg: Color.t()
+          default_bg: Color.t(),
+          scissor_stack: [{integer(), integer(), non_neg_integer(), non_neg_integer()}]
         }
 
   defstruct [
@@ -219,7 +220,7 @@ defmodule ElixirOpentui.NativeBuffer do
     raise "NativeBuffer does not support diff/2 — use render_frame/render_frame_capture instead"
   end
 
-  # ── Binary Protocol Encoding ────────────────────────────────────────────
+  # --- Binary Protocol Encoding ---
 
   defp encode_attrs([]), do: 0
 

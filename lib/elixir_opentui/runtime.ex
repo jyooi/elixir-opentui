@@ -52,7 +52,17 @@ defmodule ElixirOpentui.Runtime do
           mode: :live | :headless,
           terminal: GenServer.server() | nil,
           frame_count: non_neg_integer(),
-          on_event: (term() -> :ok) | nil
+          on_event: (term() -> :ok) | nil,
+          backend: :elixir | :zig,
+          control_state: :idle | :running | :stopping,
+          target_fps: pos_integer(),
+          target_frame_time: pos_integer(),
+          last_tick_time: non_neg_integer(),
+          live_request_count: non_neg_integer(),
+          live_refs: MapSet.t(reference()),
+          explicit_start: boolean(),
+          suspend_count: non_neg_integer(),
+          tick_timer_ref: reference() | nil
         }
 
   defstruct [

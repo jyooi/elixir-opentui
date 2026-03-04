@@ -1142,12 +1142,12 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       state = TextArea.init(%{id: :ta, value: lines, width: 40, height: 5})
 
       # Scroll down first using mouse scroll
-      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll, direction: :down}, state)
-      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll, direction: :down}, state)
+      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll_down}, state)
+      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll_down}, state)
       scroll_before = state.scroll_y
       assert scroll_before > 0
 
-      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll, direction: :up}, state)
+      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll_up}, state)
       assert state.scroll_y < scroll_before
     end
 
@@ -1155,7 +1155,7 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       lines = Enum.map_join(0..30, "\n", fn i -> "line #{i}" end)
       state = TextArea.init(%{id: :ta, value: lines, width: 40, height: 5})
 
-      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll, direction: :down}, state)
+      state = TextArea.update(:mouse, %{type: :mouse, action: :scroll_down}, state)
       assert state.scroll_y >= 0
     end
   end
@@ -1662,9 +1662,9 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
         })
 
       state = select_right_n(state, 5)
-      _state = TextArea.update(:key, key_event("x", meta: true), state)
+      state = TextArea.update(:key, key_event("x", meta: true), state)
       assert_received {:clipboard_copy, "hello"}
-      assert_received {:changed, " world"}
+      assert {:changed, " world"} in state._pending
     end
 
     test "copy does not trigger on_change" do

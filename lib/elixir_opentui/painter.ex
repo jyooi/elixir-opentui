@@ -18,7 +18,7 @@ defmodule ElixirOpentui.Painter do
   alias ElixirOpentui.Layout.Rect
   alias ElixirOpentui.TextBuffer
 
-  # ── Focus & UI ──────────────────────────────────────
+  # --- Focus & UI ---
   @focus_border_fg {80, 160, 255, 255}
   @focus_input_cursor_bg {200, 200, 200, 255}
   @select_highlight_bg {60, 120, 200, 255}
@@ -26,16 +26,16 @@ defmodule ElixirOpentui.Painter do
   @dim_fg {100, 100, 100, 255}
   @description_fg {150, 150, 150, 255}
 
-  # ── Gutter ──────────────────────────────────────────
+  # --- Gutter ---
   @gutter_fg {100, 100, 120, 255}
 
-  # ── Diff ────────────────────────────────────────────
+  # --- Diff ---
   @diff_add_fg {80, 220, 80, 255}
   @diff_add_bg {26, 77, 26, 255}
   @diff_rem_fg {220, 80, 80, 255}
   @diff_rem_bg {77, 26, 26, 255}
 
-  # ── Markdown ────────────────────────────────────────
+  # --- Markdown ---
   @md_heading_fg {88, 166, 255, 255}
   @md_code_fg {165, 214, 255, 255}
   @md_code_bg {22, 27, 34, 255}
@@ -43,15 +43,15 @@ defmodule ElixirOpentui.Painter do
   @md_list_fg {255, 123, 114, 255}
   @md_rule_fg {60, 60, 80, 255}
 
-  # ── Tab Select ──────────────────────────────────────
+  # --- Tab Select ---
   @tab_selected_fg {255, 255, 255, 255}
   @tab_selected_bg {60, 120, 200, 255}
   @tab_dim_fg {100, 100, 100, 255}
 
-  # ── Select Widget ───────────────────────────────────
+  # --- Select Widget ---
   @select_fg_highlight {255, 255, 255, 255}
 
-  # ── Syntax Token Colors ────────────────────────────
+  # --- Syntax Token Colors ---
   @token_keyword {255, 123, 114, 255}
   @token_function {210, 168, 255, 255}
   @token_class {255, 166, 87, 255}
