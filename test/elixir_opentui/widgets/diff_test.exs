@@ -192,6 +192,19 @@ defmodule ElixirOpentui.Widgets.DiffTest do
     end
   end
 
+  describe "update_props/3" do
+    test "preserves local line-number toggle when parent does not control it" do
+      prev_props = %{diff: @sample_diff, id: :diff}
+      new_props = %{diff: @sample_diff, id: :diff}
+
+      state = Diff.init(prev_props)
+      state = Diff.update({:set_show_line_numbers, false}, nil, state)
+      state = Diff.update_props(prev_props, new_props, state)
+
+      assert state.show_line_numbers == false
+    end
+  end
+
   describe "scrolling" do
     test "down increments scroll_offset" do
       state = Diff.init(%{diff: @sample_diff, id: :diff, visible_lines: 3})

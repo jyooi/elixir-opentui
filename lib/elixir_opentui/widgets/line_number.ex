@@ -99,6 +99,24 @@ defmodule ElixirOpentui.Widgets.LineNumber do
   def update(_, _, state), do: state
 
   @impl true
+  def update_props(prev_props, new_props, state) do
+    state
+    |> sync_prop(prev_props, new_props, :line_count, 0)
+    |> sync_prop(prev_props, new_props, :scroll_offset, 0)
+    |> sync_prop(prev_props, new_props, :visible_lines, nil)
+    |> sync_prop(prev_props, new_props, :id, nil)
+    |> sync_prop(prev_props, new_props, :min_width, 3)
+    |> sync_prop(prev_props, new_props, :padding_right, 1)
+    |> sync_prop(prev_props, new_props, :line_number_offset, 0)
+    |> sync_prop(prev_props, new_props, :line_colors, %{})
+    |> sync_prop(prev_props, new_props, :line_signs, %{})
+    |> sync_prop(prev_props, new_props, :hide_line_numbers, MapSet.new())
+    |> sync_prop(prev_props, new_props, :line_numbers, %{})
+    |> sync_prop(prev_props, new_props, :show_line_numbers, true)
+    |> sync_prop(prev_props, new_props, :line_sources, nil)
+  end
+
+  @impl true
   def render(state) do
     import ElixirOpentui.View, only: [line_number: 1]
 
@@ -156,6 +174,21 @@ defmodule ElixirOpentui.Widgets.LineNumber do
         acc
       end
     end)
+  end
+
+  defp sync_prop(state, prev_props, new_props, key, default) do
+    if prop_changed?(prev_props, new_props, key) do
+      Map.put(state, key, Map.get(new_props, key, default))
+    else
+      state
+    end
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 
   defp digits_count(n) when n <= 0, do: 1

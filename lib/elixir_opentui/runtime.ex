@@ -216,42 +216,23 @@ defmodule ElixirOpentui.Runtime do
   @impl true
   def handle_call({:mount, app_module, props}, _from, state) do
     app_state = app_module.init(props)
-    tree = app_module.render(app_state)
-
-    {tree, comp_states} = resolve_components(tree, state.component_states)
-
-    {tagged, layout_results} = Layout.compute(tree, state.renderer.cols, state.renderer.rows)
-    buffer = new_buffer(state)
-    buffer = Painter.paint(tagged, layout_results, buffer)
-    buffer = finalize_buffer(state, buffer)
-
-    em = EventManager.new(tree, buffer)
-
-    renderer = update_renderer_front(state.renderer, buffer)
 
     new_state = %{
       state
       | app_module: app_module,
         app_state: app_state,
-        tree: tree,
-        component_states: comp_states,
-        event_manager: em,
-        renderer: renderer
+        component_states: %{},
+        event_manager: nil,
+        tree: nil
     }
 
-    # Auto-start ticking if any component has _live: true
-    new_state =
-      if any_live?(new_state) and new_state.control_state == :idle do
-        start_tick_loop(new_state)
-      else
-        new_state
-      end
+    new_state = render_and_reconcile(new_state)
 
     {:reply, :ok, new_state}
   end
 
   def handle_call(:render, _from, state) do
-    new_state = do_render(state)
+    new_state = render_and_reconcile(state)
     {:reply, :ok, new_state}
   end
 
@@ -282,7 +263,7 @@ defmodule ElixirOpentui.Runtime do
   def handle_call({:resize, cols, rows}, _from, state) do
     new_renderer = Renderer.resize(state.renderer, cols, rows)
     new_state = %{state | renderer: new_renderer}
-    new_state = do_render(new_state)
+    new_state = render_and_reconcile(new_state)
     {:reply, :ok, new_state}
   end
 
@@ -367,27 +348,14 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_cast({:component_msg, nil, msg}, state) do
     new_state = update_app(state, msg)
-    new_state = do_render(new_state)
-    # Check if _live status changed and start/stop ticking
-    new_state =
-      cond do
-        any_live?(new_state) and new_state.control_state == :idle ->
-          start_tick_loop(new_state)
-
-        not any_live?(new_state) and new_state.control_state == :running and
-          new_state.live_request_count == 0 and not new_state.explicit_start ->
-          stop_tick_loop(new_state)
-
-        true ->
-          new_state
-      end
+    new_state = render_and_reconcile(new_state)
 
     {:noreply, new_state}
   end
 
   def handle_cast({:component_msg, component_id, msg}, state) do
     new_state = update_component(state, component_id, msg, nil)
-    new_state = do_render(new_state)
+    new_state = render_and_reconcile(new_state)
     {:noreply, new_state}
   end
 
@@ -455,7 +423,7 @@ defmodule ElixirOpentui.Runtime do
           _, acc -> acc
         end)
 
-      do_render(state)
+      render_and_reconcile(state)
     else
       state
     end
@@ -500,7 +468,7 @@ defmodule ElixirOpentui.Runtime do
 
   defp do_render(state) do
     tree = state.app_module.render(state.app_state)
-    {tree, comp_states} = resolve_components(tree, state.component_states)
+    {tree, comp_states} = resolve_components(tree, state.component_states, %{})
 
     {tagged, layout_results} = Layout.compute(tree, state.renderer.cols, state.renderer.rows)
     buffer = new_buffer(state)
@@ -523,6 +491,12 @@ defmodule ElixirOpentui.Runtime do
         event_manager: em,
         renderer: renderer
     }
+  end
+
+  defp render_and_reconcile(state) do
+    state
+    |> do_render()
+    |> reconcile_tick_loop()
   end
 
   defp buffer_mod(%{backend: :native}), do: NativeBuffer
@@ -585,6 +559,10 @@ defmodule ElixirOpentui.Runtime do
     app_live or comp_live
   end
 
+  defp should_tick?(state) do
+    any_live?(state) or state.live_request_count > 0 or state.explicit_start
+  end
+
   defp check_live(state) when is_map(state) do
     case Map.get(state, :_live) do
       val when val in [nil, false] ->
@@ -620,40 +598,82 @@ defmodule ElixirOpentui.Runtime do
     %{state | control_state: :idle, tick_timer_ref: nil}
   end
 
+  defp reconcile_tick_loop(%{control_state: :suspended} = state), do: state
+
+  defp reconcile_tick_loop(state) do
+    cond do
+      should_tick?(state) and state.control_state == :idle ->
+        start_tick_loop(state)
+
+      not should_tick?(state) and state.control_state == :running ->
+        stop_tick_loop(state)
+
+      true ->
+        state
+    end
+  end
+
   defp schedule_tick(state) do
     ref = Process.send_after(self(), :tick, state.target_frame_time)
     %{state | tick_timer_ref: ref}
   end
 
   # Walk the tree and initialize any component elements
-  defp resolve_components(%Element{component: nil} = el, comp_states) do
-    {children, comp_states} =
-      Enum.map_reduce(el.children, comp_states, &resolve_components/2)
+  defp resolve_components(%Element{component: nil} = el, old_comp_states, new_comp_states) do
+    {children, new_comp_states} =
+      Enum.map_reduce(el.children, new_comp_states, fn child, acc ->
+        resolve_components(child, old_comp_states, acc)
+      end)
 
-    {%{el | children: children}, comp_states}
+    {%{el | children: children}, new_comp_states}
   end
 
-  defp resolve_components(%Element{component: module, id: id, attrs: attrs} = _el, comp_states) do
+  defp resolve_components(
+         %Element{component: module, id: id, attrs: attrs} = _el,
+         old_comp_states,
+         new_comp_states
+       ) do
     props = Map.new(attrs)
 
-    comp =
-      case Map.get(comp_states, id) do
-        nil ->
-          %{module: module, state: module.init(props), props: props}
-
-        existing ->
-          existing
-      end
+    comp = reconcile_component(Map.get(old_comp_states, id), module, props)
 
     tree = module.render(comp.state)
     tree = %{tree | id: tree.id || id}
 
-    {children, comp_states} =
-      Enum.map_reduce(tree.children, comp_states, &resolve_components/2)
+    {children, new_comp_states} =
+      Enum.map_reduce(tree.children, new_comp_states, fn child, acc ->
+        resolve_components(child, old_comp_states, acc)
+      end)
 
     tree = %{tree | children: children}
-    comp_states = Map.put(comp_states, id, comp)
+    new_comp_states = Map.put(new_comp_states, id, comp)
 
-    {tree, comp_states}
+    {tree, new_comp_states}
+  end
+
+  defp reconcile_component(nil, module, props) do
+    %{module: module, state: module.init(props), props: props}
+  end
+
+  defp reconcile_component(%{module: module} = comp, module, props) do
+    state = maybe_update_component_props(module, comp.props, props, comp.state)
+    %{comp | module: module, props: props, state: state}
+  end
+
+  defp reconcile_component(_comp, module, props) do
+    %{module: module, state: module.init(props), props: props}
+  end
+
+  defp maybe_update_component_props(_module, prev_props, new_props, state)
+       when prev_props == new_props do
+    state
+  end
+
+  defp maybe_update_component_props(module, prev_props, new_props, state) do
+    if function_exported?(module, :update_props, 3) do
+      module.update_props(prev_props, new_props, state)
+    else
+      state
+    end
   end
 end

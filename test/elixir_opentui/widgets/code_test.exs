@@ -165,6 +165,33 @@ defmodule ElixirOpentui.Widgets.CodeTest do
     end
   end
 
+  describe "update_props/3" do
+    test "clamps scroll offset when content shrinks" do
+      prev_props = %{content: "a\nb\nc\nd\ne", visible_lines: 3, id: :code}
+      new_props = %{content: "x\ny", visible_lines: 3, id: :code}
+
+      state = Code.init(prev_props)
+      state = %{state | scroll_offset: 2}
+      state = Code.update_props(prev_props, new_props, state)
+
+      assert state.content == "x\ny"
+      assert state.scroll_offset == 0
+    end
+
+    test "preserves local toggles when parent does not control those props" do
+      prev_props = %{content: "a\nb\nc", id: :code}
+      new_props = %{content: "a\nb\nc", id: :code}
+
+      state = Code.init(prev_props)
+      state = Code.update({:set_show_line_numbers, false}, nil, state)
+      state = Code.update({:set_streaming, true}, nil, state)
+      state = Code.update_props(prev_props, new_props, state)
+
+      assert state.show_line_numbers == false
+      assert state.streaming == true
+    end
+  end
+
   describe "render" do
     test "produces a :code element" do
       state = Code.init(%{content: @sample_code, filetype: "elixir", id: :mycode})

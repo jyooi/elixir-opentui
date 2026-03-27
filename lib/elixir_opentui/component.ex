@@ -8,6 +8,7 @@ defmodule ElixirOpentui.Component do
   ## Callbacks
 
   - `init/1` — Initialize component state from props
+  - `update_props/3` — Reconcile mounted state when parent props change
   - `update/3` — Handle events, return new state
   - `render/1` — Return an Element tree from current state
 
@@ -56,13 +57,16 @@ defmodule ElixirOpentui.Component do
   @doc "Initialize component state from props."
   @callback init(props :: map()) :: term()
 
+  @doc "Reconcile mounted state when parent props change."
+  @callback update_props(prev_props :: map(), new_props :: map(), state :: term()) :: term()
+
   @doc "Handle a message/event. Returns new state."
   @callback update(msg :: term(), event :: term(), state :: term()) :: term()
 
   @doc "Render the component to an Element tree."
   @callback render(state :: term()) :: ElixirOpentui.Element.t()
 
-  @optional_callbacks []
+  @optional_callbacks [update_props: 3]
 
   defmacro __using__(_opts) do
     quote do

@@ -50,6 +50,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
   @impl true
   def update(:sync_value, %{value: value}, state) do
     %{state | value: value, cursor_pos: min(state.cursor_pos, String.length(value))}
+    |> adjust_scroll()
   end
 
   def update(:key, %{type: :key} = event, state) do
@@ -66,6 +67,39 @@ defmodule ElixirOpentui.Widgets.TextInput do
   end
 
   def update(_, _, state), do: state
+
+  @impl true
+  def update_props(prev_props, new_props, state) do
+    state = %{
+      state
+      | id: Map.get(new_props, :id),
+        placeholder: Map.get(new_props, :placeholder, ""),
+        on_change: Map.get(new_props, :on_change),
+        on_submit: Map.get(new_props, :on_submit),
+        max_length: Map.get(new_props, :max_length, :infinity),
+        width: Map.get(new_props, :width, 20),
+        cursor_style: Map.get(new_props, :cursor_style, :block),
+        focused_bg: Map.get(new_props, :focused_bg),
+        focused_fg: Map.get(new_props, :focused_fg),
+        placeholder_fg: Map.get(new_props, :placeholder_fg),
+        cursor_fg: Map.get(new_props, :cursor_fg),
+        cursor_bg: Map.get(new_props, :cursor_bg)
+    }
+
+    state =
+      if prop_changed?(prev_props, new_props, :value) do
+        update(:sync_value, %{value: Map.get(new_props, :value, "")}, state)
+      else
+        state
+      end
+
+    if prop_changed?(prev_props, new_props, :width) and
+         not prop_changed?(prev_props, new_props, :value) do
+      adjust_scroll(state)
+    else
+      state
+    end
+  end
 
   @impl true
   def render(state) do
@@ -254,5 +288,12 @@ defmodule ElixirOpentui.Widgets.TextInput do
     else
       state
     end
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 end

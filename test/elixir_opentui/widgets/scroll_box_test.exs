@@ -101,6 +101,29 @@ defmodule ElixirOpentui.Widgets.ScrollBoxTest do
     end
   end
 
+  describe "update_props/3" do
+    test "preserves locally updated content height when parent keeps omitting the prop" do
+      prev_props = %{height: 10, id: :sb}
+      new_props = %{height: 10, id: :sb}
+
+      state = ScrollBox.init(prev_props)
+      state = ScrollBox.update({:set_content_height, 25}, nil, state)
+      state = ScrollBox.update_props(prev_props, new_props, state)
+
+      assert state.content_height == 25
+    end
+
+    test "resets content height when parent removes a previously controlled prop" do
+      prev_props = %{content_height: 50, height: 10, id: :sb}
+      new_props = %{height: 10, id: :sb}
+
+      state = ScrollBox.init(prev_props)
+      state = ScrollBox.update_props(prev_props, new_props, state)
+
+      assert state.content_height == 0
+    end
+  end
+
   describe "set_scroll" do
     test "sets scroll position" do
       state = ScrollBox.init(%{content_height: 50, height: 10, id: :sb})

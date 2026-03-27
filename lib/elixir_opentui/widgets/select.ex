@@ -62,6 +62,52 @@ defmodule ElixirOpentui.Widgets.Select do
   def update(_, _, state), do: state
 
   @impl true
+  def update_props(prev_props, new_props, state) do
+    options =
+      new_props
+      |> Map.get(:options, [])
+      |> Enum.map(&normalize_option/1)
+
+    state = %{
+      state
+      | id: Map.get(new_props, :id),
+        on_change: Map.get(new_props, :on_change),
+        on_select: Map.get(new_props, :on_select),
+        visible_count: Map.get(new_props, :visible_count, length(options)),
+        wrap_selection: Map.get(new_props, :wrap_selection, false),
+        fast_scroll_step: Map.get(new_props, :fast_scroll_step, 5),
+        show_description: Map.get(new_props, :show_description, false),
+        show_scroll_indicator: Map.get(new_props, :show_scroll_indicator, false),
+        item_spacing: Map.get(new_props, :item_spacing, 0)
+    }
+
+    {state, needs_scroll_adjust?} =
+      if prop_changed?(prev_props, new_props, :options) do
+        selected = min(state.selected, max(0, length(options) - 1))
+        {%{state | options: options, selected: selected}, true}
+      else
+        {state, false}
+      end
+
+    {state, needs_scroll_adjust?} =
+      if prop_changed?(prev_props, new_props, :selected) do
+        selected = clamp(Map.get(new_props, :selected, 0), 0, max(0, length(state.options) - 1))
+        {%{state | selected: selected}, true}
+      else
+        {state, needs_scroll_adjust?}
+      end
+
+    if needs_scroll_adjust? or
+         prop_changed?(prev_props, new_props, :visible_count) or
+         prop_changed?(prev_props, new_props, :show_description) or
+         prop_changed?(prev_props, new_props, :item_spacing) do
+      adjust_scroll(state)
+    else
+      state
+    end
+  end
+
+  @impl true
   def render(state) do
     import ElixirOpentui.View, only: [select: 1]
 
@@ -203,6 +249,13 @@ defmodule ElixirOpentui.Widgets.Select do
     else
       state
     end
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 
   defp clamp(val, lo, hi), do: max(lo, min(hi, val))

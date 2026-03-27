@@ -40,6 +40,22 @@ defmodule ElixirOpentui.Widgets.Checkbox do
   def update(_, _, state), do: state
 
   @impl true
+  def update_props(prev_props, new_props, state) do
+    state = %{
+      state
+      | id: Map.get(new_props, :id),
+        label: Map.get(new_props, :label, ""),
+        on_change: Map.get(new_props, :on_change)
+    }
+
+    if prop_changed?(prev_props, new_props, :checked) do
+      %{state | checked: Map.get(new_props, :checked, false)}
+    else
+      state
+    end
+  end
+
+  @impl true
   def render(state) do
     import ElixirOpentui.View
 
@@ -65,5 +81,12 @@ defmodule ElixirOpentui.Widgets.Checkbox do
     else
       state
     end
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 end

@@ -91,6 +91,57 @@ defmodule ElixirOpentui.Widgets.TextArea do
   def update(_, _, state), do: state
 
   @impl true
+  def update_props(prev_props, new_props, state) do
+    width = Map.get(new_props, :width, 40)
+    height = Map.get(new_props, :height, 10)
+    wrap = Map.get(new_props, :wrap, :word)
+
+    size_changed? =
+      prop_changed?(prev_props, new_props, :width) or
+        prop_changed?(prev_props, new_props, :height)
+
+    wrap_changed? = prop_changed?(prev_props, new_props, :wrap)
+    value_changed? = prop_changed?(prev_props, new_props, :value)
+
+    state = %{
+      state
+      | id: Map.get(new_props, :id),
+        placeholder: Map.get(new_props, :placeholder, ""),
+        on_change: Map.get(new_props, :on_change),
+        on_submit: Map.get(new_props, :on_submit)
+    }
+
+    state =
+      if size_changed? do
+        EditBufferNIF.view_set_viewport_size(state.editor_view, width, height)
+        %{state | width: width, height: height}
+      else
+        state
+      end
+
+    state =
+      if wrap_changed? do
+        EditBufferNIF.view_set_wrap_mode(state.editor_view, EditBufferNIF.wrap_mode_int(wrap))
+        %{state | wrap: wrap}
+      else
+        state
+      end
+
+    state =
+      if value_changed? do
+        update(:sync_value, %{value: Map.get(new_props, :value, "")}, state)
+      else
+        state
+      end
+
+    if (size_changed? or wrap_changed?) and not value_changed? do
+      sync_scroll(state)
+    else
+      state
+    end
+  end
+
+  @impl true
   def render(state) do
     import ElixirOpentui.View
 
@@ -693,5 +744,12 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp emit_submit(%{on_submit: tag} = state) do
     text = EditBufferNIF.get_text(state.edit_buffer)
     %{state | _pending: [{tag, text} | state._pending]}
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 end
