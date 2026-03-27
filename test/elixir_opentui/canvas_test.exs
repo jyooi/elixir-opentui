@@ -103,6 +103,25 @@ defmodule ElixirOpentui.CanvasTest do
       assert c.cells[{0, 0}] == {"★", @white, @black}
       assert c.cells[{1, 0}] == {"●", @white, @black}
     end
+
+    test "advances x by display width for wide graphemes" do
+      c = Canvas.new(20, 5) |> Canvas.draw_text(0, 0, "A界B", @white, @black)
+      assert map_size(c.cells) == 4
+      assert c.cells[{0, 0}] == {"A", @white, @black}
+      assert c.cells[{1, 0}] == {"界", @white, @black}
+      assert c.cells[{2, 0}] == {" ", @white, @black}
+      assert c.cells[{3, 0}] == {"B", @white, @black}
+    end
+
+    test "wide graphemes clear covered continuation columns" do
+      c =
+        Canvas.new(20, 5)
+        |> Canvas.draw_text(0, 0, "AB", @white, @black)
+        |> Canvas.draw_text(0, 0, "界", @red, @blue)
+
+      assert c.cells[{0, 0}] == {"界", @red, @blue}
+      assert c.cells[{1, 0}] == {" ", @red, @blue}
+    end
   end
 
   describe "fill_rect/8" do

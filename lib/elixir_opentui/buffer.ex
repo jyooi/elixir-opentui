@@ -9,7 +9,7 @@ defmodule ElixirOpentui.Buffer do
 
   @behaviour ElixirOpentui.BufferBehaviour
 
-  alias ElixirOpentui.Color
+  alias ElixirOpentui.{Color, TextBuffer}
 
   @type cell :: %{
           char: String.t(),
@@ -103,9 +103,28 @@ defmodule ElixirOpentui.Buffer do
         ) ::
           t()
   def draw_char(buf, x, y, char, fg, bg, attrs \\ []) do
-    cell = %{blank_cell(fg, bg) | char: char}
-    cell = apply_attrs(cell, attrs)
-    put_cell(buf, x, y, cell)
+    case TextBuffer.char_width(char) do
+      width when width <= 0 ->
+        buf
+
+      width ->
+        if drawable_span?(buf, x, y, width) do
+          lead_cell = %{blank_cell(fg, bg) | char: char} |> apply_attrs(attrs)
+          continuation_cell = %{blank_cell(fg, bg) | char: ""} |> apply_attrs(attrs)
+
+          buf = put_cell(buf, x, y, lead_cell)
+
+          if width == 1 do
+            buf
+          else
+            Enum.reduce(1..(width - 1)//1, buf, fn offset, acc ->
+              put_cell(acc, x + offset, y, continuation_cell)
+            end)
+          end
+        else
+          buf
+        end
+    end
   end
 
   @doc "Write a character with alpha blending over existing cell."
@@ -145,7 +164,8 @@ defmodule ElixirOpentui.Buffer do
     text
     |> String.graphemes()
     |> Enum.reduce({buf, x}, fn grapheme, {b, cx} ->
-      {draw_char(b, cx, y, grapheme, fg, bg, attrs), cx + 1}
+      width = TextBuffer.char_width(grapheme)
+      {draw_char(b, cx, y, grapheme, fg, bg, attrs), cx + width}
     end)
     |> elem(0)
   end
@@ -267,6 +287,12 @@ defmodule ElixirOpentui.Buffer do
 
   defp in_scissor?(%__MODULE__{scissor_stack: [{sx, sy, sw, sh} | _]}, x, y) do
     x >= sx and x < sx + sw and y >= sy and y < sy + sh
+  end
+
+  defp drawable_span?(buf, x, y, width) do
+    Enum.all?(0..(width - 1)//1, fn offset ->
+      in_scissor?(buf, x + offset, y)
+    end)
   end
 
   defp intersect_rect({x1, y1, w1, h1}, {x2, y2, w2, h2}) do

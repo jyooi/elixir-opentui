@@ -24,6 +24,8 @@ defmodule ElixirOpentui.Widgets.LineNumber do
 
   use ElixirOpentui.Component
 
+  alias ElixirOpentui.TextBuffer
+
   @impl true
   def init(props) do
     %{
@@ -169,7 +171,7 @@ defmodule ElixirOpentui.Widgets.LineNumber do
       text = Map.get(sign, field)
 
       if text do
-        max(acc, String.length(text))
+        max(acc, TextBuffer.display_width(text))
       else
         acc
       end

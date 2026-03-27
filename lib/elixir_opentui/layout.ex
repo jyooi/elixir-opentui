@@ -23,7 +23,7 @@ defmodule ElixirOpentui.Layout do
   3. Position (top-down): compute absolute coordinates
   """
 
-  alias ElixirOpentui.Element
+  alias ElixirOpentui.{Element, TextBuffer}
 
   defmodule Rect do
     @moduledoc "Layout result rectangle."
@@ -286,14 +286,14 @@ defmodule ElixirOpentui.Layout do
   defp content_width(%Element{type: :text, attrs: attrs}, _avail) do
     case Map.get(attrs, :content) do
       nil -> 0
-      text -> String.length(text)
+      text -> TextBuffer.display_width(text)
     end
   end
 
   defp content_width(%Element{type: :label, attrs: attrs}, _avail) do
     case Map.get(attrs, :content) do
       nil -> 0
-      text -> String.length(text)
+      text -> TextBuffer.display_width(text)
     end
   end
 
@@ -304,13 +304,13 @@ defmodule ElixirOpentui.Layout do
   defp content_width(%Element{type: :button, attrs: attrs}, _avail) do
     case Map.get(attrs, :content) do
       nil -> 0
-      text -> String.length(text)
+      text -> TextBuffer.display_width(text)
     end
   end
 
   defp content_width(%Element{type: :checkbox, attrs: attrs}, _avail) do
     label = Map.get(attrs, :label, "")
-    4 + String.length(label)
+    4 + TextBuffer.display_width(label)
   end
 
   defp content_width(%Element{type: :textarea, attrs: attrs}, _avail) do
@@ -368,8 +368,8 @@ defmodule ElixirOpentui.Layout do
 
   defp content_width(_el, _avail), do: 0
 
-  defp select_option_width(%{name: name}), do: String.length(name)
-  defp select_option_width(opt), do: String.length(to_string(opt))
+  defp select_option_width(%{name: name}), do: TextBuffer.display_width(name)
+  defp select_option_width(opt), do: TextBuffer.display_width(to_string(opt))
 
   defp content_height(%Element{type: type}, _avail)
        when type in [:text, :label, :input, :button, :checkbox],

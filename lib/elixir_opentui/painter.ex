@@ -208,7 +208,7 @@ defmodule ElixirOpentui.Painter do
     bg = Color.with_opacity(bg, opacity)
     attrs = style_attrs(el.style)
 
-    truncated = String.slice(content, 0, w)
+    truncated = TextBuffer.slice_columns(content, 0, w)
     buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
@@ -219,7 +219,7 @@ defmodule ElixirOpentui.Painter do
     bg = Color.with_opacity(bg, opacity)
     attrs = style_attrs(el.style)
 
-    truncated = String.slice(content, 0, w)
+    truncated = TextBuffer.slice_columns(content, 0, w)
     buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
@@ -233,7 +233,7 @@ defmodule ElixirOpentui.Painter do
       if title != "" and w >= 4 do
         fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
         bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
-        truncated = String.slice(title, 0, w - 4)
+        truncated = TextBuffer.slice_columns(title, 0, w - 4)
         title_str = " #{truncated} "
         buffer_mod(buf).draw_text(buf, x + 1, y, title_str, fg, bg)
       else
@@ -246,7 +246,7 @@ defmodule ElixirOpentui.Painter do
     mod = buffer_mod(buf)
     value = Map.get(el.attrs, :value, "")
     placeholder = Map.get(el.attrs, :placeholder, "")
-    cursor_pos = Map.get(el.attrs, :cursor_pos, String.length(value))
+    cursor_pos = Map.get(el.attrs, :cursor_pos, TextBuffer.grapheme_count(value))
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
     attrs = style_attrs(el.style)
 
@@ -259,7 +259,7 @@ defmodule ElixirOpentui.Painter do
     fg = if value == "", do: ph_fg, else: default_fg
     bg = default_bg
 
-    visible = String.slice(display, scroll_offset, w)
+    visible = TextBuffer.slice_columns(display, scroll_offset, w)
     buf = mod.draw_text(buf, x, y, visible, fg, bg, attrs)
 
     if focused do
@@ -272,12 +272,12 @@ defmodule ElixirOpentui.Painter do
         |> Color.with_opacity(opacity)
 
       if value != "" do
-        cursor_x = cursor_pos - scroll_offset
+        cursor_x = TextBuffer.grapheme_index_to_column(value, cursor_pos) - scroll_offset
 
         if cursor_x >= 0 and cursor_x < w do
           cursor_char =
-            if cursor_x < String.length(visible) do
-              String.at(visible, cursor_x)
+            if cursor_x < TextBuffer.display_width(visible) do
+              TextBuffer.grapheme_at_column(visible, cursor_x)
             else
               " "
             end
@@ -319,7 +319,7 @@ defmodule ElixirOpentui.Painter do
          (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)}
       end
 
-    truncated = String.slice(content, 0, w)
+    truncated = TextBuffer.slice_columns(content, 0, w)
     buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
@@ -350,7 +350,7 @@ defmodule ElixirOpentui.Painter do
 
         if row_base < y + h do
           opt_name = option_name(opt)
-          opt_str = String.slice(opt_name, 0, text_w)
+          opt_str = TextBuffer.slice_columns(opt_name, 0, text_w)
 
           b =
             if focused and idx == selected do
@@ -364,7 +364,7 @@ defmodule ElixirOpentui.Painter do
             desc = option_description(opt)
 
             if desc do
-              desc_str = String.slice(desc, 0, text_w)
+              desc_str = TextBuffer.slice_columns(desc, 0, text_w)
               mod.draw_text(b, x, row_base + 1, desc_str, desc_fg, bg, attrs)
             else
               b
@@ -413,7 +413,7 @@ defmodule ElixirOpentui.Painter do
 
     bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
 
-    truncated = String.slice(content, 0, w)
+    truncated = TextBuffer.slice_columns(content, 0, w)
     buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
@@ -444,12 +444,12 @@ defmodule ElixirOpentui.Painter do
 
     buf =
       if lines == [] do
-        placeholder_line = String.slice(placeholder, 0, w)
+        placeholder_line = TextBuffer.slice_columns(placeholder, 0, w)
         mod.draw_text(buf, x, y, placeholder_line, placeholder_fg, bg, attrs)
       else
         Enum.reduce(Enum.with_index(lines), buf, fn {line, row_idx}, b ->
           if row_idx < h do
-            visible = String.slice(line, 0, w)
+            visible = TextBuffer.slice_columns(line, 0, w)
 
             if selection do
               draw_textarea_line_with_selection(
@@ -480,8 +480,8 @@ defmodule ElixirOpentui.Painter do
         cursor_line = Enum.at(lines, cursor_row, "")
 
         cursor_char =
-          if cursor_col < String.length(cursor_line) do
-            String.at(cursor_line, cursor_col)
+          if cursor_col < TextBuffer.display_width(cursor_line) do
+            TextBuffer.grapheme_at_column(cursor_line, cursor_col)
           else
             " "
           end
@@ -552,8 +552,8 @@ defmodule ElixirOpentui.Painter do
           b
         else
           tab_name = tab_select_name(opt)
-          truncated = String.slice(tab_name, 0, tab_width - 1)
-          padded = String.pad_trailing(truncated, tab_width)
+          truncated = TextBuffer.slice_columns(tab_name, 0, tab_width)
+          padded = TextBuffer.pad_trailing_columns(truncated, tab_width)
 
           if focused and idx == selected do
             b = mod.fill_rect(b, tab_x, y, tab_width, 1, " ", sel_fg, sel_bg)
@@ -596,7 +596,7 @@ defmodule ElixirOpentui.Painter do
       desc = tab_select_desc(Enum.at(options, selected))
 
       if desc do
-        mod.draw_text(buf, x, desc_y, String.slice(desc, 0, w), dim_fg, bg)
+        mod.draw_text(buf, x, desc_y, TextBuffer.slice_columns(desc, 0, w), dim_fg, bg)
       else
         buf
       end
@@ -638,9 +638,19 @@ defmodule ElixirOpentui.Painter do
           sign_before = get_in(line_signs, [line_idx, :before]) || ""
           sign_after = get_in(line_signs, [line_idx, :after]) || ""
           num_str = to_string(line_num)
-          num_w = gutter_width - String.length(sign_before) - String.length(sign_after) - 1
-          padded_num = String.pad_leading(num_str, max(1, num_w))
-          full_str = String.slice(sign_before <> padded_num <> sign_after <> " ", 0, gutter_width)
+
+          num_w =
+            gutter_width - TextBuffer.display_width(sign_before) -
+              TextBuffer.display_width(sign_after) - 1
+
+          padded_num = TextBuffer.pad_leading_columns(num_str, max(1, num_w))
+
+          full_str =
+            TextBuffer.slice_columns(
+              sign_before <> padded_num <> sign_after <> " ",
+              0,
+              gutter_width
+            )
 
           b = mod.draw_text(b, x, y + row, full_str, line_fg, bg)
 
@@ -828,7 +838,7 @@ defmodule ElixirOpentui.Painter do
 
     Enum.reduce(Enum.with_index(visible), buf, fn {{text, line_fg, line_bg, line_attrs}, row},
                                                   b ->
-      visible_text = String.slice(text, 0, w)
+      visible_text = TextBuffer.slice_columns(text, 0, w)
       b = if line_bg != bg, do: mod.fill_rect(b, x, y + row, w, 1, " ", line_fg, line_bg), else: b
       mod.draw_text(b, x, y + row, visible_text, line_fg, line_bg, line_attrs)
     end)
@@ -1000,16 +1010,26 @@ defmodule ElixirOpentui.Painter do
 
     line
     |> String.graphemes()
-    |> Enum.with_index()
-    |> Enum.reduce(buf, fn {ch, col}, b ->
-      if col >= sel_start and col < sel_end do
-        sel_fg = Color.with_opacity(bg, opacity)
-        sel_bg = Color.with_opacity(fg, opacity)
-        mod.draw_char(b, x + col, y, ch, sel_fg, sel_bg, attrs)
-      else
-        mod.draw_char(b, x + col, y, ch, fg, bg, attrs)
-      end
+    |> Enum.reduce({buf, 0}, fn ch, {b, col} ->
+      width = TextBuffer.char_width(ch)
+      selected? = col < sel_end and col + width > sel_start
+
+      b =
+        if width <= 0 do
+          b
+        else
+          if selected? do
+            sel_fg = Color.with_opacity(bg, opacity)
+            sel_bg = Color.with_opacity(fg, opacity)
+            mod.draw_char(b, x + col, y, ch, sel_fg, sel_bg, attrs)
+          else
+            mod.draw_char(b, x + col, y, ch, fg, bg, attrs)
+          end
+        end
+
+      {b, col + width}
     end)
+    |> elem(0)
   end
 
   defp style_attrs(style) do
@@ -1151,7 +1171,7 @@ defmodule ElixirOpentui.Painter do
       # Draw gutter
       b =
         if show_line_numbers do
-          num_str = String.pad_leading(to_string(line_idx + 1), digits)
+          num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
           gutter_str = num_str <> "  "
           mod.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
         else
@@ -1164,7 +1184,7 @@ defmodule ElixirOpentui.Painter do
       {b, _col} =
         Enum.reduce(line_tokens, {b, 0}, fn {type, text}, {bb, col} ->
           tok_fg = token_color(type, opacity)
-          visible = String.slice(text, 0, max(0, code_w - col))
+          visible = TextBuffer.slice_columns(text, 0, max(0, code_w - col))
 
           bb =
             if col < code_w and visible != "" do
@@ -1173,7 +1193,7 @@ defmodule ElixirOpentui.Painter do
               bb
             end
 
-          {bb, col + String.length(text)}
+          {bb, col + TextBuffer.display_width(text)}
         end)
 
       b
@@ -1202,7 +1222,7 @@ defmodule ElixirOpentui.Painter do
 
       b =
         if show_line_numbers do
-          num_str = String.pad_leading(to_string(line_idx + 1), digits)
+          num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
           gutter_str = num_str <> "  "
           mod.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
         else
@@ -1210,7 +1230,7 @@ defmodule ElixirOpentui.Painter do
         end
 
       line = Enum.at(lines, line_idx, "")
-      visible = String.slice(line, 0, code_w)
+      visible = TextBuffer.slice_columns(line, 0, code_w)
       mod.draw_text(b, code_x, y + row, visible, fg, bg)
     end)
   end
@@ -1267,8 +1287,13 @@ defmodule ElixirOpentui.Painter do
           if show_line_numbers do
             old_num = Map.get(line, :old_line)
             new_num = Map.get(line, :new_line)
-            old_str = if old_num, do: String.pad_leading(to_string(old_num), 4), else: "    "
-            new_str = if new_num, do: String.pad_leading(to_string(new_num), 4), else: "    "
+
+            old_str =
+              if old_num, do: TextBuffer.pad_leading_columns(to_string(old_num), 4), else: "    "
+
+            new_str =
+              if new_num, do: TextBuffer.pad_leading_columns(to_string(new_num), 4), else: "    "
+
             mod.draw_text(b, x, y + row, old_str <> " " <> new_str, gutter_fg, line_bg)
           else
             b
@@ -1276,7 +1301,7 @@ defmodule ElixirOpentui.Painter do
 
         # Draw sign and content
         b = mod.draw_text(b, x + gutter_w, y + row, sign <> " ", line_fg, line_bg)
-        visible = String.slice(content, 0, content_w)
+        visible = TextBuffer.slice_columns(content, 0, content_w)
         mod.draw_text(b, content_x, y + row, visible, line_fg, line_bg)
       end
     end)
@@ -1337,7 +1362,9 @@ defmodule ElixirOpentui.Painter do
             old_num = left.old_line
 
             old_str =
-              if old_num, do: String.pad_leading(to_string(old_num), 4) <> " ", else: "     "
+              if old_num,
+                do: TextBuffer.pad_leading_columns(to_string(old_num), 4) <> " ",
+                else: "     "
 
             mod.draw_text(b, x, y + row, old_str, gutter_fg, left_bg)
           else
@@ -1351,7 +1378,7 @@ defmodule ElixirOpentui.Painter do
             b,
             x + content_offset,
             y + row,
-            String.slice(left.content, 0, content_w),
+            TextBuffer.slice_columns(left.content, 0, content_w),
             left_fg,
             left_bg
           )
@@ -1375,7 +1402,9 @@ defmodule ElixirOpentui.Painter do
             new_num = right.new_line
 
             new_str =
-              if new_num, do: String.pad_leading(to_string(new_num), 4) <> " ", else: "     "
+              if new_num,
+                do: TextBuffer.pad_leading_columns(to_string(new_num), 4) <> " ",
+                else: "     "
 
             mod.draw_text(b, right_x, y + row, new_str, gutter_fg, right_bg)
           else
@@ -1388,7 +1417,7 @@ defmodule ElixirOpentui.Painter do
           b,
           right_x + content_offset,
           y + row,
-          String.slice(right.content, 0, content_w),
+          TextBuffer.slice_columns(right.content, 0, content_w),
           right_fg,
           right_bg
         )

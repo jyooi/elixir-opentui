@@ -159,6 +159,25 @@ defmodule ElixirOpentui.BufferTest do
       assert Buffer.get_cell(buf, 1, 0).char == "e"
       assert Buffer.get_cell(buf, 2, 0).char == "l"
     end
+
+    test "advances by display width for wide graphemes" do
+      buf = Buffer.new(5, 1)
+      buf = Buffer.draw_text(buf, 0, 0, "A界B", Color.white(), Color.black())
+
+      assert Buffer.get_cell(buf, 0, 0).char == "A"
+      assert Buffer.get_cell(buf, 1, 0).char == "界"
+      assert Buffer.get_cell(buf, 2, 0).char == ""
+      assert Buffer.get_cell(buf, 3, 0).char == "B"
+      assert Buffer.to_strings(buf) == ["A界B "]
+    end
+
+    test "does not draw partially clipped wide graphemes" do
+      buf = Buffer.new(4, 1)
+      buf = Buffer.draw_text(buf, 0, 0, "ABCD", Color.white(), Color.black())
+
+      assert Buffer.draw_char(buf, -1, 0, "界", Color.white(), Color.black()) == buf
+      assert Buffer.draw_char(buf, 3, 0, "界", Color.white(), Color.black()) == buf
+    end
   end
 
   describe "fill_rect/8" do

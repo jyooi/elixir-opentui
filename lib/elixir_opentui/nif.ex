@@ -19,24 +19,24 @@ defmodule ElixirOpentui.NIF do
   const Allocator = std.mem.Allocator;
   const ByteList = std.ArrayList(u8);
   const TermList = std.ArrayList(beam.term);
+  const char_bytes_size = 64;
 
-  // ── Cell: 16-byte cache-line-friendly terminal cell ──────────────────────
+  // ── Cell: terminal cell with UTF-8 grapheme payload ──────────────────────
   pub const Cell = extern struct {
-      char_bytes: [4]u8,  // UTF-8, null-padded
-      char_len: u8,       // 1-4
+      char_bytes: [char_bytes_size]u8, // UTF-8, null-padded
+      char_len: u8,                    // 0-64
       fg: [3]u8,          // RGB
       bg: [3]u8,          // RGB
       attrs: u8,          // bits: bold(0), italic(1), underline(2), strikethrough(3), dim(4), inverse(5)
       hit_id: u16,        // 0=none, 1..65535=mapped atom
-      _pad: [2]u8,        // explicit padding to 16 bytes
-
-      comptime {
-          std.debug.assert(@sizeOf(Cell) == 16);
-      }
+      _pad: [2]u8,
 
       pub fn blank() Cell {
+          var char_bytes = [_]u8{0} ** char_bytes_size;
+          char_bytes[0] = ' ';
+
           return Cell{
-              .char_bytes = [_]u8{ ' ', 0, 0, 0 },
+              .char_bytes = char_bytes,
               .char_len = 1,
               .fg = [_]u8{ 255, 255, 255 },
               .bg = [_]u8{ 0, 0, 0 },
@@ -47,8 +47,8 @@ defmodule ElixirOpentui.NIF do
       }
 
       pub fn eql(a: Cell, b: Cell) bool {
-          const a_bytes: *const [16]u8 = @ptrCast(&a);
-          const b_bytes: *const [16]u8 = @ptrCast(&b);
+          const a_bytes: *const [@sizeOf(Cell)]u8 = @ptrCast(&a);
+          const b_bytes: *const [@sizeOf(Cell)]u8 = @ptrCast(&b);
           return std.mem.eql(u8, a_bytes, b_bytes);
       }
   };
@@ -104,7 +104,8 @@ defmodule ElixirOpentui.NIF do
       }
       const idx = @as(usize, y) * @as(usize, data.cols) + @as(usize, x);
       const cell = data.front[idx];
-      const char_slice = cell.char_bytes[0..cell.char_len];
+      const char_len = @min(@as(usize, cell.char_len), cell.char_bytes.len);
+      const char_slice = cell.char_bytes[0..char_len];
 
       return beam.make(.{
           char_slice,
@@ -121,8 +122,8 @@ defmodule ElixirOpentui.NIF do
 
   // ── NIF: put_cells(fb, binary) → :ok ────────────────────────────────────
   // Batch binary protocol:
-  //   CELL: <<1, x::16-le, y::16-le, char[4], fg[3], bg[3], attrs, hit_id::16-le>> = 18 bytes
-  //   FILL: <<2, x::16-le, y::16-le, w::16-le, h::16-le, char[4], fg[3], bg[3], attrs>> = 20 bytes
+  //   CELL: <<1, x::16-le, y::16-le, char_len, char[64], fg[3], bg[3], attrs, hit_id::16-le>> = 79 bytes total
+  //   FILL: <<2, x::16-le, y::16-le, w::16-le, h::16-le, char_len, char[64], fg[3], bg[3], attrs>> = 81 bytes total
   //   HIT:  <<3, x::16-le, y::16-le, w::16-le, h::16-le, hit_id::16-le>> = 11 bytes
   pub fn put_cells(fb: FrameBuffer, binary: []const u8) void {
       const data = fb.unpack();
@@ -136,39 +137,40 @@ defmodule ElixirOpentui.NIF do
           pos += 1;
 
           switch (tag) {
-              1 => { // CELL: 17 bytes after tag
-                  if (pos + 17 > binary.len) return;
+              1 => { // CELL: 78 bytes after tag
+                  if (pos + 78 > binary.len) return;
                   const x = std.mem.readInt(u16, binary[pos..][0..2], .little);
                   const y = std.mem.readInt(u16, binary[pos + 2..][0..2], .little);
+                  const char_len = binary[pos + 4];
                   if (x < cols and y < rows) {
                       const idx = @as(usize, y) * @as(usize, cols) + @as(usize, x);
                       back[idx] = Cell{
-                          .char_bytes = binary[pos + 4..][0..4].*,
-                          .char_len = compute_char_len(binary[pos + 4..][0..4]),
-                          .fg = binary[pos + 8..][0..3].*,
-                          .bg = binary[pos + 11..][0..3].*,
-                          .attrs = binary[pos + 14],
-                          .hit_id = std.mem.readInt(u16, binary[pos + 15..][0..2], .little),
+                          .char_bytes = binary[pos + 5..][0..char_bytes_size].*,
+                          .char_len = @min(char_len, @as(u8, char_bytes_size)),
+                          .fg = binary[pos + 69..][0..3].*,
+                          .bg = binary[pos + 72..][0..3].*,
+                          .attrs = binary[pos + 75],
+                          .hit_id = std.mem.readInt(u16, binary[pos + 76..][0..2], .little),
                           ._pad = [_]u8{ 0, 0 },
                       };
                   }
-                  pos += 17;
+                  pos += 78;
               },
-              2 => { // FILL: 19 bytes after tag
-                  if (pos + 19 > binary.len) return;
+              2 => { // FILL: 80 bytes after tag
+                  if (pos + 80 > binary.len) return;
                   const x = std.mem.readInt(u16, binary[pos..][0..2], .little);
                   const y = std.mem.readInt(u16, binary[pos + 2..][0..2], .little);
                   const w = std.mem.readInt(u16, binary[pos + 4..][0..2], .little);
                   const h = std.mem.readInt(u16, binary[pos + 6..][0..2], .little);
-                  const char_bytes = binary[pos + 8..][0..4].*;
-                  const char_len = compute_char_len(&char_bytes);
-                  const fg = binary[pos + 12..][0..3].*;
-                  const bg = binary[pos + 15..][0..3].*;
-                  const attrs_val = binary[pos + 18];
+                  const char_len = binary[pos + 8];
+                  const char_bytes = binary[pos + 9..][0..char_bytes_size].*;
+                  const fg = binary[pos + 73..][0..3].*;
+                  const bg = binary[pos + 76..][0..3].*;
+                  const attrs_val = binary[pos + 79];
 
                   const cell = Cell{
                       .char_bytes = char_bytes,
-                      .char_len = char_len,
+                      .char_len = @min(char_len, @as(u8, char_bytes_size)),
                       .fg = fg,
                       .bg = bg,
                       .attrs = attrs_val,
@@ -184,7 +186,7 @@ defmodule ElixirOpentui.NIF do
                           back[idx] = cell;
                       }
                   }
-                  pos += 19;
+                  pos += 80;
               },
               3 => { // HIT: 10 bytes after tag
                   if (pos + 10 > binary.len) return;
@@ -209,15 +211,6 @@ defmodule ElixirOpentui.NIF do
       }
   }
 
-  fn compute_char_len(bytes: *const [4]u8) u8 {
-      if (bytes[0] == 0) return 1;
-      var i: u8 = 4;
-      while (i > 0) : (i -= 1) {
-          if (bytes[i - 1] != 0) return i;
-      }
-      return 1;
-  }
-
   // ── NIF: render_frame_capture(fb) → binary ──────────────────────────────
   pub fn render_frame_capture(fb: FrameBuffer) ![]u8 {
       const gpa = beam.allocator;
@@ -240,6 +233,7 @@ defmodule ElixirOpentui.NIF do
               const x: u32 = @intCast(i % @as(usize, cols));
               const y: u32 = @intCast(i / @as(usize, cols));
               const cell = data.back[i];
+              const char_len = @min(@as(usize, cell.char_len), cell.char_bytes.len);
 
               try write_cursor_move(gpa, &output, x + 1, y + 1);
 
@@ -255,7 +249,7 @@ defmodule ElixirOpentui.NIF do
                   sgr_initialized = true;
               }
 
-              try output.appendSlice(gpa, cell.char_bytes[0..cell.char_len]);
+              try output.appendSlice(gpa, cell.char_bytes[0..char_len]);
           }
       }
 
@@ -297,6 +291,7 @@ defmodule ElixirOpentui.NIF do
               const x: u32 = @intCast(i % @as(usize, cols));
               const y: u32 = @intCast(i / @as(usize, cols));
               const cell = data.back[i];
+              const char_len = @min(@as(usize, cell.char_len), cell.char_bytes.len);
 
               try write_cursor_move(gpa, &output, x + 1, y + 1);
 
@@ -312,7 +307,7 @@ defmodule ElixirOpentui.NIF do
                   sgr_initialized = true;
               }
 
-              try output.appendSlice(gpa, cell.char_bytes[0..cell.char_len]);
+              try output.appendSlice(gpa, cell.char_bytes[0..char_len]);
           }
       }
 
@@ -383,7 +378,8 @@ defmodule ElixirOpentui.NIF do
           while (x < cols) : (x += 1) {
               const idx = @as(usize, y) * @as(usize, cols) + @as(usize, x);
               const cell = data.front[idx];
-              try row_buf.appendSlice(gpa, cell.char_bytes[0..cell.char_len]);
+              const char_len = @min(@as(usize, cell.char_len), cell.char_bytes.len);
+              try row_buf.appendSlice(gpa, cell.char_bytes[0..char_len]);
           }
 
           try result_list.append(gpa, beam.make(row_buf.items, .{}));
@@ -392,14 +388,14 @@ defmodule ElixirOpentui.NIF do
       return beam.make(result_list.items, .{});
   }
 
-  // ── NIF: draw_char_blend(fb, x, y, char[4], fg[3], bg[3]) → :ok ────────
-  pub fn draw_char_blend(fb: FrameBuffer, x: u32, y: u32, char_bytes: [4]u8, fg: [3]u8, bg: [3]u8) void {
+  // ── NIF: draw_char_blend(fb, x, y, char_len, char[64], fg[3], bg[3]) → :ok ──
+  pub fn draw_char_blend(fb: FrameBuffer, x: u32, y: u32, char_len: u8, char_bytes: [char_bytes_size]u8, fg: [3]u8, bg: [3]u8) void {
       const data = fb.unpack();
       if (x >= data.cols or y >= data.rows) return;
       const idx = @as(usize, y) * @as(usize, data.cols) + @as(usize, x);
       data.back[idx] = Cell{
           .char_bytes = char_bytes,
-          .char_len = compute_char_len(&char_bytes),
+          .char_len = @min(char_len, @as(u8, char_bytes_size)),
           .fg = fg,
           .bg = bg,
           .attrs = 0,

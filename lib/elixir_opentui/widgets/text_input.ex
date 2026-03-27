@@ -23,6 +23,8 @@ defmodule ElixirOpentui.Widgets.TextInput do
 
   use ElixirOpentui.Component
 
+  alias ElixirOpentui.TextBuffer
+
   @impl true
   def init(props) do
     value = Map.get(props, :value, "")
@@ -263,11 +265,12 @@ defmodule ElixirOpentui.Widgets.TextInput do
 
   defp adjust_scroll(state) do
     w = state.width
+    cursor_column = TextBuffer.grapheme_index_to_column(state.value, state.cursor_pos)
 
     scroll =
       cond do
-        state.cursor_pos < state.scroll_offset -> state.cursor_pos
-        state.cursor_pos >= state.scroll_offset + w -> state.cursor_pos - w + 1
+        cursor_column < state.scroll_offset -> cursor_column
+        cursor_column >= state.scroll_offset + w -> cursor_column - w + 1
         true -> state.scroll_offset
       end
 

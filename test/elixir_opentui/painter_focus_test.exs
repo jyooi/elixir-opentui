@@ -42,6 +42,17 @@ defmodule ElixirOpentui.PainterFocusTest do
       cursor_cell = Buffer.get_cell(buf, 0, 0)
       assert cursor_cell.bg == {200, 200, 200, 255}
     end
+
+    test "cursor uses display columns for wide characters" do
+      tree =
+        Element.new(:box, [width: 20, height: 3], [
+          Element.new(:input, id: :inp, value: "A界B", width: 10)
+        ])
+
+      buf = paint_focused(tree, 20, 3, :inp)
+      cursor_cell = Buffer.get_cell(buf, 4, 0)
+      assert cursor_cell.bg == {200, 200, 200, 255}
+    end
   end
 
   describe "focused button inversion" do

@@ -31,6 +31,17 @@ defmodule ElixirOpentui.PainterTest do
       rows = Buffer.to_strings(buf)
       assert hd(rows) == "Hel"
     end
+
+    test "truncates text by display width" do
+      tree =
+        Element.new(:box, [width: 2, height: 1], [
+          Element.new(:text, content: "A界B")
+        ])
+
+      buf = paint(tree, 2, 1)
+      rows = Buffer.to_strings(buf)
+      assert hd(rows) == "A "
+    end
   end
 
   describe "background painting" do
@@ -135,6 +146,17 @@ defmodule ElixirOpentui.PainterTest do
 
       buf = paint(tree)
       assert Buffer.get_cell(buf, 0, 0).char == "N"
+    end
+
+    test "renders visible slice using display columns" do
+      tree =
+        Element.new(:box, [width: 3, height: 5], [
+          Element.new(:input, id: :name, value: "A界B", scroll_offset: 2, width: 3)
+        ])
+
+      buf = paint(tree, 3, 5)
+      rows = Buffer.to_strings(buf)
+      assert hd(rows) == " B "
     end
   end
 end
