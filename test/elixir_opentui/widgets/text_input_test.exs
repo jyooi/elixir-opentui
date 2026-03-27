@@ -33,6 +33,33 @@ defmodule ElixirOpentui.Widgets.TextInputTest do
     end
   end
 
+  describe "update_props/3" do
+    test "preserves local edits when unrelated props change" do
+      prev_props = %{id: :inp, value: "hello", placeholder: "old"}
+      new_props = %{id: :inp, value: "hello", placeholder: "new"}
+
+      state = TextInput.init(prev_props)
+      state = TextInput.update(:key, key("!"), state)
+      state = TextInput.update_props(prev_props, new_props, state)
+
+      assert state.value == "hello!"
+      assert state.cursor_pos == 6
+      assert state.placeholder == "new"
+    end
+
+    test "syncs value when the incoming value prop changes" do
+      prev_props = %{id: :inp, value: "hello"}
+      new_props = %{id: :inp, value: "ok"}
+
+      state = TextInput.init(prev_props)
+      state = TextInput.update(:key, key("!"), state)
+      state = TextInput.update_props(prev_props, new_props, state)
+
+      assert state.value == "ok"
+      assert state.cursor_pos == 2
+    end
+  end
+
   describe "character insertion" do
     test "inserts at cursor position" do
       state = TextInput.init(%{value: "", id: :inp})

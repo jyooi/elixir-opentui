@@ -69,6 +69,7 @@ defmodule ElixirOpentui.Widgets.Code do
 
   def update({:set_scroll_offset, offset}, _event, state) do
     %{state | scroll_offset: offset}
+    |> clamp_scroll_offset()
   end
 
   def update({:set_show_line_numbers, show}, _event, state) do
@@ -84,6 +85,54 @@ defmodule ElixirOpentui.Widgets.Code do
   end
 
   def update(_, _, state), do: state
+
+  @impl true
+  def update_props(prev_props, new_props, state) do
+    content_changed? = prop_changed?(prev_props, new_props, :content)
+    filetype_changed? = prop_changed?(prev_props, new_props, :filetype)
+
+    state =
+      state
+      |> sync_prop(prev_props, new_props, :id, nil)
+      |> sync_prop(prev_props, new_props, :show_line_numbers, true)
+      |> sync_prop(prev_props, new_props, :line_number_offset, 0)
+      |> sync_prop(prev_props, new_props, :wrap_mode, :none)
+      |> sync_prop(prev_props, new_props, :visible_lines, nil)
+      |> sync_prop(prev_props, new_props, :streaming, false)
+
+    state =
+      cond do
+        content_changed? and filetype_changed? ->
+          update(
+            {:set_content, Map.get(new_props, :content, ""), Map.get(new_props, :filetype)},
+            nil,
+            state
+          )
+
+        content_changed? ->
+          update({:set_content, Map.get(new_props, :content, "")}, nil, state)
+
+        filetype_changed? ->
+          update({:set_filetype, Map.get(new_props, :filetype)}, nil, state)
+
+        true ->
+          state
+      end
+
+    state =
+      if content_changed? do
+        clamp_scroll_offset(state)
+      else
+        state
+      end
+
+    if prop_changed?(prev_props, new_props, :scroll_offset) do
+      %{state | scroll_offset: Map.get(new_props, :scroll_offset, 0)}
+      |> clamp_scroll_offset()
+    else
+      state
+    end
+  end
 
   @impl true
   def render(state) do
@@ -118,6 +167,31 @@ defmodule ElixirOpentui.Widgets.Code do
       {:handled, new_offset} -> %{state | scroll_offset: new_offset}
       :unhandled -> state
     end
+  end
+
+  defp clamp_scroll_offset(state) do
+    max_offset =
+      case state.visible_lines do
+        nil -> max(0, state.line_count - 1)
+        visible_lines -> max(0, state.line_count - visible_lines)
+      end
+
+    %{state | scroll_offset: min(max(0, state.scroll_offset), max_offset)}
+  end
+
+  defp sync_prop(state, prev_props, new_props, key, default) do
+    if prop_changed?(prev_props, new_props, key) do
+      Map.put(state, key, Map.get(new_props, key, default))
+    else
+      state
+    end
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 
   # --- Syntax highlighting ---

@@ -171,6 +171,32 @@ defmodule ElixirOpentui.Widgets.LineNumberTest do
     end
   end
 
+  describe "update_props/3" do
+    test "preserves locally updated fields when parent keeps omitting those props" do
+      prev_props = %{line_count: 5, id: :ln}
+      new_props = %{line_count: 5, id: :ln}
+
+      state = LineNumber.init(prev_props)
+      state = LineNumber.update({:set_line_color, 2, "#ff0000"}, nil, state)
+      state = LineNumber.update({:set_line_count, 8}, nil, state)
+      state = LineNumber.update_props(prev_props, new_props, state)
+
+      assert state.line_count == 8
+      assert state.line_colors == %{2 => "#ff0000"}
+    end
+
+    test "resets fields when parent removes previously controlled props" do
+      prev_props = %{line_count: 5, line_colors: %{1 => "#00ff00"}, id: :ln}
+      new_props = %{id: :ln}
+
+      state = LineNumber.init(prev_props)
+      state = LineNumber.update_props(prev_props, new_props, state)
+
+      assert state.line_count == 0
+      assert state.line_colors == %{}
+    end
+  end
+
   describe "render" do
     test "produces a :line_number element" do
       state = LineNumber.init(%{line_count: 10, id: :myln})

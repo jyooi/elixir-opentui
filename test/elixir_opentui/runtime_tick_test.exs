@@ -115,6 +115,39 @@ defmodule ElixirOpentui.RuntimeTickTest do
     end
   end
 
+  defmodule LiveToggleWidgetApp do
+    @moduledoc false
+    use ElixirOpentui.Component
+
+    def init(_props), do: %{}
+    def update(_, _, state), do: state
+
+    def render(_state) do
+      import ElixirOpentui.View
+      component(ElixirOpentui.RuntimeTickTest.LiveToggleWidget, id: :live_toggle_widget)
+    end
+  end
+
+  defmodule LiveToggleWidget do
+    @moduledoc false
+    use ElixirOpentui.Component
+
+    def init(_props), do: %{ticks: 0, _live: false}
+    def update(:enable_live, _event, state), do: %{state | _live: true}
+    def update(:disable_live, _event, state), do: %{state | _live: false}
+
+    def update(:tick, %{dt: _dt}, state) do
+      %{state | ticks: state.ticks + 1}
+    end
+
+    def update(_, _, state), do: state
+
+    def render(state) do
+      import ElixirOpentui.View
+      text(id: :live_toggle_widget_counter, content: "widget ticks: #{state.ticks}")
+    end
+  end
+
   # ── FSM State Transitions ────────────────────────────────────────────
 
   describe "FSM state transitions" do
@@ -172,6 +205,23 @@ defmodule ElixirOpentui.RuntimeTickTest do
 
       # After disabling, frames should stabilize
       assert frame3 == frame4
+    end
+
+    test "mounting a static app stops a previous live tick loop" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 5)
+      Runtime.mount(rt, LiveApp)
+
+      Process.sleep(80)
+      assert extract_tick_count(Runtime.get_frame(rt)) > 0
+
+      Runtime.mount(rt, StaticApp)
+      Process.sleep(20)
+
+      frame1 = Runtime.get_frame(rt)
+      Process.sleep(80)
+      frame2 = Runtime.get_frame(rt)
+
+      assert frame1 == frame2
     end
   end
 
@@ -246,6 +296,28 @@ defmodule ElixirOpentui.RuntimeTickTest do
         nil ->
           flunk("Could not find widget tick count in frame: #{joined}")
       end
+    end
+
+    test "component messages re-run live-mode reconciliation" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 5)
+      Runtime.mount(rt, LiveToggleWidgetApp)
+
+      assert %{ticks: 0, _live: false} = Runtime.get_component_state(rt, :live_toggle_widget)
+
+      Runtime.send_msg(rt, :live_toggle_widget, :enable_live)
+      Process.sleep(100)
+
+      assert %{ticks: count, _live: true} = Runtime.get_component_state(rt, :live_toggle_widget)
+      assert count > 0
+
+      Runtime.send_msg(rt, :live_toggle_widget, :disable_live)
+      Process.sleep(20)
+
+      count_after_disable = Runtime.get_component_state(rt, :live_toggle_widget).ticks
+      Process.sleep(80)
+      final_count = Runtime.get_component_state(rt, :live_toggle_widget).ticks
+
+      assert final_count - count_after_disable <= 1
     end
   end
 
@@ -474,7 +546,7 @@ defmodule ElixirOpentui.RuntimeTickTest do
       Runtime.suspend(rt)
       Process.sleep(20)
 
-      count1 = extract_tick_count(Runtime.get_frame(rt))
+      _count1 = extract_tick_count(Runtime.get_frame(rt))
 
       # Single resume shouldn't restart if double-suspended
       Runtime.resume(rt)

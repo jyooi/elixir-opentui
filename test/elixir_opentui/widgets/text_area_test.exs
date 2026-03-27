@@ -54,6 +54,53 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
 
   # ── Editing ─────────────────────────────────────────────────────────
 
+  describe "update_props/3" do
+    test "preserves local buffer state when unrelated props change" do
+      prev_props = %{
+        id: :ta,
+        value: "hello",
+        placeholder: "old",
+        width: 40,
+        height: 10,
+        wrap: :word
+      }
+
+      new_props = %{
+        id: :ta,
+        value: "hello",
+        placeholder: "new",
+        width: 50,
+        height: 12,
+        wrap: :char
+      }
+
+      state = TextArea.init(prev_props)
+      state = move_to_end(state)
+      state = TextArea.update(:key, key_event("!"), state)
+      state = TextArea.update_props(prev_props, new_props, state)
+
+      assert get_text(state) == "hello!"
+      assert state.placeholder == "new"
+      assert state.width == 50
+      assert state.height == 12
+      assert state.wrap == :char
+      assert get_cursor(state).offset == 6
+    end
+
+    test "syncs buffer text when the incoming value prop changes" do
+      prev_props = %{id: :ta, value: "hello", width: 40, height: 10, wrap: :word}
+      new_props = %{id: :ta, value: "ok", width: 40, height: 10, wrap: :word}
+
+      state = TextArea.init(prev_props)
+      state = move_to_end(state)
+      state = TextArea.update(:key, key_event("!"), state)
+      state = TextArea.update_props(prev_props, new_props, state)
+
+      assert get_text(state) == "ok"
+      assert get_cursor(state).offset <= 2
+    end
+  end
+
   describe "editing" do
     test "init with default options" do
       state = TextArea.init(%{id: :ta})

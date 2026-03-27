@@ -57,6 +57,29 @@ defmodule ElixirOpentui.Widgets.Markdown do
   def update(_, _, state), do: state
 
   @impl true
+  def update_props(prev_props, new_props, state) do
+    state = %{
+      state
+      | id: Map.get(new_props, :id),
+        visible_lines: Map.get(new_props, :visible_lines),
+        code_filetype: Map.get(new_props, :code_filetype)
+    }
+
+    state =
+      if prop_changed?(prev_props, new_props, :content) do
+        update({:set_content, Map.get(new_props, :content, "")}, nil, state)
+      else
+        state
+      end
+
+    if prop_changed?(prev_props, new_props, :scroll_offset) do
+      %{state | scroll_offset: Map.get(new_props, :scroll_offset, 0)}
+    else
+      state
+    end
+  end
+
+  @impl true
   def render(state) do
     import ElixirOpentui.View, only: [markdown: 1]
 
@@ -119,6 +142,13 @@ defmodule ElixirOpentui.Widgets.Markdown do
   end
 
   def parse_markdown(_), do: []
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
+  end
 
   defp earmark_available? do
     Code.ensure_loaded?(Earmark)

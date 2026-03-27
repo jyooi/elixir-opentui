@@ -73,6 +73,39 @@ defmodule ElixirOpentui.Widgets.Diff do
   def update(_, _, state), do: state
 
   @impl true
+  def update_props(prev_props, new_props, state) do
+    diff_changed? = prop_changed?(prev_props, new_props, :diff)
+    view_changed? = prop_changed?(prev_props, new_props, :view)
+
+    state =
+      state
+      |> sync_prop(prev_props, new_props, :id, nil)
+      |> sync_prop(prev_props, new_props, :show_line_numbers, true)
+      |> sync_prop(prev_props, new_props, :visible_lines, nil)
+      |> sync_prop(prev_props, new_props, :filetype, nil)
+
+    state =
+      if diff_changed? do
+        update({:set_diff, Map.get(new_props, :diff, "")}, nil, state)
+      else
+        state
+      end
+
+    state =
+      if view_changed? do
+        update({:set_view, Map.get(new_props, :view, :unified)}, nil, state)
+      else
+        state
+      end
+
+    if prop_changed?(prev_props, new_props, :scroll_offset) do
+      %{state | scroll_offset: Map.get(new_props, :scroll_offset, 0)}
+    else
+      state
+    end
+  end
+
+  @impl true
   def render(state) do
     import ElixirOpentui.View, only: [diff: 1]
 
@@ -110,6 +143,21 @@ defmodule ElixirOpentui.Widgets.Diff do
 
   defp current_line_count(%{view: :unified} = state), do: state.unified_line_count
   defp current_line_count(%{view: :split} = state), do: state.split_line_count
+
+  defp sync_prop(state, prev_props, new_props, key, default) do
+    if prop_changed?(prev_props, new_props, key) do
+      Map.put(state, key, Map.get(new_props, key, default))
+    else
+      state
+    end
+  end
+
+  defp prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
+  end
 
   # --- Diff parsing ---
 

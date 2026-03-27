@@ -41,6 +41,57 @@ defmodule ElixirOpentui.RuntimeTest do
     end
   end
 
+  defmodule PropSyncWidget do
+    use ElixirOpentui.Component
+
+    def init(props), do: %{label: Map.get(props, :label, ""), syncs: 0}
+
+    def update_props(_prev_props, new_props, state) do
+      %{state | label: Map.get(new_props, :label, ""), syncs: state.syncs + 1}
+    end
+
+    def update(_, _, state), do: state
+
+    def render(state) do
+      import ElixirOpentui.View
+      text(id: :child_label, content: state.label)
+    end
+  end
+
+  defmodule PropSyncApp do
+    use ElixirOpentui.Component
+
+    def init(_props), do: %{label: "alpha"}
+    def update({:set_label, label}, _event, state), do: %{state | label: label}
+    def update(_, _, state), do: state
+
+    def render(state) do
+      import ElixirOpentui.View
+
+      box id: :root, width: 30, height: 5 do
+        component(PropSyncWidget, id: :child, label: state.label)
+      end
+    end
+  end
+
+  defmodule ConditionalChildApp do
+    use ElixirOpentui.Component
+
+    def init(_props), do: %{show_child: true}
+    def update(:hide_child, _event, state), do: %{state | show_child: false}
+    def update(_, _, state), do: state
+
+    def render(state) do
+      import ElixirOpentui.View
+
+      if state.show_child do
+        component(PropSyncWidget, id: :child, label: "shown")
+      else
+        text(id: :gone, content: "gone")
+      end
+    end
+  end
+
   describe "start_link and mount" do
     test "starts runtime with default dimensions" do
       {:ok, rt} = Runtime.start_link(cols: 40, rows: 10)
@@ -137,6 +188,49 @@ defmodule ElixirOpentui.RuntimeTest do
       tree = Runtime.get_tree(rt)
       assert tree.type == :box
       assert tree.id == :root
+    end
+  end
+
+  describe "component lifecycle reconciliation" do
+    test "refreshes mounted component props without remounting" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 10)
+      Runtime.mount(rt, PropSyncApp)
+
+      assert %{label: "alpha", syncs: 0} = Runtime.get_component_state(rt, :child)
+
+      Runtime.render(rt)
+      assert %{syncs: 0} = Runtime.get_component_state(rt, :child)
+
+      Runtime.send_app_msg(rt, {:set_label, "beta"})
+      Process.sleep(20)
+
+      assert %{label: "beta", syncs: 1} = Runtime.get_component_state(rt, :child)
+      assert Enum.join(Runtime.get_frame(rt)) =~ "beta"
+    end
+
+    test "drops component state when a child unmounts" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 10)
+      Runtime.mount(rt, ConditionalChildApp)
+
+      assert Runtime.get_component_state(rt, :child) != nil
+
+      Runtime.send_app_msg(rt, :hide_child)
+      Process.sleep(20)
+
+      assert Runtime.get_component_state(rt, :child) == nil
+      assert Enum.join(Runtime.get_frame(rt)) =~ "gone"
+    end
+
+    test "mount clears component state from the previous app tree" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 10)
+      Runtime.mount(rt, PropSyncApp)
+
+      assert Runtime.get_component_state(rt, :child) != nil
+
+      Runtime.mount(rt, SimpleApp)
+
+      assert Runtime.get_component_state(rt, :child) == nil
+      assert Enum.join(Runtime.get_frame(rt)) =~ "Hello"
     end
   end
 

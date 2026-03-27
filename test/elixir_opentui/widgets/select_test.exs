@@ -188,6 +188,19 @@ defmodule ElixirOpentui.Widgets.SelectTest do
     end
   end
 
+  describe "update_props/3" do
+    test "clears options when parent removes the options prop" do
+      prev_props = %{options: @options, selected: 4, id: :sel}
+      new_props = %{selected: 0, id: :sel}
+
+      state = Select.init(prev_props)
+      state = Select.update_props(prev_props, new_props, state)
+
+      assert state.options == []
+      assert state.selected == 0
+    end
+  end
+
   describe "set_selected" do
     test "sets selection directly" do
       state = Select.init(%{options: @options, id: :sel})
