@@ -14,6 +14,8 @@ permissions:
 jobs:
   precompile:
     runs-on: ubuntu-latest
+    env:
+      ZIGLER_PRECOMPILE_FORCE_RECOMPILE: "true"
     steps:
       - uses: actions/checkout@v4
 
