@@ -26,27 +26,27 @@ defmodule ElixirOpentui.Precompiled do
   # Platforms not listed fall back to source compilation.
   defp nif_shasums do
     [
-      "aarch64-freebsd-none": "da0c50913186a923d269826e4e2a61b63e37bfabfd16da370a2a7fb5cca35dd1",
-      "aarch64-linux-gnu": "43ed2e9ca907bfe1f19f5dda73600011e437340153398d5d2294a45cf5b20bfb",
-      "aarch64-linux-musl": "cb85947eabf13e74e17271eb247ac3a947232737e14444584149920f76923db5",
-      "aarch64-macos-none": "6efd93f8df1766f4843935da49d6e8f68f4c7e00f1637521cb608918b0ed6e19",
-      "x86_64-freebsd-none": "d6a1514919716850f15f1ec103c18efe22d7a175e9f75a006eb7057e543dd01d",
-      "x86_64-linux-gnu": "f274d173bfec2e2f17d4191e608a94a9bd43681c6dd0835042bdcbfd636525d5",
-      "x86_64-linux-musl": "d36747e651d562dbbc4f2b649d39e0e166bf395c98adf15ccdbfce331241d58f",
-      "x86_64-macos-none": "13612e44a4d519f9f68ea4ff8c541710a9fce7597e6d7609c3c0552a6b7c71bf"
+      "aarch64-freebsd-none": "1fea53c5c9855f338d1e58b31b40f0784aca8390c009fe6c0549f8a8ae150491",
+      "aarch64-linux-gnu": "a88ce74c21f2a2d880856ec6ae367b111b35d2e6efd861b9afaaa294317c40ee",
+      "aarch64-linux-musl": "76e0c8681bfa6d9894cb82a765f4352c2b650d4ee19c61a957a2b932facfcdff",
+      "aarch64-macos-none": "19269f62a612c6e6fe716fe997f189bcf49bae1c2842760ff817c286e0b69958",
+      "x86_64-freebsd-none": "43a3b78153ab0bb99c33c875f624406216b6f076bfef5f2ea02e500c4be81e15",
+      "x86_64-linux-gnu": "2d4d5d8d030005803dccc0d3dfd9fb3003ed4139c1b6eb124dc98a11db072970",
+      "x86_64-linux-musl": "a61910db7a9a8e7c2f8eb71bc10ce1cf10201a62c1740fc8a8a82c454690abf8",
+      "x86_64-macos-none": "03639503a396dd386f4a21bb981af5b06d5dc944cbd91304bb76a4eaa86826aa"
     ]
   end
 
   defp edit_buffer_nif_shasums do
     [
-      "aarch64-freebsd-none": "466c11f272d04797ce5693c7ad3daa2a554a24c2e71482e4c192489e0d2daa19",
-      "aarch64-linux-gnu": "5d32a0b3a9a0b217f7559956dcdaf81c3ec6016aabfe138fcae47b6a4f4acdc3",
-      "aarch64-linux-musl": "d468ef8a302d9df66b49ceb1828b772eebfbd5a0ba3d8fe7df3faa461544d361",
-      "aarch64-macos-none": "addeeb4755610de4bf441fdecc602c314fef87ddb314de7fa98c48c19d5acdf0",
-      "x86_64-freebsd-none": "d96d8f3c86af65adcb60cc61b57972794bc0d2815e7f910a036a554c84b86b65",
-      "x86_64-linux-gnu": "1493cc59ba428f2600993de8f42dac5f0434bde448f876894ae35be69420f089",
-      "x86_64-linux-musl": "8236e789230a1a8b528ec00dfff1feea3e756be67ec9fc72160de24288e5621e",
-      "x86_64-macos-none": "a2321aee4bfd5685e9334d97e662cbf9e430fa7ff8e2c4e026a8d28c956ed408"
+      "aarch64-freebsd-none": "11065a7e2c2bdf65ab708decbcec5d13a55cb41f429e049cb8ce68e1b66b78e1",
+      "aarch64-linux-gnu": "b730f715fdf9b7f437632af099a2abe638ed28dbdcd816e550a9f9347fd6de5d",
+      "aarch64-linux-musl": "1772faa1565604fc0cfe91ae56a213e00104d00b1708fc3982d257d34e800b79",
+      "aarch64-macos-none": "bf1e04bb8e0aa5c10e5341bec9ae31a3689f38a7b316d3a4665bbe86bf62d4d5",
+      "x86_64-freebsd-none": "7ad4c6a9e8c5798b8100d3fecb22c6964a9d381763c02c3d1e0bf4e9162c6a77",
+      "x86_64-linux-gnu": "ba91b0c5493a8be144173a1491ea66d5bfca78e1b9cbbcb173b0c22f8f609ad8",
+      "x86_64-linux-musl": "af2f583619a3d1f307affab6e952222bb306965442b6fdb2f41b481c5654f764",
+      "x86_64-macos-none": "f42d1042ea39322d5641890d891d77608f77deb257779c5c95128a71537253f5"
     ]
   end
 end
