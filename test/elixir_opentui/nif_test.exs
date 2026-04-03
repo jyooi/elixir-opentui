@@ -5,6 +5,32 @@ defmodule ElixirOpentui.NIFTest do
 
   alias ElixirOpentui.NIF
 
+  @char_bytes_size 64
+
+  defp cell_record(x, y, char, {fr, fg, fb}, {br, bg, bb}, attrs \\ 0, hit_id \\ 0) do
+    {char_len, char_bin} = encoded_char(char)
+
+    <<1, x::16-little, y::16-little, char_len, char_bin::binary-size(@char_bytes_size), fr, fg,
+      fb, br, bg, bb, attrs, hit_id::16-little>>
+  end
+
+  defp fill_record(x, y, w, h, char, {fr, fg, fb}, {br, bg, bb}, attrs \\ 0) do
+    {char_len, char_bin} = encoded_char(char)
+
+    <<2, x::16-little, y::16-little, w::16-little, h::16-little, char_len,
+      char_bin::binary-size(@char_bytes_size), fr, fg, fb, br, bg, bb, attrs>>
+  end
+
+  defp hit_record(x, y, w, h, hit_id) do
+    <<3, x::16-little, y::16-little, w::16-little, h::16-little, hit_id::16-little>>
+  end
+
+  defp encoded_char(char) do
+    bytes = char |> :binary.bin_to_list() |> Enum.take(@char_bytes_size)
+    len = length(bytes)
+    {len, :binary.list_to_bin(bytes ++ List.duplicate(0, @char_bytes_size - len))}
+  end
+
   describe "init/2" do
     test "creates a FrameBuffer resource" do
       ref = NIF.init(80, 24)
@@ -43,7 +69,7 @@ defmodule ElixirOpentui.NIFTest do
       NIF.clear(ref)
 
       # Write 'A' at (3, 2) with red fg, blue bg
-      cell = <<1, 3::16-little, 2::16-little, ?A, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0, 0::16-little>>
+      cell = cell_record(3, 2, "A", {255, 0, 0}, {0, 0, 255})
       NIF.put_cells(ref, cell)
 
       # Capture frame (diffs back vs front, produces ANSI, swaps)
@@ -63,9 +89,7 @@ defmodule ElixirOpentui.NIFTest do
       NIF.clear(ref)
 
       # Fill 3x2 rect at (1,1) with '#', green fg, black bg
-      fill =
-        <<2, 1::16-little, 1::16-little, 3::16-little, 2::16-little, ?#, 0, 0, 0, 0, 255, 0, 0, 0,
-          0, 0>>
+      fill = fill_record(1, 1, 3, 2, "#", {0, 255, 0}, {0, 0, 0})
 
       NIF.put_cells(ref, fill)
       _ansi = NIF.render_frame_capture(ref)
@@ -87,7 +111,7 @@ defmodule ElixirOpentui.NIFTest do
       NIF.clear(ref)
 
       # Set hit_id 42 on 2x1 rect at (5, 3)
-      hit = <<3, 5::16-little, 3::16-little, 2::16-little, 1::16-little, 42::16-little>>
+      hit = hit_record(5, 3, 2, 1, 42)
       NIF.put_cells(ref, hit)
       _ansi = NIF.render_frame_capture(ref)
 
@@ -101,44 +125,12 @@ defmodule ElixirOpentui.NIFTest do
       NIF.clear(ref)
 
       # Two CELL records + one HIT
-      batch = <<
-        1,
-        0::16-little,
-        0::16-little,
-        ?X,
-        0,
-        0,
-        0,
-        200,
-        200,
-        200,
-        50,
-        50,
-        50,
-        0,
-        0::16-little,
-        1,
-        1::16-little,
-        0::16-little,
-        ?Y,
-        0,
-        0,
-        0,
-        200,
-        200,
-        200,
-        50,
-        50,
-        50,
-        0,
-        0::16-little,
-        3,
-        0::16-little,
-        0::16-little,
-        2::16-little,
-        1::16-little,
-        7::16-little
-      >>
+      batch =
+        IO.iodata_to_binary([
+          cell_record(0, 0, "X", {200, 200, 200}, {50, 50, 50}),
+          cell_record(1, 0, "Y", {200, 200, 200}, {50, 50, 50}),
+          hit_record(0, 0, 2, 1, 7)
+        ])
 
       NIF.put_cells(ref, batch)
       _ansi = NIF.render_frame_capture(ref)
@@ -164,8 +156,7 @@ defmodule ElixirOpentui.NIFTest do
       ref = NIF.init(5, 3)
       NIF.clear(ref)
 
-      cell =
-        <<1, 2::16-little, 1::16-little, ?Z, 0, 0, 0, 128, 64, 32, 10, 20, 30, 0, 0::16-little>>
+      cell = cell_record(2, 1, "Z", {128, 64, 32}, {10, 20, 30})
 
       NIF.put_cells(ref, cell)
       ansi = NIF.render_frame_capture(ref)
@@ -194,38 +185,11 @@ defmodule ElixirOpentui.NIFTest do
       NIF.clear(ref)
 
       # Write "Hi" at row 0
-      batch = <<
-        1,
-        0::16-little,
-        0::16-little,
-        ?H,
-        0,
-        0,
-        0,
-        255,
-        255,
-        255,
-        0,
-        0,
-        0,
-        0,
-        0::16-little,
-        1,
-        1::16-little,
-        0::16-little,
-        ?i,
-        0,
-        0,
-        0,
-        255,
-        255,
-        255,
-        0,
-        0,
-        0,
-        0,
-        0::16-little
-      >>
+      batch =
+        IO.iodata_to_binary([
+          cell_record(0, 0, "H", {255, 255, 255}, {0, 0, 0}),
+          cell_record(1, 0, "i", {255, 255, 255}, {0, 0, 0})
+        ])
 
       NIF.put_cells(ref, batch)
       _ansi = NIF.render_frame_capture(ref)
@@ -266,9 +230,7 @@ defmodule ElixirOpentui.NIFTest do
       # attrs byte: bold(1) | dim(16) | inverse(32) = 49
       attrs = Bitwise.bor(1, Bitwise.bor(16, 32))
 
-      cell =
-        <<1, 0::16-little, 0::16-little, ?X, 0, 0, 0, 255, 255, 255, 0, 0, 0, attrs,
-          0::16-little>>
+      cell = cell_record(0, 0, "X", {255, 255, 255}, {0, 0, 0}, attrs)
 
       NIF.put_cells(ref, cell)
       ansi = NIF.render_frame_capture(ref)

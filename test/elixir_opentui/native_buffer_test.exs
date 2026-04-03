@@ -3,7 +3,7 @@ defmodule ElixirOpentui.NativeBufferTest do
 
   @moduletag :nif
 
-  alias ElixirOpentui.NativeBuffer
+  alias ElixirOpentui.{Buffer, NativeBuffer}
 
   describe "new/3" do
     test "creates a native buffer" do
@@ -38,6 +38,56 @@ defmodule ElixirOpentui.NativeBufferTest do
       rows = NativeBuffer.to_strings(buf)
       assert String.starts_with?(hd(rows), " Hi!")
     end
+
+    test "advances by display width for wide graphemes" do
+      buf = NativeBuffer.new(6, 1)
+      buf = NativeBuffer.clear(buf)
+      buf = NativeBuffer.draw_text(buf, 0, 0, "A界B", {255, 255, 255, 255}, {0, 0, 0, 255})
+      {buf, _ansi} = NativeBuffer.render_frame_capture(buf)
+
+      assert NativeBuffer.get_cell(buf, 0, 0).char == "A"
+      assert NativeBuffer.get_cell(buf, 1, 0).char == "界"
+      assert NativeBuffer.get_cell(buf, 2, 0).char == ""
+      assert NativeBuffer.get_cell(buf, 3, 0).char == "B"
+      assert NativeBuffer.to_strings(buf) == ["A界B  "]
+    end
+
+    test "preserves multi-codepoint emoji graphemes" do
+      buf = NativeBuffer.new(4, 1)
+      buf = NativeBuffer.clear(buf)
+      buf = NativeBuffer.draw_text(buf, 0, 0, "👋🏽!", {255, 255, 255, 255}, {0, 0, 0, 255})
+      {buf, _ansi} = NativeBuffer.render_frame_capture(buf)
+
+      assert NativeBuffer.get_cell(buf, 0, 0).char == "👋🏽"
+      assert NativeBuffer.get_cell(buf, 1, 0).char == ""
+      assert NativeBuffer.get_cell(buf, 2, 0).char == "!"
+    end
+
+    test "preserves graphemes longer than 32 utf8 bytes" do
+      emoji = "👩🏽‍❤️‍💋‍👩🏻"
+
+      buf = NativeBuffer.new(4, 1)
+      buf = NativeBuffer.clear(buf)
+      buf = NativeBuffer.draw_text(buf, 0, 0, emoji <> "!", {255, 255, 255, 255}, {0, 0, 0, 255})
+      {buf, _ansi} = NativeBuffer.render_frame_capture(buf)
+
+      assert byte_size(emoji) > 32
+      assert NativeBuffer.get_cell(buf, 0, 0).char == emoji
+      assert NativeBuffer.get_cell(buf, 1, 0).char == ""
+      assert NativeBuffer.get_cell(buf, 2, 0).char == "!"
+    end
+
+    test "does not draw partially clipped wide graphemes" do
+      buf = NativeBuffer.new(4, 1)
+      buf = NativeBuffer.clear(buf)
+      buf = NativeBuffer.draw_text(buf, 0, 0, "ABCD", {255, 255, 255, 255}, {0, 0, 0, 255})
+
+      buf = NativeBuffer.draw_char(buf, -1, 0, "界", {255, 255, 255, 255}, {0, 0, 0, 255})
+      buf = NativeBuffer.draw_char(buf, 3, 0, "界", {255, 255, 255, 255}, {0, 0, 0, 255})
+      {buf, _ansi} = NativeBuffer.render_frame_capture(buf)
+
+      assert NativeBuffer.to_strings(buf) == ["ABCD"]
+    end
   end
 
   describe "fill_rect/8" do
@@ -54,6 +104,24 @@ defmodule ElixirOpentui.NativeBufferTest do
 
       cell = NativeBuffer.get_cell(buf, 0, 0)
       assert cell.char == " "
+    end
+
+    test "wide fill characters match pure buffer semantics" do
+      buf = NativeBuffer.new(6, 1)
+      buf = NativeBuffer.clear(buf)
+      buf = NativeBuffer.fill_rect(buf, 0, 0, 2, 1, "界", {0, 255, 0, 255}, {0, 0, 0, 255})
+      {buf, _ansi} = NativeBuffer.render_frame_capture(buf)
+
+      pure =
+        Buffer.new(6, 1)
+        |> Buffer.clear()
+        |> Buffer.fill_rect(0, 0, 2, 1, "界", {0, 255, 0, 255}, {0, 0, 0, 255})
+
+      assert NativeBuffer.to_strings(buf) == Buffer.to_strings(pure)
+
+      for x <- 0..5 do
+        assert NativeBuffer.get_cell(buf, x, 0).char == Buffer.get_cell(pure, x, 0).char
+      end
     end
   end
 

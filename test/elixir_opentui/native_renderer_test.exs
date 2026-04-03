@@ -36,6 +36,38 @@ defmodule ElixirOpentui.NativeRendererTest do
       assert String.contains?(strip_ansi(binary), "Hello")
     end
 
+    test "renders multi-codepoint emoji without truncation" do
+      r = Renderer.new(20, 5, backend: :native)
+
+      tree =
+        Element.new(:box, [width: 20, height: 5], [
+          Element.new(:text, content: "Hi 👋🏽")
+        ])
+
+      {_r2, output} = Renderer.render(r, tree)
+      binary = if is_binary(output), do: output, else: IO.iodata_to_binary(output)
+      plain = strip_ansi(binary)
+      assert String.contains?(plain, "Hi")
+      assert String.contains?(plain, "👋🏽")
+    end
+
+    test "renders long emoji graphemes without truncation" do
+      emoji = "👩🏽‍❤️‍💋‍👩🏻"
+      r = Renderer.new(20, 5, backend: :native)
+
+      tree =
+        Element.new(:box, [width: 20, height: 5], [
+          Element.new(:text, content: emoji <> " hi")
+        ])
+
+      {_r2, output} = Renderer.render(r, tree)
+      plain = output |> IO.iodata_to_binary() |> strip_ansi()
+
+      assert byte_size(emoji) > 32
+      assert String.contains?(plain, emoji)
+      assert String.contains?(plain, "hi")
+    end
+
     test "changing content produces different output" do
       r = Renderer.new(20, 5, backend: :native)
       tree1 = Element.new(:box, [width: 20, height: 5], [Element.new(:text, content: "AAA")])
