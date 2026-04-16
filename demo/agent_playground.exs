@@ -151,8 +151,18 @@ defmodule AgentPlayground.Bridge do
 
   defp process(other, _rt), do: "ERROR: unknown command: #{inspect(other)}"
 
-  defp parse_id(":" <> name), do: String.to_atom(name)
-  defp parse_id(name), do: String.to_atom(name)
+  # Network input — never `String.to_atom`, or an agent can exhaust the atom
+  # table one `find <uuid>` at a time. All widget IDs in LoginApp are atoms
+  # that already exist once the module is compiled, so `to_existing_atom`
+  # covers the real cases; anything else falls through as a string and
+  # `Accessibility.find_node` (which matches via `==`) cleanly returns nil.
+  defp parse_id(":" <> name), do: parse_id(name)
+
+  defp parse_id(name) do
+    String.to_existing_atom(name)
+  rescue
+    ArgumentError -> name
+  end
 end
 
 {:ok, rt} = ElixirOpentui.Runtime.start_link([])
