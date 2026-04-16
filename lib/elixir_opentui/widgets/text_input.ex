@@ -51,6 +51,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
   def update(:sync_value, %{value: value}, state) do
     %{state | value: value, cursor_pos: min(state.cursor_pos, String.length(value))}
     |> adjust_scroll()
+    |> emit_change()
   end
 
   def update(:key, %{type: :key} = event, state) do

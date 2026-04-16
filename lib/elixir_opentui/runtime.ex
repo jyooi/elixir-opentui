@@ -19,6 +19,7 @@ defmodule ElixirOpentui.Runtime do
   require Logger
 
   alias ElixirOpentui.{
+    Accessibility,
     ANSI,
     Renderer,
     EventManager,
@@ -191,6 +192,36 @@ defmodule ElixirOpentui.Runtime do
     send_msg(server, nil, msg)
   end
 
+  @doc """
+  Return a semantic snapshot of the UI for agent consumption.
+
+  See `ElixirOpentui.Accessibility` for the snapshot shape.
+  """
+  @spec snapshot(GenServer.server()) :: Accessibility.t()
+  def snapshot(server) do
+    GenServer.call(server, :a11y_snapshot)
+  end
+
+  @doc """
+  Dispatch an agent action. Synchronous — by the time this returns, the
+  UI has re-rendered and is ready for a follow-up `snapshot/1`.
+
+  See `t:ElixirOpentui.Accessibility.action/0` for the action vocabulary.
+  """
+  @spec dispatch(GenServer.server(), Accessibility.action()) :: :ok
+  def dispatch(server, action) do
+    GenServer.call(server, {:a11y_dispatch, action})
+  end
+
+  @doc """
+  Find a single widget in the current snapshot by id. Returns the
+  semantic node or `nil`.
+  """
+  @spec find_widget(GenServer.server(), term()) :: Accessibility.node_snapshot() | nil
+  def find_widget(server, id) do
+    server |> snapshot() |> Accessibility.find_node(id)
+  end
+
   # --- GenServer callbacks ---
 
   @impl true
@@ -258,6 +289,16 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_call(:get_tree, _from, state) do
     {:reply, state.tree, state}
+  end
+
+  def handle_call(:a11y_snapshot, _from, state) do
+    {:reply, Accessibility.snapshot(state), state}
+  end
+
+  def handle_call({:a11y_dispatch, action}, _from, state) do
+    new_state = apply_agent_action(state, action)
+    new_state = render_and_reconcile(new_state)
+    {:reply, :ok, new_state}
   end
 
   def handle_call({:resize, cols, rows}, _from, state) do
@@ -458,6 +499,111 @@ defmodule ElixirOpentui.Runtime do
         end)
     end
   end
+
+  # Agent-dispatched action handler. Semantic actions mutate component state
+  # directly; key/mouse/paste reuse the existing event-processing path so
+  # agents and humans share the same routing logic.
+  defp apply_agent_action(state, {:focus, id}) do
+    case state.event_manager do
+      nil -> state
+      em -> %{state | event_manager: %{em | focus: Focus.focus(em.focus, id)}}
+    end
+  end
+
+  defp apply_agent_action(state, {:set_value, id, value}) when is_binary(value) do
+    update_component(state, id, :sync_value, %{value: value})
+  end
+
+  defp apply_agent_action(state, {:select_index, id, idx}) when is_integer(idx) do
+    update_component(state, id, {:set_selected, idx}, nil)
+  end
+
+  defp apply_agent_action(state, {:toggle, id}) do
+    update_component(state, id, :toggle, nil)
+  end
+
+  defp apply_agent_action(state, {:set_checked, id, value}) when is_boolean(value) do
+    update_component(state, id, {:set_checked, value}, nil)
+  end
+
+  defp apply_agent_action(state, {:click, id}) do
+    # Focus the target, then synthesize an Enter keypress using the same
+    # shape Input.parse produces. Focused-widget routing below delivers it
+    # (to a Component's :key handler, or a :button's on_click attr).
+    state = apply_agent_action(state, {:focus, id})
+
+    event = %{type: :key, key: :enter, ctrl: false, alt: false, shift: false, meta: false}
+    apply_agent_action(state, {:key, event})
+  end
+
+  defp apply_agent_action(state, {:key, event}) do
+    state = process_event(state, event)
+    route_key_to_focused_component(state, event)
+  end
+
+  defp apply_agent_action(state, {:mouse, event}), do: process_event(state, event)
+
+  defp apply_agent_action(state, {:paste, data}) when is_binary(data) do
+    process_event(state, %{type: :paste, data: data})
+  end
+
+  # EventManager only routes to registered handlers. Components live in
+  # component_states, and bare interactive elements (e.g. :button with an
+  # on_click attr) live in the tree. Bridge both here so a focused key
+  # event reaches its target regardless of which representation holds it.
+  # Tab is excluded because EventManager already consumed it for focus nav.
+  defp route_key_to_focused_component(state, %{key: k}) when k in [:tab, "Tab"], do: state
+
+  defp route_key_to_focused_component(state, event) do
+    focused_id = state.event_manager && state.event_manager.focus.focused_id
+
+    cond do
+      is_nil(focused_id) ->
+        state
+
+      Map.has_key?(state.component_states, focused_id) ->
+        update_component(state, focused_id, :key, event)
+
+      true ->
+        route_key_to_element(state, focused_id, event)
+    end
+  end
+
+  # Intrinsic handling for bare elements in the tree. Today: :button +
+  # on_click attr fires on Enter/Space. Extend with more cases as other
+  # bare element types grow first-class behaviors.
+  #
+  # We filter by type during lookup because ids can legitimately collide
+  # between a container (e.g. panel id: :login) and a focusable leaf
+  # (button id: :login). Focus already resolved to the button; a generic
+  # find_by_id would return the panel first (pre-order) and silently
+  # short-circuit the on_click.
+  defp route_key_to_element(state, id, %{key: k}) when k in [:enter, " "] do
+    case find_element_by_id_and_type(state.tree, id, :button) do
+      %Element{attrs: attrs} ->
+        case Map.get(attrs, :on_click) do
+          nil -> state
+          msg -> update_app(state, msg)
+        end
+
+      _ ->
+        state
+    end
+  end
+
+  defp route_key_to_element(state, _id, _event), do: state
+
+  defp find_element_by_id_and_type(%Element{id: id, type: type} = el, target_id, target_type)
+       when id == target_id and type == target_type,
+       do: el
+
+  defp find_element_by_id_and_type(%Element{children: children}, target_id, target_type) do
+    Enum.find_value(children, &find_element_by_id_and_type(&1, target_id, target_type))
+  end
+
+  defp find_element_by_id_and_type(_, _, _), do: nil
+
+  defp apply_agent_action(state, _unknown), do: state
 
   defp handle_resize(state, cols, rows) do
     new_renderer = Renderer.resize(state.renderer, cols, rows)
