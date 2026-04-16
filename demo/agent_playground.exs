@@ -140,16 +140,65 @@ defmodule AgentPlayground.Bridge do
   end
 
   defp process("dispatch " <> action_str, rt) do
-    {action, _} = Code.eval_string(action_str)
-    :ok = ElixirOpentui.Runtime.dispatch(rt, action)
-    "ok"
-  rescue
-    e -> "ERROR: #{Exception.message(e)}"
+    case parse_action(action_str) do
+      {:ok, action} ->
+        :ok = ElixirOpentui.Runtime.dispatch(rt, action)
+        "ok"
+
+      {:error, reason} ->
+        "ERROR: #{reason}"
+    end
   end
 
   defp process("quit", _rt), do: "bye"
 
   defp process(other, _rt), do: "ERROR: unknown command: #{inspect(other)}"
+
+  # Parses an action string into a literal Elixir term WITHOUT evaluating it.
+  # `existing_atoms_only: true` blocks atom-table exhaustion via novel atoms
+  # in the source — same reason parse_id uses String.to_existing_atom.
+  defp parse_action(str) do
+    case Code.string_to_quoted(str, existing_atoms_only: true) do
+      {:ok, ast} -> safe_term(ast)
+      {:error, {_, msg, _}} -> {:error, "parse error: #{inspect(msg)}"}
+    end
+  end
+
+  # Walks the AST and confirms every node is a pure literal: atom (incl.
+  # true/false/nil), binary, integer, tuple, or list. Any `{name, meta, args}`
+  # shape (variables, calls, operators, maps) is rejected.
+  defp safe_term(x) when is_atom(x) or is_binary(x) or is_integer(x), do: {:ok, x}
+
+  defp safe_term({a, b}) do
+    with {:ok, av} <- safe_term(a),
+         {:ok, bv} <- safe_term(b),
+         do: {:ok, {av, bv}}
+  end
+
+  defp safe_term({:{}, _meta, args}) when is_list(args) do
+    with {:ok, vals} <- safe_list(args), do: {:ok, List.to_tuple(vals)}
+  end
+
+  defp safe_term(list) when is_list(list), do: safe_list(list)
+
+  defp safe_term({name, _meta, args}) when is_atom(name) and (is_list(args) or is_nil(args)) do
+    {:error, "disallowed construct `#{name}` — only atoms, binaries, integers, tuples, lists accepted"}
+  end
+
+  defp safe_term(other), do: {:error, "disallowed term: #{inspect(other)}"}
+
+  defp safe_list(list) do
+    Enum.reduce_while(list, {:ok, []}, fn elem, {:ok, acc} ->
+      case safe_term(elem) do
+        {:ok, v} -> {:cont, {:ok, [v | acc]}}
+        err -> {:halt, err}
+      end
+    end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      err -> err
+    end
+  end
 
   # Network input — never `String.to_atom`, or an agent can exhaust the atom
   # table one `find <uuid>` at a time. All widget IDs in LoginApp are atoms
