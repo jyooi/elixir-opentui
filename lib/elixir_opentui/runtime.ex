@@ -547,6 +547,8 @@ defmodule ElixirOpentui.Runtime do
     process_event(state, %{type: :paste, data: data})
   end
 
+  defp apply_agent_action(state, _unknown), do: state
+
   # EventManager only routes to registered handlers. Components live in
   # component_states, and bare interactive elements (e.g. :button with an
   # on_click attr) live in the tree. Bridge both here so a focused key
@@ -602,8 +604,6 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp find_element_by_id_and_type(_, _, _), do: nil
-
-  defp apply_agent_action(state, _unknown), do: state
 
   defp handle_resize(state, cols, rows) do
     new_renderer = Renderer.resize(state.renderer, cols, rows)
