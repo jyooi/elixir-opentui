@@ -56,7 +56,11 @@ defmodule ElixirOpentui.AccessibilityTest do
     :ok = Runtime.dispatch(rt, {:set_value, :email, "hi@example.com"})
 
     snap = Runtime.snapshot(rt)
-    assert find_node(snap, :email).state == %{value: "hi@example.com", placeholder: "you@example.com"}
+
+    assert find_node(snap, :email).state == %{
+             value: "hi@example.com",
+             placeholder: "you@example.com"
+           }
   end
 
   test "toggle flips Checkbox checked state" do
@@ -153,8 +157,20 @@ defmodule ElixirOpentui.AccessibilityTest do
 
       box id: :root, width: 40, height: 10 do
         component(TextInput, id: :email, value: "", on_change: :email_changed)
-        component(Select, id: :role, options: ["A", "B", "C"], selected: 0, on_change: :role_changed)
-        component(Checkbox, id: :remember, label: "R", checked: false, on_change: :remember_changed)
+
+        component(Select,
+          id: :role,
+          options: ["A", "B", "C"],
+          selected: 0,
+          on_change: :role_changed
+        )
+
+        component(Checkbox,
+          id: :remember,
+          label: "R",
+          checked: false,
+          on_change: :remember_changed
+        )
       end
     end
   end

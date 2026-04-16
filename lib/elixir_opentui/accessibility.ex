@@ -59,8 +59,8 @@ defmodule ElixirOpentui.Accessibility do
   actions route through EventManager unchanged — use them to reach widget
   behaviors bound to specific keystrokes (e.g. Ctrl+K in TextInput).
   """
+  # Semantic
   @type action ::
-          # Semantic
           {:focus, term()}
           | {:set_value, term(), String.t()}
           | {:select_index, term(), non_neg_integer()}
@@ -128,15 +128,17 @@ defmodule ElixirOpentui.Accessibility do
     child_nodes = Enum.flat_map(el.children, &walk(&1, states, focused_id))
 
     if meaningful?(el) do
-      [%{
-         id: el.id,
-         type: el.type,
-         role: role_for(el.type),
-         focused: el.id != nil and el.id == focused_id,
-         visible: not Map.get(el.attrs, :hidden, false),
-         state: widget_fields(el.type, el, widget_state_for(states, el.id)),
-         children: child_nodes
-       }]
+      [
+        %{
+          id: el.id,
+          type: el.type,
+          role: role_for(el.type),
+          focused: el.id != nil and el.id == focused_id,
+          visible: not Map.get(el.attrs, :hidden, false),
+          state: widget_fields(el.type, el, widget_state_for(states, el.id)),
+          children: child_nodes
+        }
+      ]
     else
       child_nodes
     end
