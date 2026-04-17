@@ -117,9 +117,15 @@ defmodule AgentPlayground.Bridge do
   defp handle(sock, rt) do
     case :gen_tcp.recv(sock, 0, 120_000) do
       {:ok, line} ->
-        response = process(String.trim(line), rt)
-        :gen_tcp.send(sock, response <> "\n")
-        handle(sock, rt)
+        case process(String.trim(line), rt) do
+          {:close, resp} ->
+            :gen_tcp.send(sock, resp <> "\n")
+            :gen_tcp.close(sock)
+
+          resp when is_binary(resp) ->
+            :gen_tcp.send(sock, resp <> "\n")
+            handle(sock, rt)
+        end
 
       {:error, _} ->
         :ok
@@ -127,16 +133,16 @@ defmodule AgentPlayground.Bridge do
   end
 
   defp process("snapshot", rt) do
-    rt |> ElixirOpentui.Runtime.snapshot() |> inspect(pretty: true, limit: :infinity)
+    rt |> ElixirOpentui.Runtime.snapshot() |> inspect(limit: :infinity)
   end
 
   defp process("find " <> rest, rt) do
     id = parse_id(String.trim(rest))
-    rt |> ElixirOpentui.Runtime.find_widget(id) |> inspect(pretty: true, limit: :infinity)
+    rt |> ElixirOpentui.Runtime.find_widget(id) |> inspect(limit: :infinity)
   end
 
   defp process("appstate", rt) do
-    :sys.get_state(rt).app_state |> inspect(pretty: true, limit: :infinity)
+    :sys.get_state(rt).app_state |> inspect(limit: :infinity)
   end
 
   defp process("dispatch " <> action_str, rt) do
@@ -150,7 +156,7 @@ defmodule AgentPlayground.Bridge do
     end
   end
 
-  defp process("quit", _rt), do: "bye"
+  defp process("quit", _rt), do: {:close, "bye"}
 
   defp process(other, _rt), do: "ERROR: unknown command: #{inspect(other)}"
 
