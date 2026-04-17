@@ -8,8 +8,10 @@ defmodule ElixirOpentui.NativeBuffer do
 
   @behaviour ElixirOpentui.BufferBehaviour
 
-  alias ElixirOpentui.Color
+  alias ElixirOpentui.{Color, TextBuffer}
   alias ElixirOpentui.NIF
+
+  @char_bytes_size 64
 
   @type t :: %__MODULE__{
           ref: reference(),
@@ -75,22 +77,14 @@ defmodule ElixirOpentui.NativeBuffer do
   @doc "Draw a single character at (x, y) with optional text attributes."
   @spec draw_char(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) :: t()
   def draw_char(%__MODULE__{} = buf, x, y, char, fg, bg, attrs \\ []) do
-    if in_scissor?(buf, x, y) do
-      %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
-    else
-      buf
-    end
+    draw_cells(buf, x, y, char, fg, bg, attrs)
   end
 
   @doc "Draw a character with alpha blending over existing cell."
   @spec draw_char_blend(t(), integer(), integer(), String.t(), Color.t(), Color.t(), keyword()) ::
           t()
   def draw_char_blend(%__MODULE__{} = buf, x, y, char, fg, bg, attrs \\ []) do
-    if in_scissor?(buf, x, y) do
-      %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, encode_attrs(attrs), 0)]}
-    else
-      buf
-    end
+    draw_cells(buf, x, y, char, fg, bg, attrs)
   end
 
   @doc "Draw a string horizontally starting at (x, y) with optional text attributes."
@@ -99,7 +93,8 @@ defmodule ElixirOpentui.NativeBuffer do
     text
     |> String.graphemes()
     |> Enum.reduce({buf, x}, fn grapheme, {b, cx} ->
-      {draw_char(b, cx, y, grapheme, fg, bg, attrs), cx + 1}
+      width = TextBuffer.char_width(grapheme)
+      {draw_char(b, cx, y, grapheme, fg, bg, attrs), cx + width}
     end)
     |> elem(0)
   end
@@ -118,12 +113,25 @@ defmodule ElixirOpentui.NativeBuffer do
         ) ::
           t()
   def fill_rect(%__MODULE__{} = buf, x, y, w, h, char, fg, bg, attrs \\ []) do
-    {cx, cy, cw, ch} = clip_rect(buf, x, y, w, h)
+    case TextBuffer.char_width(char) do
+      1 ->
+        {cx, cy, cw, ch} = clip_rect(buf, x, y, w, h)
 
-    if cw > 0 and ch > 0 do
-      %{buf | ops: [buf.ops | encode_fill(cx, cy, cw, ch, char, fg, bg, encode_attrs(attrs))]}
-    else
-      buf
+        if cw > 0 and ch > 0 do
+          %{buf | ops: [buf.ops | encode_fill(cx, cy, cw, ch, char, fg, bg, encode_attrs(attrs))]}
+        else
+          buf
+        end
+
+      width when width <= 0 ->
+        buf
+
+      _width ->
+        for cy <- y..(y + h - 1)//1,
+            cx <- x..(x + w - 1)//1,
+            reduce: buf do
+          acc -> draw_char(acc, cx, cy, char, fg, bg, attrs)
+        end
     end
   end
 
@@ -238,32 +246,56 @@ defmodule ElixirOpentui.NativeBuffer do
     end)
   end
 
-  defp encode_cell(x, y, char, {fr, fg, fb, _fa}, {br, bg, bb, _ba}, attrs, hit_id) do
-    char_bin = pad_utf8(char)
+  defp draw_cells(%__MODULE__{} = buf, x, y, char, fg, bg, attrs) do
+    case TextBuffer.char_width(char) do
+      width when width <= 0 ->
+        buf
 
-    <<1, x::16-little, y::16-little, char_bin::binary-4, fr, fg, fb, br, bg, bb, attrs,
-      hit_id::16-little>>
+      width ->
+        if drawable_span?(buf, x, y, width) do
+          encoded_attrs = encode_attrs(attrs)
+
+          Enum.reduce(0..(width - 1)//1, buf, fn offset, acc ->
+            cell_char = if offset == 0, do: char, else: ""
+            append_cell(acc, x + offset, y, cell_char, fg, bg, encoded_attrs, 0)
+          end)
+        else
+          buf
+        end
+    end
+  end
+
+  defp append_cell(%__MODULE__{} = buf, x, y, char, fg, bg, attrs, hit_id) do
+    if in_scissor?(buf, x, y) do
+      %{buf | ops: [buf.ops | encode_cell(x, y, char, fg, bg, attrs, hit_id)]}
+    else
+      buf
+    end
+  end
+
+  defp encode_cell(x, y, char, {fr, fg, fb, _fa}, {br, bg, bb, _ba}, attrs, hit_id) do
+    {char_len, char_bin} = encode_char(char)
+
+    <<1, x::16-little, y::16-little, char_len, char_bin::binary-size(@char_bytes_size), fr, fg,
+      fb, br, bg, bb, attrs, hit_id::16-little>>
   end
 
   defp encode_fill(x, y, w, h, char, {fr, fg, fb, _fa}, {br, bg, bb, _ba}, attrs) do
-    char_bin = pad_utf8(char)
+    {char_len, char_bin} = encode_char(char)
 
-    <<2, x::16-little, y::16-little, w::16-little, h::16-little, char_bin::binary-4, fr, fg, fb,
-      br, bg, bb, attrs>>
+    <<2, x::16-little, y::16-little, w::16-little, h::16-little, char_len,
+      char_bin::binary-size(@char_bytes_size), fr, fg, fb, br, bg, bb, attrs>>
   end
 
   defp encode_hit(x, y, w, h, hit_id) do
     <<3, x::16-little, y::16-little, w::16-little, h::16-little, hit_id::16-little>>
   end
 
-  defp pad_utf8(char) do
+  defp encode_char(char) do
     bytes = :binary.bin_to_list(char)
-    len = length(bytes)
+    len = min(length(bytes), @char_bytes_size)
 
-    case len do
-      n when n >= 4 -> :binary.list_to_bin(Enum.take(bytes, 4))
-      _ -> :binary.list_to_bin(bytes ++ List.duplicate(0, 4 - len))
-    end
+    {len, :binary.list_to_bin(Enum.take(bytes, len) ++ List.duplicate(0, @char_bytes_size - len))}
   end
 
   defp in_scissor?(%__MODULE__{scissor_stack: [], cols: cols, rows: rows}, x, y) do
@@ -272,6 +304,12 @@ defmodule ElixirOpentui.NativeBuffer do
 
   defp in_scissor?(%__MODULE__{scissor_stack: [{sx, sy, sw, sh} | _]}, x, y) do
     x >= sx and x < sx + sw and y >= sy and y < sy + sh
+  end
+
+  defp drawable_span?(buf, x, y, width) do
+    Enum.all?(0..(width - 1)//1, fn offset ->
+      in_scissor?(buf, x + offset, y)
+    end)
   end
 
   defp clip_rect(%__MODULE__{scissor_stack: [], cols: cols, rows: rows}, x, y, w, h) do

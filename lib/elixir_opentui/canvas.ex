@@ -6,7 +6,7 @@ defmodule ElixirOpentui.Canvas do
   The painter iterates unique cells only — no duplicate draws.
   """
 
-  alias ElixirOpentui.Color
+  alias ElixirOpentui.{Color, TextBuffer}
 
   @type cell :: {String.t(), Color.t(), Color.t()}
   @type t :: %__MODULE__{
@@ -34,10 +34,27 @@ defmodule ElixirOpentui.Canvas do
   def draw_text(%__MODULE__{} = canvas, x, y, text, fg, bg) do
     text
     |> String.graphemes()
-    |> Enum.with_index()
-    |> Enum.reduce(canvas, fn {char, i}, acc ->
-      set_cell(acc, x + i, y, char, fg, bg)
+    |> Enum.reduce({canvas, x}, fn char, {acc, cx} ->
+      width = TextBuffer.char_width(char)
+
+      if width <= 0 do
+        {acc, cx}
+      else
+        acc = set_cell(acc, cx, y, char, fg, bg)
+
+        acc =
+          if width == 1 do
+            acc
+          else
+            Enum.reduce(1..(width - 1)//1, acc, fn offset, inner_acc ->
+              set_cell(inner_acc, cx + offset, y, " ", fg, bg)
+            end)
+          end
+
+        {acc, cx + width}
+      end
     end)
+    |> elem(0)
   end
 
   @doc "Fill a rectangle with the given character and colors."

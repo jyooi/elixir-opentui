@@ -555,6 +555,52 @@ defmodule ElixirOpentui.LayoutTest do
       assert txt_rect.w == 5
       assert txt_rect.h == 1
     end
+
+    test "text width uses display columns for wide characters" do
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:text, id: :txt, content: "A界B")
+          ]
+        )
+
+      results = layout(tree)
+      txt_rect = rect_for(results, :txt)
+      assert txt_rect.w == 4
+      assert txt_rect.h == 1
+    end
+
+    test "checkbox width uses display columns for labels" do
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:checkbox, id: :cb, label: "界界")
+          ]
+        )
+
+      results = layout(tree)
+      cb_rect = rect_for(results, :cb)
+      assert cb_rect.w == 8
+    end
+
+    test "select width uses display columns for option labels" do
+      tree =
+        Element.new(
+          :box,
+          [id: :root, width: 80, height: 24, flex_direction: :row, align_items: :flex_start],
+          [
+            Element.new(:select, id: :sel, options: ["界界", "ABC"])
+          ]
+        )
+
+      results = layout(tree)
+      sel_rect = rect_for(results, :sel)
+      assert sel_rect.w == 4
+    end
   end
 
   describe "min/max dimensions" do

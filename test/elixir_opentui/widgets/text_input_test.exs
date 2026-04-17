@@ -304,6 +304,17 @@ defmodule ElixirOpentui.Widgets.TextInputTest do
 
       assert state.cursor_pos == 3
     end
+
+    test "scroll offset uses display columns for wide graphemes" do
+      state = TextInput.init(%{value: "", width: 3, id: :inp})
+      state = TextInput.update(:key, key("A"), state)
+      state = TextInput.update(:paste, %{type: :paste, data: "界"}, state)
+      state = TextInput.update(:key, key("B"), state)
+
+      assert state.value == "A界B"
+      assert state.cursor_pos == 3
+      assert state.scroll_offset == 2
+    end
   end
 
   describe "paste" do
