@@ -213,6 +213,22 @@ defmodule ElixirOpentui.Widgets.SelectTest do
       state = Select.update({:set_selected, 100}, nil, state)
       assert state.selected == 4
     end
+
+    test "adjusts scroll_offset so selection stays in viewport" do
+      options = Enum.map(0..29, &"Item #{&1}")
+      state = Select.init(%{options: options, visible_count: 5, id: :sel})
+
+      state = Select.update({:set_selected, 20}, nil, state)
+      assert state.selected == 20
+      assert state.scroll_offset == 16
+    end
+
+    test "no-op when idx clamps to current selection (no emission)" do
+      state = Select.init(%{options: @options, selected: 2, on_change: :changed, id: :sel})
+      state = Select.update({:set_selected, 2}, nil, state)
+      assert state.selected == 2
+      assert state._pending == []
+    end
   end
 
   describe "show_description" do

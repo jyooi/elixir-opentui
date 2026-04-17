@@ -56,7 +56,15 @@ defmodule ElixirOpentui.Widgets.Select do
   end
 
   def update({:set_selected, idx}, _event, state) do
-    %{state | selected: clamp(idx, 0, length(state.options) - 1)}
+    new_idx = clamp(idx, 0, max(0, length(state.options) - 1))
+
+    if new_idx == state.selected do
+      state
+    else
+      %{state | selected: new_idx}
+      |> adjust_scroll()
+      |> emit_change()
+    end
   end
 
   def update(_, _, state), do: state

@@ -35,6 +35,7 @@ defmodule ElixirOpentui.Widgets.Checkbox do
 
   def update({:set_checked, value}, _event, state) do
     %{state | checked: value}
+    |> emit_change()
   end
 
   def update(_, _, state), do: state
