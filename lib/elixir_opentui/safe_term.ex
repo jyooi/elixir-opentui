@@ -63,7 +63,8 @@ defmodule ElixirOpentui.SafeTerm do
   defp safe_term(list) when is_list(list), do: safe_list(list)
 
   defp safe_term({name, _meta, args}) when is_atom(name) and (is_list(args) or is_nil(args)) do
-    {:error, "disallowed construct `#{name}` — only atoms, binaries, integers, tuples, lists accepted"}
+    {:error,
+     "disallowed construct `#{name}` — only atoms, binaries, integers, tuples, lists accepted"}
   end
 
   defp safe_term(other), do: {:error, "disallowed term: #{inspect(other)}"}

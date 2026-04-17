@@ -42,6 +42,7 @@ defmodule ElixirOpentui.SafeTermTest do
 
     test "nested structures" do
       assert SafeTerm.parse("{:nested, {:a, 1}}") == {:ok, {:nested, {:a, 1}}}
+
       assert SafeTerm.parse("{:tag, [1, :two, \"three\"]}") ==
                {:ok, {:tag, [1, :two, "three"]}}
     end
