@@ -552,7 +552,7 @@ defmodule ElixirOpentui.Painter do
           b
         else
           tab_name = tab_select_name(opt)
-          truncated = TextBuffer.slice_columns(tab_name, 0, tab_width)
+          truncated = TextBuffer.slice_columns(tab_name, 0, tab_width - 1)
           padded = TextBuffer.pad_trailing_columns(truncated, tab_width)
 
           if focused and idx == selected do
