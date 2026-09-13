@@ -17,8 +17,7 @@ defmodule ElixirOpentui.Precompiled do
      edit_buffer_nif_shasums()}
   end
 
-  # Empty until the precompile workflow refills it after the NIF source change.
-  # An empty list means every platform compiles from source.
+  # The precompile workflow writes these shasums for each release.
   defp edit_buffer_nif_shasums do
     [
       "aarch64-freebsd-none": "16323fbc467059300216a4a3ecc1c4c6d3f053438535a717fc3b9e53c6bc7bc0",
