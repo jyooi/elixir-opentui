@@ -82,7 +82,7 @@ defmodule ElixirOpentui.MixProject do
       {:zigler, "~> 0.15.2", runtime: false},
       {:makeup_elixir, "~> 1.0", optional: true},
       {:makeup_ts, "~> 0.2", optional: true},
-      {:earmark_parser, "~> 1.4", optional: true}
+      {:earmark_parser, "~> 1.4"}
     ]
   end
 end
