@@ -1,6 +1,6 @@
 defmodule ElixirOpentui.Renderer do
   @moduledoc """
-  Full terminal renderer with double buffering and diff-based updates.
+  Terminal renderer with diff-based updates.
 
   Keeps the last painted frame, computes layout, paints elements,
   diffs the result, and outputs minimal ANSI sequences.

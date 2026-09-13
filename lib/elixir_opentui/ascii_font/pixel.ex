@@ -7,7 +7,7 @@ defmodule ElixirOpentui.ASCIIFont.Pixel do
       letterspace_size: 2,
       colors: 1,
       chars: %{
-        # --- Letters (from original claude_animation.exs + new designs) ---
+        # --- Letters ---
         "A" => [
           "..###..",
           ".##.##.",
