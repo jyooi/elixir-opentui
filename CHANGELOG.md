@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `native_buf`, and `backend` fields. The pure Elixir `Buffer` is the only
   render path. `EditBufferNIF` stays because `TextArea` needs it.
 - The `claude_animation` and `frame_buffer_demo` demos.
+- The `space_dodge`, `checkbox_demo`, `select_demo`, `text_input_demo`, `scroll_box_demo`, `potion_lab`, `agent_driven_form`, and `agent_preferences` demos. `widget_gallery` and `agent_playground` cover them.
+- The `example_app/tui_todo` Mix scaffold. Its `todo.exs` now lives at `demo/todo.exs`.
 
 ### Changed
 

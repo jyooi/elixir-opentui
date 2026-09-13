@@ -1,5 +1,5 @@
 # Interactive Todo List App
-# Run: cd example_app/tui_todo && mix run todo.exs
+# Run: mix run demo/todo.exs
 #
 # Tab/Shift+Tab: navigate | Enter: add todo | Space: toggle
 # d: delete todo | Left/Right: switch filter | Ctrl+C: quit
