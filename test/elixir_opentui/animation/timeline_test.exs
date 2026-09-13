@@ -255,16 +255,6 @@ defmodule ElixirOpentui.Animation.TimelineTest do
       assert Timeline.value(tl, :x) == 75
     end
 
-    test "timeline-level alternate is the default for looping items" do
-      tl =
-        new_timeline(duration: 3000, alternate: true)
-        |> Timeline.add(:x, from: 0, to: 100, duration: 1000, loop: true)
-        |> Timeline.play()
-        |> Timeline.advance(1250)
-
-      assert Timeline.value(tl, :x) == 75
-    end
-
     test "should alternate direction with each loop" do
       tl =
         new_timeline(duration: 5000)

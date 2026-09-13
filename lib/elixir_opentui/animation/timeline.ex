@@ -115,7 +115,7 @@ defmodule ElixirOpentui.Animation.Timeline do
       duration: Keyword.get(opts, :duration, tl.duration),
       delay: Keyword.get(opts, :start_time, Keyword.get(opts, :delay, 0)),
       loop: Keyword.get(opts, :loop, false),
-      alternate: Keyword.get(opts, :alternate, tl.alternate),
+      alternate: Keyword.get(opts, :alternate, false),
       loop_delay: Keyword.get(opts, :loop_delay, 0),
       loop_count: 0,
       on_start: Keyword.get(opts, :on_start),
