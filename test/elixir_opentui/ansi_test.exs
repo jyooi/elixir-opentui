@@ -13,11 +13,6 @@ defmodule ElixirOpentui.ANSITest do
       assert IO.iodata_to_binary(ANSI.hide_cursor()) == "\e[?25l"
       assert IO.iodata_to_binary(ANSI.show_cursor()) == "\e[?25h"
     end
-
-    test "save/restore cursor" do
-      assert IO.iodata_to_binary(ANSI.save_cursor()) == "\e7"
-      assert IO.iodata_to_binary(ANSI.restore_cursor()) == "\e8"
-    end
   end
 
   describe "screen control" do
@@ -156,32 +151,6 @@ defmodule ElixirOpentui.ANSITest do
 
       assert String.contains?(result, "5")
       assert String.contains?(result, "8")
-    end
-  end
-
-  describe "cursor shape" do
-    test "block cursor shape (steady)" do
-      assert IO.iodata_to_binary(ANSI.cursor_shape(:block)) == "\e[2 q"
-    end
-
-    test "underline cursor shape (steady)" do
-      assert IO.iodata_to_binary(ANSI.cursor_shape(:underline)) == "\e[4 q"
-    end
-
-    test "bar cursor shape (steady)" do
-      assert IO.iodata_to_binary(ANSI.cursor_shape(:bar)) == "\e[6 q"
-    end
-
-    test "block cursor shape (blinking)" do
-      assert IO.iodata_to_binary(ANSI.cursor_shape(:block, blink: true)) == "\e[1 q"
-    end
-
-    test "underline cursor shape (blinking)" do
-      assert IO.iodata_to_binary(ANSI.cursor_shape(:underline, blink: true)) == "\e[3 q"
-    end
-
-    test "bar cursor shape (blinking)" do
-      assert IO.iodata_to_binary(ANSI.cursor_shape(:bar, blink: true)) == "\e[5 q"
     end
   end
 

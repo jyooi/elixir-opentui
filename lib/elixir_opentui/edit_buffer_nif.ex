@@ -79,12 +79,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       return result;
   }
 
-  // ── replace_text(resource, text) → :ok ─────────────────────────────────
-  pub fn replace_text(resource: EditBufferResource, text: []const u8) !void {
-      const data = resource.unpack();
-      try data.edit_buffer.replaceText(text);
-  }
-
   // ── get_cursor(resource) → {row, col, offset} ─────────────────────────
   pub fn get_cursor(resource: EditBufferResource) beam.term {
       const data = resource.unpack();
@@ -134,18 +128,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       data.edit_buffer.moveRight();
   }
 
-  // ── move_cursor_up(resource) → :ok ─────────────────────────────────────
-  pub fn move_cursor_up(resource: EditBufferResource) void {
-      const data = resource.unpack();
-      data.edit_buffer.moveUp();
-  }
-
-  // ── move_cursor_down(resource) → :ok ───────────────────────────────────
-  pub fn move_cursor_down(resource: EditBufferResource) void {
-      const data = resource.unpack();
-      data.edit_buffer.moveDown();
-  }
-
   // ── new_line(resource) → :ok ───────────────────────────────────────────
   pub fn new_line(resource: EditBufferResource) !void {
       const data = resource.unpack();
@@ -156,12 +138,6 @@ defmodule ElixirOpentui.EditBufferNIF do
   pub fn delete_line(resource: EditBufferResource) !void {
       const data = resource.unpack();
       try data.edit_buffer.deleteLine();
-  }
-
-  // ── goto_line(resource, line) → :ok ────────────────────────────────────
-  pub fn goto_line(resource: EditBufferResource, line: u32) !void {
-      const data = resource.unpack();
-      try data.edit_buffer.gotoLine(line);
   }
 
   // ── undo(resource) → binary | nil ──────────────────────────────────────
@@ -184,85 +160,6 @@ defmodule ElixirOpentui.EditBufferNIF do
   pub fn get_line_count(resource: EditBufferResource) u32 {
       const data = resource.unpack();
       return data.edit_buffer.tb.lineCount();
-  }
-
-  // ── delete_range(resource, r1, c1, r2, c2) → :ok ─────────────────────
-  pub fn delete_range(resource: EditBufferResource, r1: u32, c1: u32, r2: u32, c2: u32) !void {
-      const data = resource.unpack();
-      const start = api.Cursor{ .row = r1, .col = c1 };
-      const end_cur = api.Cursor{ .row = r2, .col = c2 };
-      try data.edit_buffer.deleteRange(start, end_cur);
-  }
-
-  // ── clear(resource) → :ok ────────────────────────────────────────────
-  pub fn eb_clear(resource: EditBufferResource) !void {
-      const data = resource.unpack();
-      try data.edit_buffer.clear();
-  }
-
-  // ── can_undo(resource) → bool ────────────────────────────────────────
-  pub fn can_undo(resource: EditBufferResource) bool {
-      const data = resource.unpack();
-      return data.edit_buffer.canUndo();
-  }
-
-  // ── can_redo(resource) → bool ────────────────────────────────────────
-  pub fn can_redo(resource: EditBufferResource) bool {
-      const data = resource.unpack();
-      return data.edit_buffer.canRedo();
-  }
-
-  // ── clear_history(resource) → :ok ────────────────────────────────────
-  pub fn clear_history(resource: EditBufferResource) void {
-      const data = resource.unpack();
-      data.edit_buffer.clearHistory();
-  }
-
-  // ── get_eol_eb(resource) → {row, col, offset} ───────────────────────
-  pub fn get_eol_eb(resource: EditBufferResource) beam.term {
-      const data = resource.unpack();
-      const cursor = data.edit_buffer.getEOL();
-      return beam.make(.{ cursor.row, cursor.col, cursor.offset }, .{});
-  }
-
-  // ── get_next_word_boundary_eb(resource) → {row, col, offset} ────────
-  pub fn get_next_word_boundary_eb(resource: EditBufferResource) beam.term {
-      const data = resource.unpack();
-      const cursor = data.edit_buffer.getNextWordBoundary();
-      return beam.make(.{ cursor.row, cursor.col, cursor.offset }, .{});
-  }
-
-  // ── get_prev_word_boundary_eb(resource) → {row, col, offset} ────────
-  pub fn get_prev_word_boundary_eb(resource: EditBufferResource) beam.term {
-      const data = resource.unpack();
-      const cursor = data.edit_buffer.getPrevWordBoundary();
-      return beam.make(.{ cursor.row, cursor.col, cursor.offset }, .{});
-  }
-
-  // ── get_text_range(resource, start_offset, end_offset) → binary ─────
-  pub fn get_text_range(resource: EditBufferResource, start_offset: u32, end_offset: u32) ![]u8 {
-      const gpa = beam.allocator;
-      const data = resource.unpack();
-      const byte_size = @max(1, data.edit_buffer.tb.getByteSize());
-      const buf = try gpa.alloc(u8, byte_size);
-      defer gpa.free(buf);
-      const len = try data.edit_buffer.getTextRange(start_offset, end_offset, buf);
-      const result = try gpa.alloc(u8, len);
-      @memcpy(result, buf[0..len]);
-      return result;
-  }
-
-  // ── get_text_range_by_coords(resource, r1, c1, r2, c2) → binary ────
-  pub fn get_text_range_by_coords(resource: EditBufferResource, r1: u32, c1: u32, r2: u32, c2: u32) ![]u8 {
-      const gpa = beam.allocator;
-      const data = resource.unpack();
-      const byte_size = @max(1, data.edit_buffer.tb.getByteSize());
-      const buf = try gpa.alloc(u8, byte_size);
-      defer gpa.free(buf);
-      const len = data.edit_buffer.getTextRangeByCoords(r1, c1, r2, c2, buf);
-      const result = try gpa.alloc(u8, len);
-      @memcpy(result, buf[0..len]);
-      return result;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -376,15 +273,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       data.editor_view.resetSelection();
   }
 
-  // ── view_get_selection(view) → {start, end} | nil ──────────────────────
-  pub fn view_get_selection(view: EditorViewResource) beam.term {
-      const data = view.unpack();
-      if (data.editor_view.getSelection()) |sel| {
-          return beam.make(.{ sel.start, sel.end }, .{});
-      }
-      return beam.make(.nil, .{});
-  }
-
   // ── view_delete_selected_text(view) → :ok ──────────────────────────────
   pub fn view_delete_selected_text(view: EditorViewResource) !void {
       const data = view.unpack();
@@ -406,12 +294,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       const result = try gpa.alloc(u8, len);
       @memcpy(result, buf[0..len]);
       return result;
-  }
-
-  // ── view_set_cursor_by_offset(view, offset) → :ok ─────────────────────
-  pub fn view_set_cursor_by_offset(view: EditorViewResource, offset: u32) !void {
-      const data = view.unpack();
-      try data.editor_view.setCursorByOffset(offset);
   }
 
   // ── view_get_next_word_boundary(view) → {visual_row, visual_col, logical_row, logical_col, offset}
@@ -527,17 +409,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       data.editor_view.setViewport(api.Viewport{ .x = x, .y = y, .width = width, .height = height }, false);
   }
   """
-
-  @doc "Check if the EditBuffer NIF is available."
-  @spec available?() :: boolean()
-  def available? do
-    try do
-      ref = create()
-      is_reference(ref)
-    rescue
-      _ -> false
-    end
-  end
 
   @wrap_modes %{none: 0, char: 1, word: 2}
 

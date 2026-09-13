@@ -11,11 +11,8 @@ defmodule ElixirOpentui.Widgets.Code do
   - `:filetype` — language identifier for highlighting (e.g., "elixir", "html")
   - `:id` — element id
   - `:show_line_numbers` — show line number gutter (default: true)
-  - `:line_number_offset` — offset for line numbering (default: 0)
-  - `:wrap_mode` — text wrapping mode :none | :char | :word (default: :none)
   - `:scroll_offset` — vertical scroll position (default: 0)
   - `:visible_lines` — number of visible lines (default: nil, show all)
-  - `:streaming` — whether content is being streamed (default: false)
   """
 
   use ElixirOpentui.Component
@@ -35,11 +32,8 @@ defmodule ElixirOpentui.Widgets.Code do
       tokens: tokens,
       id: Map.get(props, :id),
       show_line_numbers: Map.get(props, :show_line_numbers, true),
-      line_number_offset: Map.get(props, :line_number_offset, 0),
-      wrap_mode: Map.get(props, :wrap_mode, :none),
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
-      streaming: Map.get(props, :streaming, false),
       line_count: length(String.split(content, "\n"))
     }
   end
@@ -76,10 +70,6 @@ defmodule ElixirOpentui.Widgets.Code do
     %{state | show_line_numbers: show}
   end
 
-  def update({:set_streaming, streaming}, _event, state) do
-    %{state | streaming: streaming}
-  end
-
   def update(:key, %{type: :key} = event, state) do
     handle_key(event, state)
   end
@@ -95,10 +85,7 @@ defmodule ElixirOpentui.Widgets.Code do
       state
       |> sync_prop(prev_props, new_props, :id, nil)
       |> sync_prop(prev_props, new_props, :show_line_numbers, true)
-      |> sync_prop(prev_props, new_props, :line_number_offset, 0)
-      |> sync_prop(prev_props, new_props, :wrap_mode, :none)
       |> sync_prop(prev_props, new_props, :visible_lines, nil)
-      |> sync_prop(prev_props, new_props, :streaming, false)
 
     state =
       cond do
@@ -148,11 +135,8 @@ defmodule ElixirOpentui.Widgets.Code do
       lines: lines,
       line_count: state.line_count,
       show_line_numbers: state.show_line_numbers,
-      line_number_offset: state.line_number_offset,
-      wrap_mode: state.wrap_mode,
       scroll_offset: state.scroll_offset,
-      visible_lines: state.visible_lines,
-      streaming: state.streaming
+      visible_lines: state.visible_lines
     )
   end
 

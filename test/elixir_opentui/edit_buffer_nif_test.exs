@@ -40,13 +40,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       assert EditBufferNIF.get_text(buf) == ""
     end
 
-    test "replace_text replaces content" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "hello")
-      EditBufferNIF.replace_text(buf, "world")
-      assert EditBufferNIF.get_text(buf) == "world"
-    end
-
     test "set_text with multi-line content" do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "line1\nline2\nline3")
@@ -151,42 +144,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {row, col, _offset} = EditBufferNIF.get_cursor(buf)
       assert row == 0
       assert col == 2
-    end
-
-    test "move_cursor_down moves to next line" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "hello\nworld")
-      EditBufferNIF.set_cursor(buf, 0, 0)
-      EditBufferNIF.move_cursor_down(buf)
-      {row, _col, _offset} = EditBufferNIF.get_cursor(buf)
-      assert row == 1
-    end
-
-    test "move_cursor_up moves to previous line" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "hello\nworld")
-      EditBufferNIF.set_cursor(buf, 1, 0)
-      EditBufferNIF.move_cursor_up(buf)
-      {row, _col, _offset} = EditBufferNIF.get_cursor(buf)
-      assert row == 0
-    end
-
-    test "move_cursor_up on first line stays" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "hello\nworld")
-      EditBufferNIF.set_cursor(buf, 0, 0)
-      EditBufferNIF.move_cursor_up(buf)
-      {row, _col, _offset} = EditBufferNIF.get_cursor(buf)
-      assert row == 0
-    end
-
-    test "move_cursor_down on last line stays" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "hello\nworld")
-      EditBufferNIF.set_cursor(buf, 1, 0)
-      EditBufferNIF.move_cursor_down(buf)
-      {row, _col, _offset} = EditBufferNIF.get_cursor(buf)
-      assert row == 1
     end
 
     test "multiple right moves" do
@@ -352,23 +309,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {row, col, _offset} = EditBufferNIF.get_cursor(buf)
       assert row == 1
       assert col == 0
-    end
-
-    test "goto_line moves cursor to specified line" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "line1\nline2\nline3")
-      EditBufferNIF.goto_line(buf, 2)
-      {row, _col, _offset} = EditBufferNIF.get_cursor(buf)
-      assert row == 2
-    end
-
-    test "goto_line 0 moves to first line" do
-      buf = EditBufferNIF.create()
-      EditBufferNIF.set_text(buf, "line1\nline2\nline3")
-      EditBufferNIF.goto_line(buf, 2)
-      EditBufferNIF.goto_line(buf, 0)
-      {row, _col, _offset} = EditBufferNIF.get_cursor(buf)
-      assert row == 0
     end
 
     test "delete_line removes current line" do
@@ -847,26 +787,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
   end
 
   describe "editor view: selection" do
-    test "no selection initially" do
-      {_buf, view} = create_view("hello world")
-      assert EditBufferNIF.view_get_selection(view) == nil
-    end
-
-    test "set and get selection" do
-      {_buf, view} = create_view("hello world")
-      EditBufferNIF.view_set_selection(view, 0, 5)
-      {start_off, end_off} = EditBufferNIF.view_get_selection(view)
-      assert start_off == 0
-      assert end_off == 5
-    end
-
-    test "reset selection clears it" do
-      {_buf, view} = create_view("hello world")
-      EditBufferNIF.view_set_selection(view, 0, 5)
-      EditBufferNIF.view_reset_selection(view)
-      assert EditBufferNIF.view_get_selection(view) == nil
-    end
-
     test "get_selected_text returns selected portion" do
       {_buf, view} = create_view("hello world")
       EditBufferNIF.view_set_selection(view, 0, 5)
@@ -891,26 +811,10 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       assert EditBufferNIF.get_text(buf) == "hello"
     end
 
-    test "selection after delete is cleared" do
-      {_buf, view} = create_view("hello world")
-      EditBufferNIF.view_set_selection(view, 5, 11)
-      EditBufferNIF.view_delete_selected_text(view)
-      assert EditBufferNIF.view_get_selection(view) == nil
-    end
-
     test "select entire text" do
       {_buf, view} = create_view("hello")
       EditBufferNIF.view_set_selection(view, 0, 5)
       assert EditBufferNIF.view_get_selected_text(view) == "hello"
-    end
-
-    test "overwrite selection" do
-      {_buf, view} = create_view("hello world")
-      EditBufferNIF.view_set_selection(view, 0, 3)
-      EditBufferNIF.view_set_selection(view, 2, 7)
-      {start_off, end_off} = EditBufferNIF.view_get_selection(view)
-      assert start_off == 2
-      assert end_off == 7
     end
 
     test "select across newline" do
@@ -925,37 +829,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       EditBufferNIF.view_set_selection(view, 3, 9)
       EditBufferNIF.view_delete_selected_text(view)
       assert EditBufferNIF.get_text(buf) == "helld"
-    end
-  end
-
-  describe "editor view: cursor by offset" do
-    test "view_set_cursor_by_offset moves cursor" do
-      {_buf, view} = create_view("hello world")
-      EditBufferNIF.view_set_cursor_by_offset(view, 6)
-      {_vr, vc, _lr, lc, offset} = EditBufferNIF.view_get_visual_cursor(view)
-      assert offset == 6
-      assert vc == 6
-      assert lc == 6
-    end
-
-    test "view_set_cursor_by_offset to beginning" do
-      {_buf, view} = create_view("hello world")
-      EditBufferNIF.view_set_cursor_by_offset(view, 5)
-      EditBufferNIF.view_set_cursor_by_offset(view, 0)
-      {_vr, vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_cursor(view)
-      assert offset == 0
-      assert vc == 0
-    end
-
-    test "view_set_cursor_by_offset to second line" do
-      {_buf, view} = create_view("hello\nworld")
-      # offset 6 = 'w' on second line
-      EditBufferNIF.view_set_cursor_by_offset(view, 6)
-      {vr, vc, lr, _lc, offset} = EditBufferNIF.view_get_visual_cursor(view)
-      assert offset == 6
-      assert vr == 1
-      assert lr == 1
-      assert vc == 0
     end
   end
 
@@ -1140,13 +1013,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {_buf, view} = create_view("")
       EditBufferNIF.view_set_selection(view, 0, 0)
       assert EditBufferNIF.view_get_selected_text(view) == ""
-    end
-
-    test "reset selection when none set" do
-      {_buf, view} = create_view("hello")
-      # Should not raise
-      EditBufferNIF.view_reset_selection(view)
-      assert EditBufferNIF.view_get_selection(view) == nil
     end
 
     test "move up visual on empty buffer" do

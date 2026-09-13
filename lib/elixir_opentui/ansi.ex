@@ -23,12 +23,6 @@ defmodule ElixirOpentui.ANSI do
   @spec show_cursor() :: iodata()
   def show_cursor, do: "\e[?25h"
 
-  @spec save_cursor() :: iodata()
-  def save_cursor, do: "\e7"
-
-  @spec restore_cursor() :: iodata()
-  def restore_cursor, do: "\e8"
-
   # --- Screen control ---
 
   @spec clear_screen() :: iodata()
@@ -131,22 +125,6 @@ defmodule ElixirOpentui.ANSI do
   end
 
   # --- Cursor shape ---
-
-  @doc "Set terminal cursor shape. Steady variants (no opts) or blink control."
-  @spec cursor_shape(:block | :underline | :bar, keyword()) :: iodata()
-  def cursor_shape(style, opts \\ [])
-
-  def cursor_shape(:block, opts) do
-    if Keyword.get(opts, :blink, false), do: "\e[1 q", else: "\e[2 q"
-  end
-
-  def cursor_shape(:underline, opts) do
-    if Keyword.get(opts, :blink, false), do: "\e[3 q", else: "\e[4 q"
-  end
-
-  def cursor_shape(:bar, opts) do
-    if Keyword.get(opts, :blink, false), do: "\e[5 q", else: "\e[6 q"
-  end
 
   # --- Color / attribute SGR ---
 

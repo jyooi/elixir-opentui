@@ -119,7 +119,7 @@ All demos use `Ctrl+C` to exit.
 | `code` / `Code` | Syntax-highlighted code display |
 | `markdown` / `Markdown` | Rendered markdown |
 | `diff` / `Diff` | Unified and split diff views |
-| `line_number` / `LineNumber` | Line number gutter with signs and colors |
+| `line_number` | Line number gutter with signs and colors |
 | `ascii_font` / `AsciiFont` | Decorative ASCII art text |
 
 ## View DSL

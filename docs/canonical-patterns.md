@@ -20,8 +20,7 @@
 | Error tuples | `{:error, :reason_atom}` | Not bare `:error` |
 | Boolean helpers | `foo?` (no `is_` prefix unless guard) | Elixir convention |
 | `@type` specs | Must match all `defstruct` fields | Enforced by audit |
-| `@enforce_keys` | Required on NIF wrapper structs | EditBuffer, EditorView |
 | Test paths | `test/elixir_opentui/<module>_test.exs` | Mirror `lib/` structure |
 | Display widgets | No `_pending` in init state | Only interactive widgets use `_pending` |
-| `font_name` type | Only implemented fonts (`:tiny`, `:block`, `:pixel`) | No phantom types |
+| `font_name` type | Only implemented fonts (`:tiny`, `:block`) | No phantom types |
 | Buffer coordinates | Two-tier: `u32` cell ops, `i32` viewport ops | Matches upstream OpenTUI |

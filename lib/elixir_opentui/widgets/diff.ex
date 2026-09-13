@@ -13,7 +13,6 @@ defmodule ElixirOpentui.Widgets.Diff do
   - `:show_line_numbers` — show line number gutters (default: true)
   - `:scroll_offset` — vertical scroll position (default: 0)
   - `:visible_lines` — number of visible lines (default: nil, show all)
-  - `:filetype` — language for syntax highlighting (optional)
   """
 
   use ElixirOpentui.Component
@@ -34,7 +33,6 @@ defmodule ElixirOpentui.Widgets.Diff do
       show_line_numbers: Map.get(props, :show_line_numbers, true),
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
-      filetype: Map.get(props, :filetype),
       unified_line_count: length(build_unified_lines(parsed)),
       split_line_count: length(build_split_lines(parsed))
     }
@@ -82,7 +80,6 @@ defmodule ElixirOpentui.Widgets.Diff do
       |> sync_prop(prev_props, new_props, :id, nil)
       |> sync_prop(prev_props, new_props, :show_line_numbers, true)
       |> sync_prop(prev_props, new_props, :visible_lines, nil)
-      |> sync_prop(prev_props, new_props, :filetype, nil)
 
     state =
       if diff_changed? do
@@ -123,8 +120,7 @@ defmodule ElixirOpentui.Widgets.Diff do
       line_count: current_line_count(state),
       show_line_numbers: state.show_line_numbers,
       scroll_offset: state.scroll_offset,
-      visible_lines: state.visible_lines,
-      filetype: state.filetype
+      visible_lines: state.visible_lines
     )
   end
 
