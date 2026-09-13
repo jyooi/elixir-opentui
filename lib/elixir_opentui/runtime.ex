@@ -24,8 +24,6 @@ defmodule ElixirOpentui.Runtime do
     EventManager,
     Element,
     Buffer,
-    Layout,
-    Painter,
     Focus
   }
 
@@ -50,10 +48,8 @@ defmodule ElixirOpentui.Runtime do
           mode: :live | :headless,
           on_event: (term() -> :ok) | nil,
           control_state: :idle | :running | :stopping,
-          target_fps: pos_integer(),
           target_frame_time: pos_integer(),
           last_tick_time: non_neg_integer(),
-          live_request_count: non_neg_integer(),
           live_refs: MapSet.t(reference()),
           explicit_start: boolean(),
           suspend_count: non_neg_integer(),
@@ -70,10 +66,8 @@ defmodule ElixirOpentui.Runtime do
     component_states: %{},
     mode: :headless,
     control_state: :idle,
-    target_fps: 30,
     target_frame_time: 33,
     last_tick_time: 0,
-    live_request_count: 0,
     live_refs: MapSet.new(),
     explicit_start: false,
     suspend_count: 0,
@@ -310,11 +304,7 @@ defmodule ElixirOpentui.Runtime do
   def handle_call(:request_live, _from, state) do
     ref = make_ref()
 
-    state = %{
-      state
-      | live_refs: MapSet.put(state.live_refs, ref),
-        live_request_count: state.live_request_count + 1
-    }
+    state = %{state | live_refs: MapSet.put(state.live_refs, ref)}
 
     state = start_tick_loop(state)
     {:reply, ref, state}
@@ -322,18 +312,8 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_call({:drop_live, ref}, _from, state) do
     if MapSet.member?(state.live_refs, ref) do
-      state = %{
-        state
-        | live_refs: MapSet.delete(state.live_refs, ref),
-          live_request_count: max(state.live_request_count - 1, 0)
-      }
-
-      state =
-        if state.live_request_count == 0 and not state.explicit_start and not any_live?(state) do
-          stop_tick_loop(state)
-        else
-          state
-        end
+      state = %{state | live_refs: MapSet.delete(state.live_refs, ref)}
+      state = if should_tick?(state), do: state, else: stop_tick_loop(state)
 
       {:reply, :ok, state}
     else
@@ -353,7 +333,7 @@ defmodule ElixirOpentui.Runtime do
     state = %{state | suspend_count: new_count}
 
     if new_count == 0 do
-      if any_live?(state) or state.live_request_count > 0 or state.explicit_start do
+      if should_tick?(state) do
         state = start_tick_loop(state)
         {:reply, :ok, state}
       else
@@ -400,11 +380,7 @@ defmodule ElixirOpentui.Runtime do
     state = do_render(state)
 
     state =
-      if not any_live?(state) and not state.explicit_start and state.live_request_count == 0 do
-        stop_tick_loop(state)
-      else
-        schedule_tick(state)
-      end
+      if should_tick?(state), do: schedule_tick(state), else: stop_tick_loop(state)
 
     {:noreply, state}
   end
@@ -587,9 +563,7 @@ defmodule ElixirOpentui.Runtime do
     tree = state.app_module.render(state.app_state)
     {tree, comp_states} = resolve_components(tree, state.component_states, %{})
 
-    {tagged, layout_results} = Layout.compute(tree, state.renderer.cols, state.renderer.rows)
-    buffer = Buffer.new(state.renderer.cols, state.renderer.rows)
-    buffer = Painter.paint(tagged, layout_results, buffer)
+    {renderer, buffer} = Renderer.paint(state.renderer, tree)
 
     em =
       if state.event_manager do
@@ -597,8 +571,6 @@ defmodule ElixirOpentui.Runtime do
       else
         EventManager.new(tree, buffer)
       end
-
-    renderer = %{state.renderer | front: buffer, frame_count: state.renderer.frame_count + 1}
 
     %{
       state
@@ -649,7 +621,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp should_tick?(state) do
-    any_live?(state) or state.live_request_count > 0 or state.explicit_start
+    any_live?(state) or MapSet.size(state.live_refs) > 0 or state.explicit_start
   end
 
   defp check_live(state) when is_map(state) do

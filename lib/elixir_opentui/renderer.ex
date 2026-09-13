@@ -26,33 +26,23 @@ defmodule ElixirOpentui.Renderer do
     %__MODULE__{cols: cols, rows: rows, front: Buffer.new(cols, rows), frame_count: 0}
   end
 
-  @doc "Render an element tree and return {renderer, ansi_iodata}."
-  def render(%__MODULE__{cols: cols, rows: rows, front: front} = renderer, tree, opts \\ []) do
+  @doc "Paint an element tree into a fresh buffer and return {renderer, buffer}."
+  def paint(%__MODULE__{cols: cols, rows: rows} = renderer, tree, opts \\ []) do
     {tagged, layout_results} = Layout.compute(tree, cols, rows)
+    painted = Painter.paint(tagged, layout_results, Buffer.new(cols, rows), opts)
+    {%{renderer | front: painted, frame_count: renderer.frame_count + 1}, painted}
+  end
 
-    back = Buffer.new(cols, rows)
-    painted = Painter.paint(tagged, layout_results, back, opts)
-
-    changes = Buffer.diff(front, painted)
-    ansi_output = ANSI.render_diff(changes)
-
-    new_renderer = %{renderer | front: painted, frame_count: renderer.frame_count + 1}
-
-    {new_renderer, ANSI.frame(ansi_output)}
+  @doc "Render an element tree and return {renderer, ansi_iodata}."
+  def render(%__MODULE__{front: front} = renderer, tree, opts \\ []) do
+    {new_renderer, painted} = paint(renderer, tree, opts)
+    {new_renderer, ANSI.frame(ANSI.render_diff(Buffer.diff(front, painted)))}
   end
 
   @doc "Force a full redraw (no diff, re-render everything)."
-  def render_full(%__MODULE__{cols: cols, rows: rows} = renderer, tree, opts \\ []) do
-    {tagged, layout_results} = Layout.compute(tree, cols, rows)
-
-    back = Buffer.new(cols, rows)
-    painted = Painter.paint(tagged, layout_results, back, opts)
-
-    ansi_output = ANSI.render_full(painted)
-
-    new_renderer = %{renderer | front: painted, frame_count: renderer.frame_count + 1}
-
-    {new_renderer, ANSI.frame([ANSI.clear_screen(), ansi_output])}
+  def render_full(%__MODULE__{} = renderer, tree, opts \\ []) do
+    {new_renderer, painted} = paint(renderer, tree, opts)
+    {new_renderer, ANSI.frame([ANSI.clear_screen(), ANSI.render_full(painted)])}
   end
 
   @doc "Resize the renderer. Next render will be a full redraw."
