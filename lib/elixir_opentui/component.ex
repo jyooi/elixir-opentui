@@ -76,7 +76,7 @@ defmodule ElixirOpentui.Component do
 
   # --- Shared widget helpers ---
 
-  @doc "True when `key` was added, removed, or changed between two prop maps."
+  @doc false
   @spec prop_changed?(map(), map(), term()) :: boolean()
   def prop_changed?(prev_props, new_props, key) do
     prev_has? = Map.has_key?(prev_props, key)
@@ -85,7 +85,7 @@ defmodule ElixirOpentui.Component do
     prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 
-  @doc "Copy prop `key` into state under `state_key` when it changed."
+  @doc false
   @spec sync_prop(map(), map(), map(), term(), term(), term()) :: map()
   def sync_prop(state, prev_props, new_props, key, default, state_key \\ nil) do
     if prop_changed?(prev_props, new_props, key) do
@@ -95,7 +95,7 @@ defmodule ElixirOpentui.Component do
     end
   end
 
-  @doc "Queue `{tag, args...}` in `_pending` when `tag` is set."
+  @doc false
   @spec emit(map(), term(), list()) :: map()
   def emit(state, nil, _args), do: state
 
@@ -103,7 +103,7 @@ defmodule ElixirOpentui.Component do
     %{state | _pending: [List.to_tuple([tag | args]) | state._pending]}
   end
 
-  @doc "Normalize a list of option strings or maps to `%{name, description, value}` maps."
+  @doc false
   @spec normalize_options([String.t() | map()]) :: [map()]
   def normalize_options(options), do: Enum.map(options, &normalize_option/1)
 
@@ -115,11 +115,7 @@ defmodule ElixirOpentui.Component do
     %{name: string, description: nil, value: nil}
   end
 
-  @doc """
-  Reconcile `:options` and `:selected` props into state.
-
-  Returns `{state, changed?}` where `changed?` is true when either prop changed.
-  """
+  @doc false
   @spec sync_options(map(), map(), map()) :: {map(), boolean()}
   def sync_options(state, prev_props, new_props) do
     {state, options_changed?} =
@@ -139,7 +135,7 @@ defmodule ElixirOpentui.Component do
     end
   end
 
-  @doc "Clamp `val` into `lo..hi`."
+  @doc false
   @spec clamp(number(), number(), number()) :: number()
   def clamp(val, lo, hi), do: max(lo, min(hi, val))
 end
