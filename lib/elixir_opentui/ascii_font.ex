@@ -36,27 +36,8 @@ defmodule ElixirOpentui.ASCIIFont do
   """
   @spec dimensions(String.t(), font_name()) :: {non_neg_integer(), non_neg_integer()}
   def dimensions(text, font) do
-    data = font_data(font)
-    height = data.lines
-
-    if text == "" do
-      {0, height}
-    else
-      chars = text |> String.upcase() |> String.graphemes()
-      letterspace = data.letterspace_size
-
-      width =
-        chars
-        |> Enum.with_index()
-        |> Enum.reduce(0, fn {char, idx}, acc ->
-          glyph = Map.get(data.chars, char)
-          char_width = glyph_width(glyph, data)
-          gap = if idx > 0, do: letterspace, else: 0
-          acc + char_width + gap
-        end)
-
-      {width, height}
-    end
+    [first_row | _] = lines = render_to_lines(text, font)
+    {String.length(first_row), length(lines)}
   end
 
   @doc """
@@ -66,25 +47,9 @@ defmodule ElixirOpentui.ASCIIFont do
   """
   @spec render_to_lines(String.t(), font_name()) :: [String.t()]
   def render_to_lines(text, font) do
-    data = font_data(font)
-
-    if text == "" do
-      List.duplicate("", data.lines)
-    else
-      chars = text |> String.upcase() |> String.graphemes()
-      letterspace_str = String.duplicate(" ", data.letterspace_size)
-
-      Enum.map(0..(data.lines - 1)//1, fn row ->
-        chars
-        |> Enum.with_index()
-        |> Enum.map(fn {char, _idx} ->
-          glyph = Map.get(data.chars, char)
-          row_data = glyph_row(glyph, data, row)
-          strip_color_tags(row_data)
-        end)
-        |> Enum.join(letterspace_str)
-      end)
-    end
+    {data, rows} = glyph_rows(text, font, &strip_color_tags/1)
+    letterspace_str = String.duplicate(" ", data.letterspace_size)
+    Enum.map(rows, &Enum.join(&1, letterspace_str))
   end
 
   @doc """
@@ -95,30 +60,20 @@ defmodule ElixirOpentui.ASCIIFont do
   """
   @spec render_to_segments(String.t(), font_name()) :: [[{String.t(), non_neg_integer()}]]
   def render_to_segments(text, font) do
-    data = font_data(font)
+    {data, rows} = glyph_rows(text, font, &parse_color_tags/1)
+    letterspace_str = String.duplicate(" ", data.letterspace_size)
 
-    if text == "" do
-      List.duplicate([], data.lines)
-    else
-      chars = text |> String.upcase() |> String.graphemes()
-      letterspace_str = String.duplicate(" ", data.letterspace_size)
-
-      Enum.map(0..(data.lines - 1)//1, fn row ->
-        chars
-        |> Enum.with_index()
-        |> Enum.flat_map(fn {char, idx} ->
-          glyph = Map.get(data.chars, char)
-          row_data = glyph_row(glyph, data, row)
-          segments = parse_color_tags(row_data)
-
-          if idx > 0 and letterspace_str != "" do
-            [{letterspace_str, 0} | segments]
-          else
-            segments
-          end
-        end)
+    Enum.map(rows, fn row ->
+      row
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {segments, idx} ->
+        if idx > 0 and letterspace_str != "" do
+          [{letterspace_str, 0} | segments]
+        else
+          segments
+        end
       end)
-    end
+    end)
   end
 
   @doc """
@@ -134,19 +89,8 @@ defmodule ElixirOpentui.ASCIIFont do
     ~r/<c(\d+)>(.*?)<\/c\d+>|([^<]+)/
     |> Regex.scan(str)
     |> Enum.map(fn
-      [_full, color_num, text, ""] ->
-        idx = max(0, String.to_integer(color_num) - 1)
-        {text, idx}
-
-      [_full, "", "", plain_text] ->
-        {plain_text, 0}
-
-      [_full, color_num, text] ->
-        idx = max(0, String.to_integer(color_num) - 1)
-        {text, idx}
-
-      [plain_text] ->
-        {plain_text, 0}
+      [_full, "", "", plain_text] -> {plain_text, 0}
+      [_full, color_num, text] -> {text, max(0, String.to_integer(color_num) - 1)}
     end)
     |> Enum.reject(fn {text, _} -> text == "" end)
   end
@@ -155,26 +99,17 @@ defmodule ElixirOpentui.ASCIIFont do
 
   # --- Private helpers ---
 
-  defp glyph_width(nil, data) do
-    # Unknown char: use space width
-    case Map.get(data.chars, " ") do
-      nil -> 1
-      space_glyph -> first_row_width(space_glyph, data)
-    end
-  end
+  # Apply `fun` to every glyph row of `text`, one list per font line.
+  defp glyph_rows(text, font, fun) do
+    data = font_data(font)
+    chars = text |> String.upcase() |> String.graphemes()
 
-  defp glyph_width(glyph, data) do
-    first_row_width(glyph, data)
-  end
+    rows =
+      Enum.map(0..(data.lines - 1)//1, fn row ->
+        Enum.map(chars, fn char -> fun.(glyph_row(Map.get(data.chars, char), data, row)) end)
+      end)
 
-  defp first_row_width(glyph, data) do
-    row_str = List.first(glyph) || ""
-
-    if data.colors > 1 do
-      strip_color_tags(row_str) |> grapheme_length()
-    else
-      grapheme_length(row_str)
-    end
+    {data, rows}
   end
 
   defp glyph_row(nil, data, row) do
@@ -193,9 +128,5 @@ defmodule ElixirOpentui.ASCIIFont do
     str
     |> String.replace(~r/<c\d+>/, "")
     |> String.replace(~r/<\/c\d+>/, "")
-  end
-
-  defp grapheme_length(str) do
-    String.graphemes(str) |> length()
   end
 end
