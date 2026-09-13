@@ -59,35 +59,13 @@ with a live counter you can increment and decrement with the arrow keys.
 - **Pure Elixir fallback** — everything works without the NIF too, just slower
 - **Animation system** — timeline-based with 25 easing functions, ~30 FPS live mode
 - **Syntax highlighting** — via Makeup, supports Elixir and TypeScript
-- **Markdown rendering** — via Earmark, headings, lists, code blocks, blockquotes
+- **Markdown rendering** — via EarmarkParser, headings, lists, code blocks, blockquotes
 - **Full input handling** — keyboard, mouse (SGR 1006), paste, Kitty keyboard protocol
 - **Terminal capability detection** — progressive enhancement based on what the terminal supports
 
 ## Installation
 
-Add `elixir_opentui` to your dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:elixir_opentui, "~> 0.1.0"}
-  ]
-end
-```
-
-Then fetch and set up:
-
-```bash
-mix deps.get
-mix zig.get    # downloads the Zig toolchain (required for NIF compilation)
-mix compile
-```
-
-### Requirements
-
-- **Elixir** ~> 1.19
-- **OTP 28+** — uses `:shell.start_interactive/1` for raw terminal mode
-- A terminal emulator that supports ANSI escape sequences (basically all of them)
+See the [Getting Started guide](guides/getting-started.md) for setup and requirements.
 
 ### Optional dependencies
 
@@ -96,7 +74,7 @@ These are optional and only needed if you use the corresponding widgets:
 ```elixir
 {:makeup, "~> 1.2", optional: true}          # for Code widget syntax highlighting
 {:makeup_elixir, "~> 1.0", optional: true}    # Elixir syntax highlighting
-{:earmark, "~> 1.4", optional: true}          # for Markdown widget
+{:earmark_parser, "~> 1.4", optional: true}   # for Markdown widget
 ```
 
 ## How it works
@@ -113,7 +91,7 @@ if you'd rather not compile native code.
 
 ## Demos
 
-The `demo/` directory has 17 runnable examples. Here are some highlights:
+The `demo/` directory has 20 runnable examples. Here are some highlights:
 
 ```bash
 mix run demo/widget_gallery.exs   # all widgets in one view
