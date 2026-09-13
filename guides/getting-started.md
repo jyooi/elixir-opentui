@@ -225,7 +225,7 @@ The pattern for any widget is the same:
 
 ## Next steps
 
-- Browse the `demo/` directory for more examples — there are 11 of them covering
+- Browse the `demo/` directory for more examples - there are 11 of them covering
   every widget and feature
 - Check out `demo/widget_gallery.exs` to see all the basic widgets together
 - Look at `demo/text_area_demo.exs` for multi-line editing with undo/redo
