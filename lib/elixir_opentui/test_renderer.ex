@@ -9,7 +9,6 @@ defmodule ElixirOpentui.TestRenderer do
   use GenServer
 
   alias ElixirOpentui.Buffer
-  alias ElixirOpentui.NativeBuffer
   alias ElixirOpentui.Element
   alias ElixirOpentui.Layout
   alias ElixirOpentui.Painter
@@ -22,8 +21,7 @@ defmodule ElixirOpentui.TestRenderer do
     :buffer,
     :prev_buffer,
     :layout_results,
-    :element_tree,
-    backend: :elixir
+    :element_tree
   ]
 
   # --- Public API ---
@@ -33,8 +31,7 @@ defmodule ElixirOpentui.TestRenderer do
   def start_link(opts \\ []) do
     cols = Keyword.get(opts, :cols, 80)
     rows = Keyword.get(opts, :rows, 24)
-    backend = Keyword.get(opts, :backend, :elixir)
-    GenServer.start_link(__MODULE__, {cols, rows, backend})
+    GenServer.start_link(__MODULE__, {cols, rows})
   end
 
   @doc "Render an element tree and return the buffer."
@@ -88,8 +85,8 @@ defmodule ElixirOpentui.TestRenderer do
   # --- GenServer callbacks ---
 
   @impl true
-  def init({cols, rows, backend}) do
-    buffer = make_buffer(backend, cols, rows)
+  def init({cols, rows}) do
+    buffer = Buffer.new(cols, rows)
 
     {:ok,
      %__MODULE__{
@@ -98,8 +95,7 @@ defmodule ElixirOpentui.TestRenderer do
        buffer: buffer,
        prev_buffer: nil,
        layout_results: %{},
-       element_tree: nil,
-       backend: backend
+       element_tree: nil
      }}
   end
 
@@ -107,7 +103,7 @@ defmodule ElixirOpentui.TestRenderer do
   def handle_call({:render, element}, _from, state) do
     {tagged_tree, layout_results} = Layout.compute(element, state.cols, state.rows)
 
-    buffer = make_buffer(state.backend, state.cols, state.rows)
+    buffer = Buffer.new(state.cols, state.rows)
     buffer = Painter.paint(tagged_tree, layout_results, buffer)
 
     {:reply, buffer,
@@ -125,33 +121,27 @@ defmodule ElixirOpentui.TestRenderer do
   end
 
   def handle_call(:get_frame, _from, state) do
-    {:reply, buf_mod(state.backend).to_strings(state.buffer), state}
+    {:reply, Buffer.to_strings(state.buffer), state}
   end
 
   def handle_call({:get_cell, x, y}, _from, state) do
-    {:reply, buf_mod(state.backend).get_cell(state.buffer, x, y), state}
+    {:reply, Buffer.get_cell(state.buffer, x, y), state}
   end
 
   def handle_call({:get_hit_id, x, y}, _from, state) do
-    {:reply, buf_mod(state.backend).get_hit_id(state.buffer, x, y), state}
+    {:reply, Buffer.get_hit_id(state.buffer, x, y), state}
   end
 
   def handle_call({:resize, cols, rows}, _from, state) do
-    buffer = make_buffer(state.backend, cols, rows)
+    buffer = Buffer.new(cols, rows)
     {:reply, :ok, %{state | cols: cols, rows: rows, buffer: buffer, prev_buffer: nil}}
   end
 
   def handle_call(:clear, _from, state) do
-    {:reply, :ok, %{state | buffer: buf_mod(state.backend).clear(state.buffer)}}
+    {:reply, :ok, %{state | buffer: Buffer.clear(state.buffer)}}
   end
 
   def handle_call(:get_layout, _from, state) do
     {:reply, state.layout_results, state}
   end
-
-  defp buf_mod(:native), do: NativeBuffer
-  defp buf_mod(_), do: Buffer
-
-  defp make_buffer(:native, cols, rows), do: NativeBuffer.new(cols, rows)
-  defp make_buffer(_, cols, rows), do: Buffer.new(cols, rows)
 end

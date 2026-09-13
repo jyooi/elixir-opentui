@@ -24,7 +24,6 @@ defmodule ElixirOpentui.Runtime do
     EventManager,
     Element,
     Buffer,
-    NativeBuffer,
     Layout,
     Painter,
     Focus
@@ -50,7 +49,6 @@ defmodule ElixirOpentui.Runtime do
           tree: Element.t() | nil,
           mode: :live | :headless,
           on_event: (term() -> :ok) | nil,
-          backend: :elixir | :zig,
           control_state: :idle | :running | :stopping,
           target_fps: pos_integer(),
           target_frame_time: pos_integer(),
@@ -71,7 +69,6 @@ defmodule ElixirOpentui.Runtime do
     :on_event,
     component_states: %{},
     mode: :headless,
-    backend: :elixir,
     control_state: :idle,
     target_fps: 30,
     target_frame_time: 33,
@@ -224,13 +221,11 @@ defmodule ElixirOpentui.Runtime do
     rows = Keyword.get(opts, :rows, 24)
     mode = Keyword.get(opts, :mode, :headless)
     on_event = Keyword.get(opts, :on_event)
-    backend = Keyword.get(opts, :backend, :elixir)
 
     state = %__MODULE__{
-      renderer: Renderer.new(cols, rows, backend: backend),
+      renderer: Renderer.new(cols, rows),
       mode: mode,
-      on_event: on_event,
-      backend: backend
+      on_event: on_event
     }
 
     {:ok, state}
@@ -260,7 +255,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   def handle_call(:get_frame, _from, state) do
-    frame = buffer_mod(state).to_strings(state.renderer.front)
+    frame = Buffer.to_strings(state.renderer.front)
     {:reply, frame, state}
   end
 
@@ -593,9 +588,8 @@ defmodule ElixirOpentui.Runtime do
     {tree, comp_states} = resolve_components(tree, state.component_states, %{})
 
     {tagged, layout_results} = Layout.compute(tree, state.renderer.cols, state.renderer.rows)
-    buffer = new_buffer(state)
+    buffer = Buffer.new(state.renderer.cols, state.renderer.rows)
     buffer = Painter.paint(tagged, layout_results, buffer)
-    buffer = finalize_buffer(state, buffer)
 
     em =
       if state.event_manager do
@@ -604,7 +598,7 @@ defmodule ElixirOpentui.Runtime do
         EventManager.new(tree, buffer)
       end
 
-    renderer = update_renderer_front(state.renderer, buffer)
+    renderer = %{state.renderer | front: buffer, frame_count: state.renderer.frame_count + 1}
 
     %{
       state
@@ -619,33 +613,6 @@ defmodule ElixirOpentui.Runtime do
     state
     |> do_render()
     |> reconcile_tick_loop()
-  end
-
-  defp buffer_mod(%{backend: :native}), do: NativeBuffer
-  defp buffer_mod(_state), do: Buffer
-
-  defp new_buffer(%{backend: :native, renderer: %{cols: cols, rows: rows}}) do
-    nbuf = NativeBuffer.new(cols, rows)
-    NativeBuffer.clear(nbuf)
-  end
-
-  defp new_buffer(%{renderer: %{cols: cols, rows: rows}}) do
-    Buffer.new(cols, rows)
-  end
-
-  defp finalize_buffer(%{backend: :native}, %NativeBuffer{} = nbuf) do
-    {nbuf, _ansi} = NativeBuffer.render_frame_capture(nbuf)
-    nbuf
-  end
-
-  defp finalize_buffer(_state, buffer), do: buffer
-
-  defp update_renderer_front(%{backend: :native} = renderer, nbuf) do
-    %{renderer | native_buf: nbuf, front: nbuf, frame_count: renderer.frame_count + 1}
-  end
-
-  defp update_renderer_front(renderer, buffer) do
-    %{renderer | front: buffer, frame_count: renderer.frame_count + 1}
   end
 
   defp tick_all(state, dt) do

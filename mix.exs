@@ -71,7 +71,6 @@ defmodule ElixirOpentui.MixProject do
         Rendering: [
           ElixirOpentui.Renderer,
           ElixirOpentui.Buffer,
-          ElixirOpentui.NativeBuffer,
           ElixirOpentui.Painter,
           ElixirOpentui.ANSI
         ],

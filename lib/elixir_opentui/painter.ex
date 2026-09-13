@@ -5,14 +5,10 @@ defmodule ElixirOpentui.Painter do
   Walks the element tree in z-order (painter's algorithm), writing
   characters and colors into the cell buffer. Each element type has
   its own painting logic.
-
-  Supports both Buffer (pure Elixir) and NativeBuffer (NIF-backed) via
-  polymorphic dispatch through buffer_mod/1.
   """
 
   alias ElixirOpentui.Border
   alias ElixirOpentui.Buffer
-  alias ElixirOpentui.NativeBuffer
   alias ElixirOpentui.Color
   alias ElixirOpentui.Element
   alias ElixirOpentui.Layout.Rect
@@ -71,7 +67,6 @@ defmodule ElixirOpentui.Painter do
   end
 
   defp buffer_mod(%Buffer{}), do: Buffer
-  defp buffer_mod(%NativeBuffer{}), do: NativeBuffer
 
   defp paint_node(%Element{} = el, layout, buf, parent_opacity, focus_id) do
     ref = el.attrs[:_layout_ref]

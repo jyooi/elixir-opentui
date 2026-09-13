@@ -11,11 +11,6 @@ defmodule ElixirOpentui.Precompiled do
   @version Mix.Project.config()[:version]
   @base_url "https://github.com/jyooi/elixir-opentui/releases/download/v#{@version}"
 
-  @doc "Precompiled config for ElixirOpentui.NIF"
-  def nif_precompiled do
-    {:web, "#{@base_url}/Elixir.ElixirOpentui.NIF.#TRIPLE.#EXT", nif_shasums()}
-  end
-
   @doc "Precompiled config for ElixirOpentui.EditBufferNIF"
   def edit_buffer_nif_precompiled do
     {:web, "#{@base_url}/Elixir.ElixirOpentui.EditBufferNIF.#TRIPLE.#EXT",
@@ -24,19 +19,6 @@ defmodule ElixirOpentui.Precompiled do
 
   # Populated by CI after running `mix zig.precompile`.
   # Platforms not listed fall back to source compilation.
-  defp nif_shasums do
-    [
-      "aarch64-freebsd-none": "1fea53c5c9855f338d1e58b31b40f0784aca8390c009fe6c0549f8a8ae150491",
-      "aarch64-linux-gnu": "a88ce74c21f2a2d880856ec6ae367b111b35d2e6efd861b9afaaa294317c40ee",
-      "aarch64-linux-musl": "76e0c8681bfa6d9894cb82a765f4352c2b650d4ee19c61a957a2b932facfcdff",
-      "aarch64-macos-none": "19269f62a612c6e6fe716fe997f189bcf49bae1c2842760ff817c286e0b69958",
-      "x86_64-freebsd-none": "43a3b78153ab0bb99c33c875f624406216b6f076bfef5f2ea02e500c4be81e15",
-      "x86_64-linux-gnu": "2d4d5d8d030005803dccc0d3dfd9fb3003ed4139c1b6eb124dc98a11db072970",
-      "x86_64-linux-musl": "a61910db7a9a8e7c2f8eb71bc10ce1cf10201a62c1740fc8a8a82c454690abf8",
-      "x86_64-macos-none": "03639503a396dd386f4a21bb981af5b06d5dc944cbd91304bb76a4eaa86826aa"
-    ]
-  end
-
   defp edit_buffer_nif_shasums do
     [
       "aarch64-freebsd-none": "11065a7e2c2bdf65ab708decbcec5d13a55cb41f429e049cb8ce68e1b66b78e1",

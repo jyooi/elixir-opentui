@@ -7,8 +7,6 @@ defmodule ElixirOpentui.Buffer do
   to produce minimal ANSI output.
   """
 
-  @behaviour ElixirOpentui.BufferBehaviour
-
   alias ElixirOpentui.{Color, TextBuffer}
 
   @type cell :: %{

@@ -2,16 +2,16 @@ defmodule ElixirOpentui.Accessibility do
   @moduledoc """
   Semantic snapshot of the UI for agent / programmatic consumption.
 
-  Unlike `Buffer` / `NativeBuffer` (which produce cells), this module produces
+  Unlike `Buffer` (which produces cells), this module produces
   a tree of semantic nodes: widget type, id, role, current value, focus state.
   Agents read `snapshot/1` to perceive the UI and dispatch actions through
   `Runtime` to act on it — no ANSI parsing required.
 
-  ## Why this is NOT a BufferBehaviour
+  ## Why this is NOT a Buffer
 
-  The buffer abstraction is coordinate-based (draw_char, fill_rect). An agent
+  The buffer is coordinate-based (draw_char, fill_rect). An agent
   tree is structural (parent/child) and semantic (role/value/state). Forcing
-  it through BufferBehaviour would throw away the very information agents need.
+  it through Buffer would throw away the very information agents need.
   """
 
   alias ElixirOpentui.{Element, Runtime}

@@ -27,7 +27,7 @@ effect with no polling needed.
 
 | Function | Purpose |
 |---|---|
-| `Runtime.start_link(opts)` | Start a Runtime GenServer. `opts` accepts `cols:`, `rows:`, `mode: :headless \| :live`, `backend: :elixir \| :zig`. |
+| `Runtime.start_link(opts)` | Start a Runtime GenServer. `opts` accepts `cols:`, `rows:`, `mode: :headless \| :live`. |
 | `Runtime.mount(server, app_module, props \\ %{})` | Initialize with a root component module. |
 | `Runtime.snapshot(server)` | Return the full semantic snapshot. |
 | `Runtime.dispatch(server, action)` | Apply one action. Returns `:ok`. |

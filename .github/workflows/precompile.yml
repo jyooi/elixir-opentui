@@ -33,9 +33,6 @@ jobs:
       - name: Compile project
         run: mix compile
 
-      - name: Precompile NIF
-        run: mix run scripts/precompile.exs lib/elixir_opentui/nif.ex 2>&1 | tee /tmp/nif_precompile.log
-
       - name: Precompile EditBufferNIF
         run: mix run scripts/precompile.exs lib/elixir_opentui/edit_buffer_nif.ex 2>&1 | tee /tmp/edit_buffer_precompile.log
 
