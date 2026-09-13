@@ -245,6 +245,16 @@ defmodule ElixirOpentui.Animation.TimelineTest do
   # ── Alternating Animations ───────────────────────────────────────────
 
   describe "Alternating Animations" do
+    test "timeline-level alternate reverses items on each timeline loop" do
+      tl =
+        new_timeline(duration: 1000, loop: true, alternate: true)
+        |> Timeline.add(:x, from: 0, to: 100)
+        |> Timeline.play()
+        |> Timeline.advance(1250)
+
+      assert Timeline.value(tl, :x) == 75
+    end
+
     test "should alternate direction with each loop" do
       tl =
         new_timeline(duration: 5000)

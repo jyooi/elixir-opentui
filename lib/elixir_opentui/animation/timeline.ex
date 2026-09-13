@@ -468,7 +468,7 @@ defmodule ElixirOpentui.Animation.Timeline do
       tl.loop == true ->
         # Infinite loop
         overshoot = elapsed - dur
-        items = Enum.map(tl.items, &reset_item/1)
+        items = reset_items_for_loop(tl)
 
         if overshoot > 0 do
           once_values = collect_once_values(tl)
@@ -492,7 +492,7 @@ defmodule ElixirOpentui.Animation.Timeline do
       is_integer(tl.loop) and tl.loop_count + 1 < tl.loop ->
         # Finite loop, not yet exhausted
         overshoot = elapsed - dur
-        items = Enum.map(tl.items, &reset_item/1)
+        items = reset_items_for_loop(tl)
 
         if overshoot > 0 do
           once_values = collect_once_values(tl)
@@ -522,6 +522,16 @@ defmodule ElixirOpentui.Animation.Timeline do
   end
 
   defp handle_completion(tl), do: tl
+
+  defp reset_items_for_loop(tl) do
+    items = Enum.map(tl.items, &reset_item/1)
+    if tl.alternate, do: Enum.map(items, &reverse_item/1), else: items
+  end
+
+  defp reverse_item(%{type: :animation, once: false} = item),
+    do: %{item | from: item.to, to: item.from}
+
+  defp reverse_item(item), do: item
 
   defp reset_item(%{type: :animation, once: true} = item) do
     # Once-animations survive timeline loops — don't reset
