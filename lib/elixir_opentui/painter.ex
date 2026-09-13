@@ -653,7 +653,7 @@ defmodule ElixirOpentui.Painter do
             gutter_width - TextBuffer.display_width(sign_before) -
               TextBuffer.display_width(sign_after) - 1
 
-          padded_num = TextBuffer.pad_leading_columns(num_str, max(1, num_w))
+          padded_num = String.pad_leading(num_str, max(1, num_w))
 
           full_str =
             TextBuffer.slice_columns(
@@ -1100,7 +1100,7 @@ defmodule ElixirOpentui.Painter do
 
       b =
         if show_line_numbers do
-          num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
+          num_str = String.pad_leading(to_string(line_idx + 1), digits)
           Buffer.draw_text(b, x, y + row, num_str <> "  ", gutter_fg, bg)
         else
           b
@@ -1171,10 +1171,10 @@ defmodule ElixirOpentui.Painter do
             new_num = Map.get(line, :new_line)
 
             old_str =
-              if old_num, do: TextBuffer.pad_leading_columns(to_string(old_num), 4), else: "    "
+              if old_num, do: String.pad_leading(to_string(old_num), 4), else: "    "
 
             new_str =
-              if new_num, do: TextBuffer.pad_leading_columns(to_string(new_num), 4), else: "    "
+              if new_num, do: String.pad_leading(to_string(new_num), 4), else: "    "
 
             Buffer.draw_text(b, x, y + row, old_str <> " " <> new_str, gutter_fg, line_bg)
           else
@@ -1240,7 +1240,7 @@ defmodule ElixirOpentui.Painter do
     b =
       if gutter_w do
         num_str =
-          if num, do: TextBuffer.pad_leading_columns(to_string(num), 4) <> " ", else: "     "
+          if num, do: String.pad_leading(to_string(num), 4) <> " ", else: "     "
 
         Buffer.draw_text(b, sx, sy, num_str, colors.gutter_fg, side_bg)
       else

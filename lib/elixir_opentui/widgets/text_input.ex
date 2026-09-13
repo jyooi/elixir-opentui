@@ -257,14 +257,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
     end
   end
 
-  defp split_at_cursor(state) do
-    before = String.slice(state.value, 0, state.cursor_pos)
-
-    after_cursor =
-      String.slice(state.value, state.cursor_pos, String.length(state.value) - state.cursor_pos)
-
-    {before, after_cursor}
-  end
+  defp split_at_cursor(state), do: String.split_at(state.value, state.cursor_pos)
 
   defp adjust_scroll(state) do
     w = state.width
