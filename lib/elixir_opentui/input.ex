@@ -227,13 +227,13 @@ defmodule ElixirOpentui.Input do
 
   # Bare escape
   defp parse_loop(<<"\e">>, acc) do
-    [%{type: :key, key: :escape, ctrl: false, alt: false, shift: false, meta: false} | acc]
+    [key(:escape) | acc]
     |> Enum.reverse()
   end
 
   defp parse_loop(<<"\e", rest::binary>>, acc) do
     parse_loop(rest, [
-      %{type: :key, key: :escape, ctrl: false, alt: false, shift: false, meta: false} | acc
+      key(:escape) | acc
     ])
   end
 
@@ -247,9 +247,9 @@ defmodule ElixirOpentui.Input do
 
     event =
       case char do
-        9 -> %{type: :key, key: :tab, ctrl: false, alt: false, shift: false, meta: false}
-        10 -> %{type: :key, key: :enter, ctrl: false, alt: false, shift: false, meta: false}
-        13 -> %{type: :key, key: :enter, ctrl: false, alt: false, shift: false, meta: false}
+        9 -> key(:tab)
+        10 -> key(:enter)
+        13 -> key(:enter)
         _ -> ctrl_key(letter)
       end
 
@@ -259,7 +259,7 @@ defmodule ElixirOpentui.Input do
   # Backspace / Delete
   defp parse_loop(<<127, rest::binary>>, acc) do
     parse_loop(rest, [
-      %{type: :key, key: :backspace, ctrl: false, alt: false, shift: false, meta: false} | acc
+      key(:backspace) | acc
     ])
   end
 
@@ -268,9 +268,7 @@ defmodule ElixirOpentui.Input do
     key = <<char::utf8>>
     shift = char in ?A..?Z
 
-    parse_loop(rest, [
-      %{type: :key, key: key, ctrl: false, alt: false, shift: shift, meta: false} | acc
-    ])
+    parse_loop(rest, [%{key(key) | shift: shift} | acc])
   end
 
   # Skip unrecognized bytes
@@ -317,7 +315,7 @@ defmodule ElixirOpentui.Input do
   defp csi_to_event(_params, "F"), do: key(:end)
 
   defp csi_to_event(_params, "Z"),
-    do: %{type: :key, key: :tab, ctrl: false, alt: false, shift: true, meta: false}
+    do: %{key(:tab) | shift: true}
 
   # --- Tilde-terminated sequences ---
   # Clause ordering (most-specific first, Elixir matches top-down):
@@ -330,7 +328,7 @@ defmodule ElixirOpentui.Input do
     keycode = to_integer(keycode_str, 0)
     mod_value = to_integer(mod_str, 1)
     key_name = modify_other_keys_to_key(keycode)
-    event = %{type: :key, key: key_name, ctrl: false, alt: false, shift: false, meta: false}
+    event = key(key_name)
     apply_modifier(event, mod_value)
   end
 
@@ -484,7 +482,7 @@ defmodule ElixirOpentui.Input do
 
     key_name = kitty_codepoint_to_key(codepoint)
 
-    event = %{type: :key, key: key_name, ctrl: false, alt: false, shift: false, meta: false}
+    event = key(key_name)
 
     if mod_str do
       {mod_value, event_type} = split_modifier_event_type(mod_str)
