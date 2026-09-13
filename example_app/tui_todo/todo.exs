@@ -334,4 +334,4 @@ defmodule TodoApp do
   end
 end
 
-ElixirOpentui.Demo.DemoRunner.run(TodoApp)
+ElixirOpentui.DemoRunner.run(TodoApp)

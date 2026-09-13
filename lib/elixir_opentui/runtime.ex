@@ -49,7 +49,6 @@ defmodule ElixirOpentui.Runtime do
           event_manager: EventManager.state(),
           tree: Element.t() | nil,
           mode: :live | :headless,
-          terminal: GenServer.server() | nil,
           on_event: (term() -> :ok) | nil,
           backend: :elixir | :zig,
           control_state: :idle | :running | :stopping,
