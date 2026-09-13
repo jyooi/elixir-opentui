@@ -51,7 +51,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       editor_view: editor_view,
       selection: nil,
       scroll_y: 0,
-      scroll_x: 0,
       wrap: wrap,
       _pending: []
     }
@@ -174,51 +173,51 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
     case {key, ctrl, alt, shift, super_} do
       # Movement
-      {:left, false, false, false, false} -> :move_left
-      {:right, false, false, false, false} -> :move_right
-      {:up, false, false, false, false} -> :move_up
-      {:down, false, false, false, false} -> :move_down
-      {"f", true, false, false, false} -> :move_right
-      {"b", true, false, false, false} -> :move_left
+      {:left, false, false, false, false} -> {:move, :left}
+      {:right, false, false, false, false} -> {:move, :right}
+      {:up, false, false, false, false} -> {:move, :up}
+      {:down, false, false, false, false} -> {:move, :down}
+      {"f", true, false, false, false} -> {:move, :right}
+      {"b", true, false, false, false} -> {:move, :left}
       # Selection (shift+movement)
-      {:left, false, false, true, false} -> :select_left
-      {:right, false, false, true, false} -> :select_right
-      {:up, false, false, true, false} -> :select_up
-      {:down, false, false, true, false} -> :select_down
+      {:left, false, false, true, false} -> {:select, :left}
+      {:right, false, false, true, false} -> {:select, :right}
+      {:up, false, false, true, false} -> {:select, :up}
+      {:down, false, false, true, false} -> {:select, :down}
       # Line home/end (logical)
-      {"a", true, false, false, false} -> :line_home
-      {"e", true, false, false, false} -> :line_end
-      {"a", true, false, true, false} -> :select_line_home
-      {"e", true, false, true, false} -> :select_line_end
+      {"a", true, false, false, false} -> {:move, :line_home}
+      {"e", true, false, false, false} -> {:move, :line_end}
+      {"a", true, false, true, false} -> {:select, :line_home}
+      {"e", true, false, true, false} -> {:select, :line_end}
       # Visual line home/end
-      {"a", false, true, false, false} -> :visual_line_home
-      {"e", false, true, false, false} -> :visual_line_end
-      {"a", false, true, true, false} -> :select_visual_line_home
-      {"e", false, true, true, false} -> :select_visual_line_end
-      {:left, false, false, false, true} -> :visual_line_home
-      {:right, false, false, false, true} -> :visual_line_end
-      {:left, false, false, true, true} -> :select_visual_line_home
-      {:right, false, false, true, true} -> :select_visual_line_end
+      {"a", false, true, false, false} -> {:move, :visual_line_home}
+      {"e", false, true, false, false} -> {:move, :visual_line_end}
+      {"a", false, true, true, false} -> {:select, :visual_line_home}
+      {"e", false, true, true, false} -> {:select, :visual_line_end}
+      {:left, false, false, false, true} -> {:move, :visual_line_home}
+      {:right, false, false, false, true} -> {:move, :visual_line_end}
+      {:left, false, false, true, true} -> {:select, :visual_line_home}
+      {:right, false, false, true, true} -> {:select, :visual_line_end}
       # Buffer home/end
-      {:home, false, false, false, false} -> :buffer_home
-      {:end, false, false, false, false} -> :buffer_end
-      {:home, false, false, true, false} -> :select_buffer_home
-      {:end, false, false, true, false} -> :select_buffer_end
-      {:up, false, false, false, true} -> :buffer_home
-      {:down, false, false, false, true} -> :buffer_end
-      {:up, false, false, true, true} -> :select_buffer_home
-      {:down, false, false, true, true} -> :select_buffer_end
+      {:home, false, false, false, false} -> {:move, :buffer_home}
+      {:end, false, false, false, false} -> {:move, :buffer_end}
+      {:home, false, false, true, false} -> {:select, :buffer_home}
+      {:end, false, false, true, false} -> {:select, :buffer_end}
+      {:up, false, false, false, true} -> {:move, :buffer_home}
+      {:down, false, false, false, true} -> {:move, :buffer_end}
+      {:up, false, false, true, true} -> {:select, :buffer_home}
+      {:down, false, false, true, true} -> {:select, :buffer_end}
       # Word movement
-      {"f", false, true, false, false} -> :word_forward
-      {"b", false, true, false, false} -> :word_backward
-      {:right, false, true, false, false} -> :word_forward
-      {:left, false, true, false, false} -> :word_backward
-      {:right, true, false, false, false} -> :word_forward
-      {:left, true, false, false, false} -> :word_backward
-      {"f", false, true, true, false} -> :select_word_forward
-      {"b", false, true, true, false} -> :select_word_backward
-      {:right, false, true, true, false} -> :select_word_forward
-      {:left, false, true, true, false} -> :select_word_backward
+      {"f", false, true, false, false} -> {:move, :word_forward}
+      {"b", false, true, false, false} -> {:move, :word_backward}
+      {:right, false, true, false, false} -> {:move, :word_forward}
+      {:left, false, true, false, false} -> {:move, :word_backward}
+      {:right, true, false, false, false} -> {:move, :word_forward}
+      {:left, true, false, false, false} -> {:move, :word_backward}
+      {"f", false, true, true, false} -> {:select, :word_forward}
+      {"b", false, true, true, false} -> {:select, :word_backward}
+      {:right, false, true, true, false} -> {:select, :word_forward}
+      {:left, false, true, true, false} -> {:select, :word_backward}
       # Deletion
       {:backspace, false, false, false, false} -> :backspace
       {:backspace, false, false, true, false} -> :backspace
@@ -259,191 +258,15 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp execute_action(:noop, _event, state), do: state
 
-  # Movement actions
-  defp execute_action(:move_left, _event, state) do
-    state = collapse_selection_to(:start, state)
-    EditBufferNIF.move_cursor_left(state.edit_buffer)
+  defp execute_action({:move, motion}, _event, state) do
+    state = collapse_selection_for(motion, state)
+    move_cursor(motion, state)
     sync_scroll(state)
   end
 
-  defp execute_action(:move_right, _event, state) do
-    state = collapse_selection_to(:end, state)
-    EditBufferNIF.move_cursor_right(state.edit_buffer)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:move_up, _event, state) do
-    state = collapse_selection(state)
-    EditBufferNIF.view_move_up_visual(state.editor_view)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:move_down, _event, state) do
-    state = collapse_selection(state)
-    EditBufferNIF.view_move_down_visual(state.editor_view)
-    sync_scroll(state)
-  end
-
-  # Selection movement
-  defp execute_action(:select_left, _event, state) do
+  defp execute_action({:select, motion}, _event, state) do
     state = start_or_continue_selection(state)
-    EditBufferNIF.move_cursor_left(state.edit_buffer)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_right, _event, state) do
-    state = start_or_continue_selection(state)
-    EditBufferNIF.move_cursor_right(state.edit_buffer)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_up, _event, state) do
-    state = start_or_continue_selection(state)
-    EditBufferNIF.view_move_up_visual(state.editor_view)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_down, _event, state) do
-    state = start_or_continue_selection(state)
-    EditBufferNIF.view_move_down_visual(state.editor_view)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  # Line home/end
-  defp execute_action(:line_home, _event, state) do
-    state = collapse_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_eol(state.editor_view)
-    {row, _col, _off} = EditBufferNIF.get_cursor(state.edit_buffer)
-    EditBufferNIF.set_cursor(state.edit_buffer, row, 0)
-    _ = offset
-    sync_scroll(state)
-  end
-
-  defp execute_action(:line_end, _event, state) do
-    state = collapse_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_eol(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:select_line_home, _event, state) do
-    state = start_or_continue_selection(state)
-    {row, _col, _off} = EditBufferNIF.get_cursor(state.edit_buffer)
-    EditBufferNIF.set_cursor(state.edit_buffer, row, 0)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_line_end, _event, state) do
-    state = start_or_continue_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_eol(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  # Visual line home/end
-  defp execute_action(:visual_line_home, _event, state) do
-    state = collapse_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_sol(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:visual_line_end, _event, state) do
-    state = collapse_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_eol(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:select_visual_line_home, _event, state) do
-    state = start_or_continue_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_sol(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_visual_line_end, _event, state) do
-    state = start_or_continue_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_eol(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  # Buffer home/end
-  defp execute_action(:buffer_home, _event, state) do
-    state = collapse_selection(state)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, 0)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:buffer_end, _event, state) do
-    state = collapse_selection(state)
-    display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:select_buffer_home, _event, state) do
-    state = start_or_continue_selection(state)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, 0)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_buffer_end, _event, state) do
-    state = start_or_continue_selection(state)
-    display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  # Word movement
-  defp execute_action(:word_forward, _event, state) do
-    state = collapse_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_next_word_boundary(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:word_backward, _event, state) do
-    state = collapse_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_prev_word_boundary(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-    sync_scroll(state)
-  end
-
-  defp execute_action(:select_word_forward, _event, state) do
-    state = start_or_continue_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_next_word_boundary(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-
-    update_selection_focus(state)
-    |> sync_scroll()
-  end
-
-  defp execute_action(:select_word_backward, _event, state) do
-    state = start_or_continue_selection(state)
-    {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_prev_word_boundary(state.editor_view)
-    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+    move_cursor(motion, state)
 
     update_selection_focus(state)
     |> sync_scroll()
@@ -614,6 +437,43 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp handle_mouse(_event, state), do: state
 
+  # --- Cursor motion ---
+
+  defp collapse_selection_for(:left, state), do: collapse_selection_to(:start, state)
+  defp collapse_selection_for(:right, state), do: collapse_selection_to(:end, state)
+  defp collapse_selection_for(_motion, state), do: collapse_selection(state)
+
+  defp move_cursor(:left, state), do: EditBufferNIF.move_cursor_left(state.edit_buffer)
+  defp move_cursor(:right, state), do: EditBufferNIF.move_cursor_right(state.edit_buffer)
+  defp move_cursor(:up, state), do: EditBufferNIF.view_move_up_visual(state.editor_view)
+  defp move_cursor(:down, state), do: EditBufferNIF.view_move_down_visual(state.editor_view)
+
+  defp move_cursor(:line_home, state) do
+    {row, _col, _off} = EditBufferNIF.get_cursor(state.edit_buffer)
+    EditBufferNIF.set_cursor(state.edit_buffer, row, 0)
+  end
+
+  defp move_cursor(:buffer_home, state),
+    do: EditBufferNIF.set_cursor_by_offset(state.edit_buffer, 0)
+
+  defp move_cursor(:buffer_end, state) do
+    display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
+    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
+  end
+
+  defp move_cursor(motion, state) do
+    {_vr, _vc, _lr, _lc, offset} =
+      case motion do
+        :line_end -> EditBufferNIF.view_get_eol(state.editor_view)
+        :visual_line_home -> EditBufferNIF.view_get_visual_sol(state.editor_view)
+        :visual_line_end -> EditBufferNIF.view_get_visual_eol(state.editor_view)
+        :word_forward -> EditBufferNIF.view_get_next_word_boundary(state.editor_view)
+        :word_backward -> EditBufferNIF.view_get_prev_word_boundary(state.editor_view)
+      end
+
+    EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
+  end
+
   # --- Selection helpers ---
 
   defp has_selection?(%{selection: nil}), do: false
@@ -707,7 +567,7 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp sync_scroll(state) do
     case EditBufferNIF.view_get_viewport(state.editor_view) do
-      {ox, oy, _w, _h} -> %{state | scroll_x: ox, scroll_y: oy}
+      {_ox, oy, _w, _h} -> %{state | scroll_y: oy}
       nil -> state
     end
   end
