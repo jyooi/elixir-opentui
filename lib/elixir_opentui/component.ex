@@ -73,4 +73,69 @@ defmodule ElixirOpentui.Component do
       @behaviour ElixirOpentui.Component
     end
   end
+
+  # --- Shared widget helpers ---
+
+  @doc false
+  @spec prop_changed?(map(), map(), term()) :: boolean()
+  def prop_changed?(prev_props, new_props, key) do
+    prev_has? = Map.has_key?(prev_props, key)
+    new_has? = Map.has_key?(new_props, key)
+
+    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
+  end
+
+  @doc false
+  @spec sync_prop(map(), map(), map(), term(), term(), term()) :: map()
+  def sync_prop(state, prev_props, new_props, key, default, state_key \\ nil) do
+    if prop_changed?(prev_props, new_props, key) do
+      Map.put(state, state_key || key, Map.get(new_props, key, default))
+    else
+      state
+    end
+  end
+
+  @doc false
+  @spec emit(map(), term(), list()) :: map()
+  def emit(state, nil, _args), do: state
+
+  def emit(state, tag, args) do
+    %{state | _pending: [List.to_tuple([tag | args]) | state._pending]}
+  end
+
+  @doc false
+  @spec normalize_options([String.t() | map()]) :: [map()]
+  def normalize_options(options), do: Enum.map(options, &normalize_option/1)
+
+  defp normalize_option(%{name: _} = opt) do
+    Map.merge(%{name: "", description: nil, value: nil}, opt)
+  end
+
+  defp normalize_option(string) when is_binary(string) do
+    %{name: string, description: nil, value: nil}
+  end
+
+  @doc false
+  @spec sync_options(map(), map(), map()) :: {map(), boolean()}
+  def sync_options(state, prev_props, new_props) do
+    {state, options_changed?} =
+      if prop_changed?(prev_props, new_props, :options) do
+        options = normalize_options(Map.get(new_props, :options, []))
+        selected = min(state.selected, max(0, length(options) - 1))
+        {%{state | options: options, selected: selected}, true}
+      else
+        {state, false}
+      end
+
+    if prop_changed?(prev_props, new_props, :selected) do
+      selected = clamp(Map.get(new_props, :selected, 0), 0, max(0, length(state.options) - 1))
+      {%{state | selected: selected}, true}
+    else
+      {state, options_changed?}
+    end
+  end
+
+  @doc false
+  @spec clamp(number(), number(), number()) :: number()
+  def clamp(val, lo, hi), do: max(lo, min(hi, val))
 end

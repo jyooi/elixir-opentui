@@ -114,25 +114,15 @@ defmodule ElixirOpentui.Style do
   @spec from_attrs(keyword()) :: t()
   def from_attrs(attrs) when is_list(attrs) do
     attrs
-    |> normalize_padding()
-    |> normalize_margin()
+    |> normalize_quad(:padding)
+    |> normalize_quad(:margin)
     |> then(&struct(__MODULE__, &1))
   end
 
-  defp normalize_padding(attrs) do
-    case Keyword.get(attrs, :padding) do
-      nil -> attrs
-      n when is_integer(n) -> Keyword.put(attrs, :padding, {n, n, n, n})
-      {_t, _r, _b, _l} = quad -> Keyword.put(attrs, :padding, quad)
-      _ -> attrs
-    end
-  end
-
-  defp normalize_margin(attrs) do
-    case Keyword.get(attrs, :margin) do
-      nil -> attrs
-      n when is_integer(n) -> Keyword.put(attrs, :margin, {n, n, n, n})
-      {_t, _r, _b, _l} = quad -> Keyword.put(attrs, :margin, quad)
+  defp normalize_quad(attrs, key) do
+    case Keyword.get(attrs, key) do
+      n when is_integer(n) -> Keyword.put(attrs, key, {n, n, n, n})
+      {_t, _r, _b, _l} = quad -> Keyword.put(attrs, key, quad)
       _ -> attrs
     end
   end

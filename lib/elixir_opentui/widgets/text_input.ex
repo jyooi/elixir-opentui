@@ -23,6 +23,8 @@ defmodule ElixirOpentui.Widgets.TextInput do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   alias ElixirOpentui.TextBuffer
 
   @impl true
@@ -255,14 +257,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
     end
   end
 
-  defp split_at_cursor(state) do
-    before = String.slice(state.value, 0, state.cursor_pos)
-
-    after_cursor =
-      String.slice(state.value, state.cursor_pos, String.length(state.value) - state.cursor_pos)
-
-    {before, after_cursor}
-  end
+  defp split_at_cursor(state), do: String.split_at(state.value, state.cursor_pos)
 
   defp adjust_scroll(state) do
     w = state.width
@@ -278,26 +273,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
     %{state | scroll_offset: max(0, scroll)}
   end
 
-  defp emit_change(state) do
-    if state.on_change do
-      %{state | _pending: [{state.on_change, state.value} | state._pending]}
-    else
-      state
-    end
-  end
+  defp emit_change(state), do: emit(state, state.on_change, [state.value])
 
-  defp emit_submit(state) do
-    if state.on_submit do
-      %{state | _pending: [{state.on_submit, state.value} | state._pending]}
-    else
-      state
-    end
-  end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
+  defp emit_submit(state), do: emit(state, state.on_submit, [state.value])
 end

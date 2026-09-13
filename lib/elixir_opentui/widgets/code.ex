@@ -17,6 +17,8 @@ defmodule ElixirOpentui.Widgets.Code do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   alias ElixirOpentui.Widgets.ScrollHelper
 
   @impl true
@@ -161,21 +163,6 @@ defmodule ElixirOpentui.Widgets.Code do
       end
 
     %{state | scroll_offset: min(max(0, state.scroll_offset), max_offset)}
-  end
-
-  defp sync_prop(state, prev_props, new_props, key, default) do
-    if prop_changed?(prev_props, new_props, key) do
-      Map.put(state, key, Map.get(new_props, key, default))
-    else
-      state
-    end
-  end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
   end
 
   # --- Syntax highlighting ---

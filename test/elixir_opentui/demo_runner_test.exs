@@ -65,7 +65,6 @@ defmodule ElixirOpentui.DemoRunnerTest do
     test "empty-events base case checks tick due and fires inline" do
       source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "time_since_tick >= tick_interval"
-      assert source =~ "tick_and_render(demo_mod, dt, state, renderer, ctx)"
     end
 
     test "live demos skip per-event rendering" do

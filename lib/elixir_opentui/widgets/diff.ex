@@ -17,6 +17,8 @@ defmodule ElixirOpentui.Widgets.Diff do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   alias ElixirOpentui.Widgets.ScrollHelper
 
   @impl true
@@ -33,8 +35,8 @@ defmodule ElixirOpentui.Widgets.Diff do
       show_line_numbers: Map.get(props, :show_line_numbers, true),
       scroll_offset: Map.get(props, :scroll_offset, 0),
       visible_lines: Map.get(props, :visible_lines),
-      unified_line_count: length(build_unified_lines(parsed)),
-      split_line_count: length(build_split_lines(parsed))
+      unified_lines: build_unified_lines(parsed),
+      split_lines: build_split_lines(parsed)
     }
   end
 
@@ -47,8 +49,8 @@ defmodule ElixirOpentui.Widgets.Diff do
       | diff: diff_text,
         parsed: parsed,
         scroll_offset: 0,
-        unified_line_count: length(build_unified_lines(parsed)),
-        split_line_count: length(build_split_lines(parsed))
+        unified_lines: build_unified_lines(parsed),
+        split_lines: build_split_lines(parsed)
     }
   end
 
@@ -106,18 +108,14 @@ defmodule ElixirOpentui.Widgets.Diff do
   def render(state) do
     import ElixirOpentui.View, only: [diff: 1]
 
-    lines =
-      case state.view do
-        :unified -> build_unified_lines(state.parsed)
-        :split -> build_split_lines(state.parsed)
-      end
+    lines = current_lines(state)
 
     diff(
       id: state.id,
       diff: state.diff,
       view: state.view,
       lines: lines,
-      line_count: current_line_count(state),
+      line_count: length(lines),
       show_line_numbers: state.show_line_numbers,
       scroll_offset: state.scroll_offset,
       visible_lines: state.visible_lines
@@ -129,7 +127,7 @@ defmodule ElixirOpentui.Widgets.Diff do
   defp handle_key(event, state) do
     case ScrollHelper.handle_scroll_key(event,
            offset: state.scroll_offset,
-           total: current_line_count(state),
+           total: length(current_lines(state)),
            visible: state.visible_lines
          ) do
       {:handled, new_offset} -> %{state | scroll_offset: new_offset}
@@ -137,23 +135,8 @@ defmodule ElixirOpentui.Widgets.Diff do
     end
   end
 
-  defp current_line_count(%{view: :unified} = state), do: state.unified_line_count
-  defp current_line_count(%{view: :split} = state), do: state.split_line_count
-
-  defp sync_prop(state, prev_props, new_props, key, default) do
-    if prop_changed?(prev_props, new_props, key) do
-      Map.put(state, key, Map.get(new_props, key, default))
-    else
-      state
-    end
-  end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
+  defp current_lines(%{view: :unified} = state), do: state.unified_lines
+  defp current_lines(%{view: :split} = state), do: state.split_lines
 
   # --- Diff parsing ---
 
@@ -195,41 +178,21 @@ defmodule ElixirOpentui.Widgets.Diff do
         hunks = maybe_close_hunk(hunks, current)
         parse_lines(rest, hunks, new_hunk)
 
-      current != nil and String.starts_with?(line, "+") ->
+      current != nil and line_type(line) != nil ->
+        {type, old_step, new_step} = line_type(line)
+
         diff_line = %{
-          type: :add,
+          type: type,
           content: String.slice(line, 1..-1//1),
-          old_line: nil,
-          new_line: current.new_line
-        }
-
-        current = %{current | lines: [diff_line | current.lines], new_line: current.new_line + 1}
-        parse_lines(rest, hunks, current)
-
-      current != nil and String.starts_with?(line, "-") ->
-        diff_line = %{
-          type: :remove,
-          content: String.slice(line, 1..-1//1),
-          old_line: current.old_line,
-          new_line: nil
-        }
-
-        current = %{current | lines: [diff_line | current.lines], old_line: current.old_line + 1}
-        parse_lines(rest, hunks, current)
-
-      current != nil and String.starts_with?(line, " ") ->
-        diff_line = %{
-          type: :context,
-          content: String.slice(line, 1..-1//1),
-          old_line: current.old_line,
-          new_line: current.new_line
+          old_line: if(old_step == 1, do: current.old_line),
+          new_line: if(new_step == 1, do: current.new_line)
         }
 
         current = %{
           current
           | lines: [diff_line | current.lines],
-            old_line: current.old_line + 1,
-            new_line: current.new_line + 1
+            old_line: current.old_line + old_step,
+            new_line: current.new_line + new_step
         }
 
         parse_lines(rest, hunks, current)
@@ -239,6 +202,12 @@ defmodule ElixirOpentui.Widgets.Diff do
         parse_lines(rest, hunks, current)
     end
   end
+
+  # {type, old line step, new line step} for a hunk body line, or nil.
+  defp line_type("+" <> _), do: {:add, 0, 1}
+  defp line_type("-" <> _), do: {:remove, 1, 0}
+  defp line_type(" " <> _), do: {:context, 1, 1}
+  defp line_type(_), do: nil
 
   defp maybe_close_hunk(hunks, nil), do: hunks
 

@@ -48,23 +48,52 @@ defmodule ElixirOpentui.Painter do
   @select_fg_highlight {255, 255, 255, 255}
 
   # --- Syntax Token Colors ---
-  @token_keyword {255, 123, 114, 255}
-  @token_function {210, 168, 255, 255}
-  @token_class {255, 166, 87, 255}
-  @token_string {165, 214, 255, 255}
-  @token_comment {139, 148, 158, 255}
-  @token_number {121, 192, 255, 255}
-  @token_attribute {255, 166, 87, 255}
-  @token_operator {255, 123, 114, 255}
-  @token_punctuation {240, 246, 252, 255}
-  @token_constant {121, 192, 255, 255}
   @token_default {230, 237, 243, 255}
+  @token_colors [
+                  {[:keyword, :keyword_declaration, :keyword_namespace, :keyword_reserved],
+                   {255, 123, 114, 255}},
+                  {[:name_function, :name_function_magic], {210, 168, 255, 255}},
+                  {[:name_class, :name_builtin, :name_builtin_pseudo], {255, 166, 87, 255}},
+                  {[
+                     :string,
+                     :string_affix,
+                     :string_char,
+                     :string_doc,
+                     :string_double,
+                     :string_escape,
+                     :string_heredoc,
+                     :string_interpol,
+                     :string_regex,
+                     :string_single,
+                     :string_symbol,
+                     :string_sigil
+                   ], {165, 214, 255, 255}},
+                  {[:comment, :comment_doc, :comment_multiline, :comment_single],
+                   {139, 148, 158, 255}},
+                  {[
+                     :number,
+                     :number_bin,
+                     :number_float,
+                     :number_hex,
+                     :number_integer,
+                     :number_oct
+                   ], {121, 192, 255, 255}},
+                  {[:name_attribute, :name_decorator], {255, 166, 87, 255}},
+                  {[:operator, :operator_word], {255, 123, 114, 255}},
+                  {[:punctuation], {240, 246, 252, 255}},
+                  {[:name_constant, :name_variable_global, :name_entity], {121, 192, 255, 255}}
+                ]
+                |> Enum.flat_map(fn {types, color} -> Enum.map(types, &{&1, color}) end)
+                |> Map.new()
 
   @doc "Paint the element tree into the buffer using computed layout."
   def paint(%Element{} = root, layout_results, buffer, opts \\ []) do
     focus_id = Keyword.get(opts, :focus_id)
     paint_node(root, layout_results, buffer, 1.0, focus_id)
   end
+
+  defp el_fg(el, buf, opacity), do: Color.with_opacity(el.style.fg || buf.default_fg, opacity)
+  defp el_bg(el, buf, opacity), do: Color.with_opacity(el.style.bg || buf.default_bg, opacity)
 
   defp paint_node(%Element{} = el, layout, buf, parent_opacity, focus_id) do
     ref = el.attrs[:_layout_ref]
@@ -112,7 +141,7 @@ defmodule ElixirOpentui.Painter do
 
       bg ->
         bg = Color.with_opacity(bg, opacity)
-        fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+        fg = el_fg(el, buf, opacity)
         Buffer.fill_rect(buf, x, y, w, h, " ", fg, bg)
     end
   end
@@ -125,10 +154,10 @@ defmodule ElixirOpentui.Painter do
         if focused do
           (el.style.focus_border_color || @focus_border_fg) |> Color.with_opacity(opacity)
         else
-          (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+          el_fg(el, buf, opacity)
         end
 
-      bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+      bg = el_bg(el, buf, opacity)
 
       buf =
         Enum.reduce(1..(w - 2)//1, buf, fn cx, b ->
@@ -194,7 +223,7 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_content(buf, %Element{type: :text} = el, x, y, w, _h, opacity, _focused) do
     content = Map.get(el.attrs, :content, "")
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
     bg = el.style.bg || Map.get(el.attrs, :_parent_bg, buf.default_bg)
     bg = Color.with_opacity(bg, opacity)
     attrs = style_attrs(el.style)
@@ -205,7 +234,7 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_content(buf, %Element{type: :label} = el, x, y, w, _h, opacity, _focused) do
     content = Map.get(el.attrs, :content, "")
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
     bg = el.style.bg || Map.get(el.attrs, :_parent_bg, buf.default_bg)
     bg = Color.with_opacity(bg, opacity)
     attrs = style_attrs(el.style)
@@ -222,8 +251,8 @@ defmodule ElixirOpentui.Painter do
       title = Map.get(el.attrs, :title, "")
 
       if title != "" and w >= 4 do
-        fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-        bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+        fg = el_fg(el, buf, opacity)
+        bg = el_bg(el, buf, opacity)
         truncated = TextBuffer.slice_columns(title, 0, w - 4)
         title_str = " #{truncated} "
         Buffer.draw_text(buf, x + 1, y, title_str, fg, bg)
@@ -242,8 +271,8 @@ defmodule ElixirOpentui.Painter do
 
     display = if value == "", do: placeholder, else: value
 
-    default_fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    default_bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    default_fg = el_fg(el, buf, opacity)
+    default_bg = el_bg(el, buf, opacity)
     ph_fg = Map.get(el.attrs, :placeholder_fg, @placeholder_fg) |> Color.with_opacity(opacity)
 
     fg = if value == "", do: ph_fg, else: default_fg
@@ -304,8 +333,7 @@ defmodule ElixirOpentui.Painter do
         {(el.style.focus_fg || el.style.bg || buf.default_bg) |> Color.with_opacity(opacity),
          (el.style.focus_bg || el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)}
       else
-        {(el.style.fg || buf.default_fg) |> Color.with_opacity(opacity),
-         (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)}
+        {el_fg(el, buf, opacity), el_bg(el, buf, opacity)}
       end
 
     truncated = TextBuffer.slice_columns(content, 0, w)
@@ -321,8 +349,8 @@ defmodule ElixirOpentui.Painter do
     item_spacing = Map.get(el.attrs, :item_spacing, 0)
     attrs = style_attrs(el.style)
 
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
+    bg = el_bg(el, buf, opacity)
     sel_fg = Color.with_opacity(@select_fg_highlight, opacity)
     sel_bg = (el.style.focus_bg || @select_highlight_bg) |> Color.with_opacity(opacity)
     desc_fg = Color.with_opacity(@description_fg, opacity)
@@ -395,10 +423,10 @@ defmodule ElixirOpentui.Painter do
       if focused do
         (el.style.focus_fg || @focus_border_fg) |> Color.with_opacity(opacity)
       else
-        (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
+        el_fg(el, buf, opacity)
       end
 
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    bg = el_bg(el, buf, opacity)
 
     truncated = TextBuffer.slice_columns(content, 0, w)
     Buffer.draw_text(buf, x, y, truncated, fg, bg, attrs)
@@ -409,7 +437,7 @@ defmodule ElixirOpentui.Painter do
 
     if scroll_y > 0 do
       fg = Color.with_opacity(@description_fg, opacity)
-      bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+      bg = el_bg(el, buf, opacity)
       Buffer.draw_char(buf, x + w - 1, y, "▲", fg, bg)
     else
       buf
@@ -424,8 +452,8 @@ defmodule ElixirOpentui.Painter do
     selection = Map.get(el.attrs, :selection)
     attrs = style_attrs(el.style)
 
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
+    bg = el_bg(el, buf, opacity)
     placeholder_fg = Color.with_opacity(@placeholder_fg, opacity)
 
     buf =
@@ -471,7 +499,7 @@ defmodule ElixirOpentui.Painter do
             " "
           end
 
-        cursor_fg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+        cursor_fg = el_bg(el, buf, opacity)
 
         cursor_bg =
           (el.style.cursor_color || @focus_input_cursor_bg) |> Color.with_opacity(opacity)
@@ -507,8 +535,8 @@ defmodule ElixirOpentui.Painter do
     show_description = Map.get(el.attrs, :show_description, true)
     show_scroll_arrows = Map.get(el.attrs, :show_scroll_arrows, true)
 
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
+    bg = el_bg(el, buf, opacity)
     sel_fg = Color.with_opacity(@tab_selected_fg, opacity)
     sel_bg = Color.with_opacity(@tab_selected_bg, opacity)
     dim_fg = Color.with_opacity(@tab_dim_fg, opacity)
@@ -601,7 +629,7 @@ defmodule ElixirOpentui.Painter do
     gutter_width = w
 
     fg = el.style.fg || Color.with_opacity(@dim_fg, opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    bg = el_bg(el, buf, opacity)
 
     if not show do
       buf
@@ -625,7 +653,7 @@ defmodule ElixirOpentui.Painter do
             gutter_width - TextBuffer.display_width(sign_before) -
               TextBuffer.display_width(sign_after) - 1
 
-          padded_num = TextBuffer.pad_leading_columns(num_str, max(1, num_w))
+          padded_num = String.pad_leading(num_str, max(1, num_w))
 
           full_str =
             TextBuffer.slice_columns(
@@ -664,8 +692,8 @@ defmodule ElixirOpentui.Painter do
     visible_lines = Map.get(el.attrs, :visible_lines) || h
     show_line_numbers = Map.get(el.attrs, :show_line_numbers, true)
 
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
+    bg = el_bg(el, buf, opacity)
     gutter_fg = Color.with_opacity(@gutter_fg, opacity)
 
     lines = String.split(content, "\n")
@@ -676,44 +704,28 @@ defmodule ElixirOpentui.Painter do
     code_w = max(0, w - gutter_w)
     rows = min(visible_lines, min(h, max(0, total - scroll_offset)))
 
-    if tokens do
-      token_lines = split_tokens_into_lines(tokens)
+    {token_lines, color_for} =
+      if tokens do
+        {split_tokens_into_lines(tokens), &token_color(&1, opacity)}
+      else
+        {Enum.map(lines, &[{:plain, &1}]), fn _ -> fg end}
+      end
 
-      paint_code_highlighted(
-        buf,
-        token_lines,
-        lines,
-        x,
-        y,
-        code_x,
-        code_w,
-        gutter_fg,
-        bg,
-        opacity,
-        digits,
-        show_line_numbers,
-        scroll_offset,
-        total,
-        rows
-      )
-    else
-      paint_code_plain(
-        buf,
-        lines,
-        x,
-        y,
-        code_x,
-        code_w,
-        fg,
-        bg,
-        gutter_fg,
-        digits,
-        show_line_numbers,
-        scroll_offset,
-        total,
-        rows
-      )
-    end
+    paint_code_lines(
+      buf,
+      token_lines,
+      x,
+      y,
+      code_x,
+      code_w,
+      gutter_fg,
+      bg,
+      digits,
+      show_line_numbers,
+      scroll_offset,
+      rows,
+      color_for
+    )
   end
 
   # --- Diff ---
@@ -725,8 +737,8 @@ defmodule ElixirOpentui.Painter do
     visible_lines = Map.get(el.attrs, :visible_lines) || h
     show_line_numbers = Map.get(el.attrs, :show_line_numbers, true)
 
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
+    bg = el_bg(el, buf, opacity)
     add_fg = Color.with_opacity(@diff_add_fg, opacity)
     add_bg = Color.with_opacity(@diff_add_bg, opacity)
     rem_fg = Color.with_opacity(@diff_rem_fg, opacity)
@@ -781,8 +793,8 @@ defmodule ElixirOpentui.Painter do
     blocks = Map.get(el.attrs, :blocks, [])
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
 
-    fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-    bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+    fg = el_fg(el, buf, opacity)
+    bg = el_bg(el, buf, opacity)
     heading_fg = Color.with_opacity(@md_heading_fg, opacity)
     code_fg = Color.with_opacity(@md_code_fg, opacity)
     code_bg = Color.with_opacity(@md_code_bg, opacity)
@@ -853,8 +865,8 @@ defmodule ElixirOpentui.Painter do
     if text == "" do
       buf
     else
-      primary_fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-      bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
+      primary_fg = el_fg(el, buf, opacity)
+      bg = el_bg(el, buf, opacity)
 
       secondary_fg =
         case Map.get(el.attrs, :secondary_fg) do
@@ -1063,106 +1075,46 @@ defmodule ElixirOpentui.Painter do
   end
 
   defp token_color(type, opacity) do
-    color =
-      case type do
-        t when t in [:keyword, :keyword_declaration, :keyword_namespace, :keyword_reserved] ->
-          @token_keyword
-
-        t when t in [:name_function, :name_function_magic] ->
-          @token_function
-
-        t when t in [:name_class, :name_builtin, :name_builtin_pseudo] ->
-          @token_class
-
-        t
-        when t in [
-               :string,
-               :string_affix,
-               :string_char,
-               :string_doc,
-               :string_double,
-               :string_escape,
-               :string_heredoc,
-               :string_interpol,
-               :string_regex,
-               :string_single,
-               :string_symbol,
-               :string_sigil
-             ] ->
-          @token_string
-
-        t when t in [:comment, :comment_doc, :comment_multiline, :comment_single] ->
-          @token_comment
-
-        t
-        when t in [:number, :number_bin, :number_float, :number_hex, :number_integer, :number_oct] ->
-          @token_number
-
-        t when t in [:name_attribute, :name_decorator] ->
-          @token_attribute
-
-        t when t in [:operator, :operator_word] ->
-          @token_operator
-
-        :punctuation ->
-          @token_punctuation
-
-        t when t in [:name_constant, :name_variable_global, :name_entity] ->
-          @token_constant
-
-        :string_sigil ->
-          @token_string
-
-        _ ->
-          @token_default
-      end
-
-    Color.with_opacity(color, opacity)
+    Color.with_opacity(Map.get(@token_colors, type, @token_default), opacity)
   end
 
   # --- Code painting helpers ---
 
-  defp paint_code_highlighted(
+  defp paint_code_lines(
          buf,
          token_lines,
-         _lines,
          x,
          y,
          code_x,
          code_w,
          gutter_fg,
          bg,
-         opacity,
          digits,
          show_line_numbers,
          scroll_offset,
-         _total,
-         rows
+         rows,
+         color_for
        ) do
     Enum.reduce(0..max(0, rows - 1)//1, buf, fn row, b ->
       line_idx = scroll_offset + row
 
-      # Draw gutter
       b =
         if show_line_numbers do
-          num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
-          gutter_str = num_str <> "  "
-          Buffer.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
+          num_str = String.pad_leading(to_string(line_idx + 1), digits)
+          Buffer.draw_text(b, x, y + row, num_str <> "  ", gutter_fg, bg)
         else
           b
         end
 
-      # Draw highlighted tokens
       line_tokens = Enum.at(token_lines, line_idx, [])
 
       {b, _col} =
         Enum.reduce(line_tokens, {b, 0}, fn {type, text}, {bb, col} ->
-          tok_fg = token_color(type, opacity)
           visible = TextBuffer.slice_columns(text, 0, max(0, code_w - col))
 
           bb =
             if col < code_w and visible != "" do
-              Buffer.draw_text(bb, code_x + col, y + row, visible, tok_fg, bg)
+              Buffer.draw_text(bb, code_x + col, y + row, visible, color_for.(type), bg)
             else
               bb
             end
@@ -1171,40 +1123,6 @@ defmodule ElixirOpentui.Painter do
         end)
 
       b
-    end)
-  end
-
-  defp paint_code_plain(
-         buf,
-         lines,
-         x,
-         y,
-         code_x,
-         code_w,
-         fg,
-         bg,
-         gutter_fg,
-         digits,
-         show_line_numbers,
-         scroll_offset,
-         _total,
-         rows
-       ) do
-    Enum.reduce(0..max(0, rows - 1)//1, buf, fn row, b ->
-      line_idx = scroll_offset + row
-
-      b =
-        if show_line_numbers do
-          num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
-          gutter_str = num_str <> "  "
-          Buffer.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
-        else
-          b
-        end
-
-      line = Enum.at(lines, line_idx, "")
-      visible = TextBuffer.slice_columns(line, 0, code_w)
-      Buffer.draw_text(b, code_x, y + row, visible, fg, bg)
     end)
   end
 
@@ -1221,15 +1139,7 @@ defmodule ElixirOpentui.Painter do
          scroll_offset,
          rows
        ) do
-    %{
-      fg: fg,
-      bg: bg,
-      add_fg: add_fg,
-      add_bg: add_bg,
-      rem_fg: rem_fg,
-      rem_bg: rem_bg,
-      gutter_fg: gutter_fg
-    } = colors
+    %{gutter_fg: gutter_fg} = colors
 
     gutter_w = if show_line_numbers, do: 10, else: 0
     content_x = x + gutter_w + 2
@@ -1243,7 +1153,7 @@ defmodule ElixirOpentui.Painter do
         b
       else
         type = Map.get(line, :type, :context)
-        {line_fg, line_bg, sign} = diff_line_style(type, fg, bg, add_fg, add_bg, rem_fg, rem_bg)
+        {line_fg, line_bg, sign} = diff_line_style(type, colors)
         content = Map.get(line, :content, "")
 
         # Fill background for add/remove lines
@@ -1261,10 +1171,10 @@ defmodule ElixirOpentui.Painter do
             new_num = Map.get(line, :new_line)
 
             old_str =
-              if old_num, do: TextBuffer.pad_leading_columns(to_string(old_num), 4), else: "    "
+              if old_num, do: String.pad_leading(to_string(old_num), 4), else: "    "
 
             new_str =
-              if new_num, do: TextBuffer.pad_leading_columns(to_string(new_num), 4), else: "    "
+              if new_num, do: String.pad_leading(to_string(new_num), 4), else: "    "
 
             Buffer.draw_text(b, x, y + row, old_str <> " " <> new_str, gutter_fg, line_bg)
           else
@@ -1290,21 +1200,11 @@ defmodule ElixirOpentui.Painter do
          scroll_offset,
          rows
        ) do
-    %{
-      fg: fg,
-      bg: bg,
-      add_fg: add_fg,
-      add_bg: add_bg,
-      rem_fg: rem_fg,
-      rem_bg: rem_bg,
-      gutter_fg: gutter_fg
-    } = colors
-
     half_w = div(w, 2)
     right_x = x + half_w
-    gutter_w = if show_line_numbers, do: 6, else: 0
-    content_offset = gutter_w + 2
-    content_w = max(0, half_w - content_offset - 1)
+    gutter_w = if show_line_numbers, do: 6, else: nil
+    content_w = max(0, half_w - (gutter_w || 0) - 3)
+    empty = %{type: :empty, content: "", old_line: nil, new_line: nil}
 
     Enum.reduce(0..max(0, rows - 1)//1, buf, fn row, b ->
       line_idx = scroll_offset + row
@@ -1314,99 +1214,74 @@ defmodule ElixirOpentui.Painter do
         b
       else
         # Split lines have %{left: side, right: side} structure
-        left = Map.get(line, :left, %{type: :empty, content: "", old_line: nil, new_line: nil})
-        right = Map.get(line, :right, %{type: :empty, content: "", old_line: nil, new_line: nil})
+        left = Map.get(line, :left, empty)
+        right = Map.get(line, :right, empty)
 
-        # --- Left side (old file) ---
-        {left_fg, left_bg, left_sign} =
-          diff_line_style(left.type, fg, bg, add_fg, add_bg, rem_fg, rem_bg)
-
-        b =
-          if left.type in [:remove, :add] do
-            Buffer.fill_rect(b, x, y + row, half_w - 1, 1, " ", left_fg, left_bg)
-          else
-            b
-          end
-
-        b =
-          if show_line_numbers do
-            old_num = left.old_line
-
-            old_str =
-              if old_num,
-                do: TextBuffer.pad_leading_columns(to_string(old_num), 4) <> " ",
-                else: "     "
-
-            Buffer.draw_text(b, x, y + row, old_str, gutter_fg, left_bg)
-          else
-            b
-          end
-
-        b = Buffer.draw_text(b, x + gutter_w, y + row, left_sign <> " ", left_fg, left_bg)
-
-        b =
-          Buffer.draw_text(
-            b,
-            x + content_offset,
-            y + row,
-            TextBuffer.slice_columns(left.content, 0, content_w),
-            left_fg,
-            left_bg
-          )
-
-        # --- Divider ---
-        b = Buffer.draw_char(b, right_x - 1, y + row, "│", gutter_fg, bg)
-
-        # --- Right side (new file) ---
-        {right_fg, right_bg, right_sign} =
-          diff_line_style(right.type, fg, bg, add_fg, add_bg, rem_fg, rem_bg)
-
-        b =
-          if right.type in [:remove, :add] do
-            Buffer.fill_rect(b, right_x, y + row, half_w, 1, " ", right_fg, right_bg)
-          else
-            b
-          end
-
-        b =
-          if show_line_numbers do
-            new_num = right.new_line
-
-            new_str =
-              if new_num,
-                do: TextBuffer.pad_leading_columns(to_string(new_num), 4) <> " ",
-                else: "     "
-
-            Buffer.draw_text(b, right_x, y + row, new_str, gutter_fg, right_bg)
-          else
-            b
-          end
-
-        b =
-          Buffer.draw_text(b, right_x + gutter_w, y + row, right_sign <> " ", right_fg, right_bg)
-
-        Buffer.draw_text(
-          b,
-          right_x + content_offset,
+        b
+        |> paint_diff_side(
+          left,
+          left.old_line,
+          x,
           y + row,
-          TextBuffer.slice_columns(right.content, 0, content_w),
-          right_fg,
-          right_bg
+          half_w - 1,
+          content_w,
+          gutter_w,
+          colors
+        )
+        |> Buffer.draw_char(right_x - 1, y + row, "│", colors.gutter_fg, colors.bg)
+        |> paint_diff_side(
+          right,
+          right.new_line,
+          right_x,
+          y + row,
+          half_w,
+          content_w,
+          gutter_w,
+          colors
         )
       end
     end)
   end
 
+  # One half of a split diff row. `gutter_w` is nil when line numbers are hidden.
+  defp paint_diff_side(b, side, num, sx, sy, fill_w, content_w, gutter_w, colors) do
+    {side_fg, side_bg, sign} = diff_line_style(side.type, colors)
+    content_offset = (gutter_w || 0) + 2
+
+    b =
+      if side.type in [:remove, :add] do
+        Buffer.fill_rect(b, sx, sy, fill_w, 1, " ", side_fg, side_bg)
+      else
+        b
+      end
+
+    b =
+      if gutter_w do
+        num_str =
+          if num, do: String.pad_leading(to_string(num), 4) <> " ", else: "     "
+
+        Buffer.draw_text(b, sx, sy, num_str, colors.gutter_fg, side_bg)
+      else
+        b
+      end
+
+    b = Buffer.draw_text(b, sx + (gutter_w || 0), sy, sign <> " ", side_fg, side_bg)
+
+    Buffer.draw_text(
+      b,
+      sx + content_offset,
+      sy,
+      TextBuffer.slice_columns(side.content, 0, content_w),
+      side_fg,
+      side_bg
+    )
+  end
+
   # --- Diff helpers ---
 
-  defp diff_line_style(:add, _fg, _bg, add_fg, add_bg, _rem_fg, _rem_bg),
-    do: {add_fg, add_bg, "+"}
-
-  defp diff_line_style(:remove, _fg, _bg, _add_fg, _add_bg, rem_fg, rem_bg),
-    do: {rem_fg, rem_bg, "-"}
-
-  defp diff_line_style(:context, fg, bg, _add_fg, _add_bg, _rem_fg, _rem_bg), do: {fg, bg, " "}
-  defp diff_line_style(_type, fg, bg, _add_fg, _add_bg, _rem_fg, _rem_bg), do: {fg, bg, " "}
+  defp diff_line_style(:add, %{add_fg: fg, add_bg: bg}), do: {fg, bg, "+"}
+  defp diff_line_style(:remove, %{rem_fg: fg, rem_bg: bg}), do: {fg, bg, "-"}
+  defp diff_line_style(_type, %{fg: fg, bg: bg}), do: {fg, bg, " "}
 
   # --- Markdown helpers ---
 

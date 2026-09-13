@@ -21,12 +21,12 @@ defmodule ElixirOpentui.Widgets.Select do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   @impl true
   def init(props) do
     options =
-      props
-      |> Map.get(:options, [])
-      |> Enum.map(&normalize_option/1)
+      normalize_options(Map.get(props, :options, []))
 
     %{
       options: options,
@@ -51,7 +51,7 @@ defmodule ElixirOpentui.Widgets.Select do
   end
 
   def update({:set_options, options}, _event, state) do
-    normalized = Enum.map(options, &normalize_option/1)
+    normalized = normalize_options(options)
     %{state | options: normalized, selected: min(state.selected, max(0, length(normalized) - 1))}
   end
 
@@ -71,17 +71,14 @@ defmodule ElixirOpentui.Widgets.Select do
 
   @impl true
   def update_props(prev_props, new_props, state) do
-    options =
-      new_props
-      |> Map.get(:options, [])
-      |> Enum.map(&normalize_option/1)
+    option_count = length(Map.get(new_props, :options, []))
 
     state = %{
       state
       | id: Map.get(new_props, :id),
         on_change: Map.get(new_props, :on_change),
         on_select: Map.get(new_props, :on_select),
-        visible_count: Map.get(new_props, :visible_count, length(options)),
+        visible_count: Map.get(new_props, :visible_count, option_count),
         wrap_selection: Map.get(new_props, :wrap_selection, false),
         fast_scroll_step: Map.get(new_props, :fast_scroll_step, 5),
         show_description: Map.get(new_props, :show_description, false),
@@ -89,21 +86,7 @@ defmodule ElixirOpentui.Widgets.Select do
         item_spacing: Map.get(new_props, :item_spacing, 0)
     }
 
-    {state, needs_scroll_adjust?} =
-      if prop_changed?(prev_props, new_props, :options) do
-        selected = min(state.selected, max(0, length(options) - 1))
-        {%{state | options: options, selected: selected}, true}
-      else
-        {state, false}
-      end
-
-    {state, needs_scroll_adjust?} =
-      if prop_changed?(prev_props, new_props, :selected) do
-        selected = clamp(Map.get(new_props, :selected, 0), 0, max(0, length(state.options) - 1))
-        {%{state | selected: selected}, true}
-      else
-        {state, needs_scroll_adjust?}
-      end
+    {state, needs_scroll_adjust?} = sync_options(state, prev_props, new_props)
 
     if needs_scroll_adjust? or
          prop_changed?(prev_props, new_props, :visible_count) or
@@ -128,16 +111,6 @@ defmodule ElixirOpentui.Widgets.Select do
       show_scroll_indicator: state.show_scroll_indicator,
       item_spacing: state.item_spacing
     )
-  end
-
-  # --- Option normalization ---
-
-  defp normalize_option(%{name: _} = opt) do
-    Map.merge(%{name: "", description: nil, value: nil}, opt)
-  end
-
-  defp normalize_option(string) when is_binary(string) do
-    %{name: string, description: nil, value: nil}
   end
 
   # --- Key handling ---
@@ -242,29 +215,9 @@ defmodule ElixirOpentui.Widgets.Select do
     %{state | scroll_offset: max(0, scroll)}
   end
 
-  defp emit_change(state) do
-    if state.on_change do
-      %{state | _pending: [{state.on_change, state.selected} | state._pending]}
-    else
-      state
-    end
-  end
+  defp emit_change(state), do: emit(state, state.on_change, [state.selected])
 
   defp emit_select(state) do
-    if state.on_select do
-      option = Enum.at(state.options, state.selected)
-      %{state | _pending: [{state.on_select, state.selected, option} | state._pending]}
-    else
-      state
-    end
+    emit(state, state.on_select, [state.selected, Enum.at(state.options, state.selected)])
   end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
-
-  defp clamp(val, lo, hi), do: max(lo, min(hi, val))
 end

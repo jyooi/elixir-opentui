@@ -14,11 +14,10 @@ defmodule ElixirOpentui.Focus do
 
   @type t :: %__MODULE__{
           focused_id: term() | nil,
-          focusable_ids: [term()],
-          focus_order: [term()]
+          focusable_ids: [term()]
         }
 
-  defstruct focused_id: nil, focusable_ids: [], focus_order: []
+  defstruct focused_id: nil, focusable_ids: []
 
   @focusable_types [:input, :button, :select, :checkbox, :scroll_box, :textarea, :tab_select]
 
@@ -27,11 +26,7 @@ defmodule ElixirOpentui.Focus do
   def from_tree(tree) do
     ids = collect_focusable(tree, [])
 
-    %__MODULE__{
-      focused_id: nil,
-      focusable_ids: ids,
-      focus_order: ids
-    }
+    %__MODULE__{focused_id: nil, focusable_ids: ids}
   end
 
   @doc "Set focus to a specific element id."
@@ -50,13 +45,13 @@ defmodule ElixirOpentui.Focus do
 
   @doc "Move focus to the next focusable element (Tab)."
   @spec focus_next(t()) :: t()
-  def focus_next(%{focus_order: []} = state), do: state
+  def focus_next(%{focusable_ids: []} = state), do: state
 
-  def focus_next(%{focused_id: nil, focus_order: [first | _]} = state) do
+  def focus_next(%{focused_id: nil, focusable_ids: [first | _]} = state) do
     %{state | focused_id: first}
   end
 
-  def focus_next(%{focused_id: current, focus_order: order} = state) do
+  def focus_next(%{focused_id: current, focusable_ids: order} = state) do
     case Enum.find_index(order, &(&1 == current)) do
       nil -> %{state | focused_id: hd(order)}
       idx -> %{state | focused_id: Enum.at(order, rem(idx + 1, length(order)))}
@@ -65,13 +60,13 @@ defmodule ElixirOpentui.Focus do
 
   @doc "Move focus to the previous focusable element (Shift+Tab)."
   @spec focus_prev(t()) :: t()
-  def focus_prev(%{focus_order: []} = state), do: state
+  def focus_prev(%{focusable_ids: []} = state), do: state
 
-  def focus_prev(%{focused_id: nil, focus_order: order} = state) do
+  def focus_prev(%{focused_id: nil, focusable_ids: order} = state) do
     %{state | focused_id: List.last(order)}
   end
 
-  def focus_prev(%{focused_id: current, focus_order: order} = state) do
+  def focus_prev(%{focused_id: current, focusable_ids: order} = state) do
     case Enum.find_index(order, &(&1 == current)) do
       nil -> %{state | focused_id: List.last(order)}
       0 -> %{state | focused_id: List.last(order)}
@@ -110,7 +105,7 @@ defmodule ElixirOpentui.Focus do
         nil
       end
 
-    %{state | focusable_ids: new_ids, focus_order: new_ids, focused_id: focused}
+    %{state | focusable_ids: new_ids, focused_id: focused}
   end
 
   # --- Private helpers ---

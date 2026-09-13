@@ -15,6 +15,8 @@ defmodule ElixirOpentui.Widgets.Markdown do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   alias ElixirOpentui.Widgets.ScrollHelper
 
   @impl true
@@ -140,13 +142,6 @@ defmodule ElixirOpentui.Widgets.Markdown do
   end
 
   def parse_markdown(_), do: []
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
 
   defp ast_to_blocks(ast) do
     Enum.flat_map(ast, &ast_node_to_block/1)

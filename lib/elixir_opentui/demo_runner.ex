@@ -64,11 +64,7 @@ defmodule ElixirOpentui.DemoRunner do
       state = demo_mod.init(cols, rows)
       renderer = Renderer.new(cols, rows)
 
-      # Initial full render
-      tree = demo_mod.render(state)
-      focus_id = demo_mod.focused_id(state)
-      {renderer, ansi} = Renderer.render_full(renderer, tree, focus_id: focus_id)
-      write_frame(ctx, ansi)
+      renderer = render_frame(demo_mod, state, renderer, ctx, &Renderer.render_full/3)
 
       # Process any input events that arrived during the detection window
       case process_buffered_events(demo_mod, buffered_events, state, renderer, ctx) do
@@ -249,14 +245,7 @@ defmodule ElixirOpentui.DemoRunner do
   # with ENXIO after setsid(). We need the real device like /dev/pts/3.
   defp resolve_tty_path do
     # Try standard fds first (stderr, stdin, stdout)
-    from_fds =
-      Enum.find_value([2, 0, 1], fn fd_num ->
-        case File.read_link("/proc/self/fd/#{fd_num}") do
-          {:ok, "/dev/pts/" <> _ = path} -> path
-          {:ok, "/dev/tty" <> rest = path} when rest != "" -> path
-          _ -> nil
-        end
-      end)
+    from_fds = Enum.find_value([2, 0, 1], &tty_device_of_fd/1)
 
     from_fds || resolve_tty_via_open()
   end
@@ -284,16 +273,19 @@ defmodule ElixirOpentui.DemoRunner do
         entries
         |> Enum.sort_by(&String.to_integer/1)
         |> Enum.reverse()
-        |> Enum.find_value(fn entry ->
-          case File.read_link("/proc/self/fd/#{entry}") do
-            {:ok, "/dev/pts/" <> _ = path} -> path
-            {:ok, "/dev/tty" <> rest = path} when rest != "" -> path
-            _ -> nil
-          end
-        end)
+        |> Enum.find_value(&tty_device_of_fd/1)
 
       _ ->
         nil
+    end
+  end
+
+  # Real tty device path behind an fd number, or nil.
+  defp tty_device_of_fd(fd) do
+    case File.read_link("/proc/self/fd/#{fd}") do
+      {:ok, "/dev/pts/" <> _ = path} -> path
+      {:ok, "/dev/tty" <> rest = path} when rest != "" -> path
+      _ -> nil
     end
   end
 
@@ -347,10 +339,7 @@ defmodule ElixirOpentui.DemoRunner do
   defp process_buffered_events(demo_mod, [event | rest], state, renderer, ctx) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
-        tree = demo_mod.render(new_state)
-        focus_id = demo_mod.focused_id(new_state)
-        {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-        write_frame(ctx, ansi)
+        new_renderer = render_frame(demo_mod, new_state, renderer, ctx)
         process_buffered_events(demo_mod, rest, new_state, new_renderer, ctx)
 
       :quit ->
@@ -370,6 +359,15 @@ defmodule ElixirOpentui.DemoRunner do
     else
       tty_write(tty, [ansi, ANSI.hide_cursor()])
     end
+  end
+
+  # Render the demo state and write the frame. `render` is Renderer.render/3
+  # or Renderer.render_full/3.
+  defp render_frame(demo_mod, state, renderer, ctx, render \\ &Renderer.render/3) do
+    tree = demo_mod.render(state)
+    {new_renderer, ansi} = render.(renderer, tree, focus_id: demo_mod.focused_id(state))
+    write_frame(ctx, ansi)
+    new_renderer
   end
 
   defp tty_write(tty, data) do
@@ -451,16 +449,9 @@ defmodule ElixirOpentui.DemoRunner do
               ctx
             end
 
-          press_events =
-            Enum.filter(input_events, fn
-              %{event_type: :release} -> false
-              %{event_type: :repeat} -> false
-              _ -> true
-            end)
-
           handle_events(
             demo_mod,
-            press_events,
+            filter_press_events(input_events),
             state,
             renderer,
             ctx,
@@ -480,17 +471,7 @@ defmodule ElixirOpentui.DemoRunner do
       after
         wait_ms ->
           if is_live and function_exported?(demo_mod, :handle_tick, 2) do
-            now = System.monotonic_time(:millisecond)
-            dt = min(now - Map.get(state, :_last_tick, now), 500)
-
-            case tick_and_render(demo_mod, dt, state, renderer, ctx) do
-              {new_state, new_renderer, ctx} ->
-                new_state = Map.put(new_state, :_last_tick, now)
-                loop(demo_mod, new_state, new_renderer, ctx, input_pid, start_time, timeout)
-
-              :ok ->
-                :ok
-            end
+            tick_then_loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
           else
             loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
           end
@@ -498,14 +479,17 @@ defmodule ElixirOpentui.DemoRunner do
     end
   end
 
-  defp tick_and_render(demo_mod, dt, state, renderer, ctx) do
+  # Fire one tick with real wall-clock dt (capped at 500ms), then continue
+  # the loop. Returns :ok when the demo quits.
+  defp tick_then_loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout) do
+    now = System.monotonic_time(:millisecond)
+    dt = min(now - Map.get(state, :_last_tick, now), 500)
+
     case demo_mod.handle_tick(dt, state) do
       {:cont, new_state} ->
-        tree = demo_mod.render(new_state)
-        focus_id = demo_mod.focused_id(new_state)
-        {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-        write_frame(ctx, ansi)
-        {new_state, new_renderer, ctx}
+        new_state = Map.put(new_state, :_last_tick, now)
+        new_renderer = render_frame(demo_mod, new_state, renderer, ctx)
+        loop(demo_mod, new_state, new_renderer, ctx, input_pid, start_time, timeout)
 
       :quit ->
         :ok
@@ -521,16 +505,7 @@ defmodule ElixirOpentui.DemoRunner do
       time_since_tick = now - Map.get(state, :_last_tick, now)
 
       if time_since_tick >= tick_interval do
-        dt = min(time_since_tick, 500)
-
-        case tick_and_render(demo_mod, dt, state, renderer, ctx) do
-          {new_state, new_renderer, ctx} ->
-            new_state = Map.put(new_state, :_last_tick, now)
-            loop(demo_mod, new_state, new_renderer, ctx, input_pid, start_time, timeout)
-
-          :ok ->
-            :ok
-        end
+        tick_then_loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
       else
         loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
       end
@@ -558,11 +533,7 @@ defmodule ElixirOpentui.DemoRunner do
           if Map.get(new_state, :_live, false) do
             {renderer, ctx}
           else
-            tree = demo_mod.render(new_state)
-            focus_id = demo_mod.focused_id(new_state)
-            {new_renderer, ansi} = Renderer.render(renderer, tree, focus_id: focus_id)
-            write_frame(ctx, ansi)
-            {new_renderer, ctx}
+            {render_frame(demo_mod, new_state, renderer, ctx), ctx}
           end
 
         handle_events(

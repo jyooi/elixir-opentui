@@ -38,7 +38,7 @@ defmodule ElixirOpentui.FocusTest do
 
     test "preserves document order" do
       focus = Focus.from_tree(sample_tree())
-      assert focus.focus_order == [:name_input, :submit_btn, :role_select, :nested_input]
+      assert focus.focusable_ids == [:name_input, :submit_btn, :role_select, :nested_input]
     end
   end
 

@@ -85,7 +85,6 @@ defmodule ElixirOpentui.View do
 
   defp extract_children(do: {:__block__, _, children}), do: children
   defp extract_children(do: child) when not is_nil(child), do: [child]
-  defp extract_children(do: nil), do: []
   defp extract_children(_), do: []
 
   defp build_element(type, attrs, children) do

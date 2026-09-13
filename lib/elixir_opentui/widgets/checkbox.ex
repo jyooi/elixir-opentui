@@ -13,6 +13,8 @@ defmodule ElixirOpentui.Widgets.Checkbox do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   @impl true
   def init(props) do
     %{
@@ -76,18 +78,5 @@ defmodule ElixirOpentui.Widgets.Checkbox do
     emit_change(state)
   end
 
-  defp emit_change(state) do
-    if state.on_change do
-      %{state | _pending: [{state.on_change, state.checked} | state._pending]}
-    else
-      state
-    end
-  end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
+  defp emit_change(state), do: emit(state, state.on_change, [state.checked])
 end
