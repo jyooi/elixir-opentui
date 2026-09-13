@@ -21,12 +21,12 @@ defmodule ElixirOpentui.Widgets.TabSelect do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   @impl true
   def init(props) do
     options =
-      props
-      |> Map.get(:options, [])
-      |> Enum.map(&normalize_option/1)
+      normalize_options(Map.get(props, :options, []))
 
     tab_width = Map.get(props, :tab_width, 20)
     width = Map.get(props, :width, 60)
@@ -56,7 +56,7 @@ defmodule ElixirOpentui.Widgets.TabSelect do
   end
 
   def update({:set_options, options}, _event, state) do
-    normalized = Enum.map(options, &normalize_option/1)
+    normalized = normalize_options(options)
 
     %{
       state
@@ -100,26 +100,7 @@ defmodule ElixirOpentui.Widgets.TabSelect do
         show_scroll_arrows: Map.get(new_props, :show_scroll_arrows, true)
     }
 
-    {state, needs_scroll_adjust?} =
-      if prop_changed?(prev_props, new_props, :options) do
-        options =
-          new_props
-          |> Map.get(:options, [])
-          |> Enum.map(&normalize_option/1)
-
-        selected = min(state.selected, max(0, length(options) - 1))
-        {%{state | options: options, selected: selected}, true}
-      else
-        {state, false}
-      end
-
-    {state, needs_scroll_adjust?} =
-      if prop_changed?(prev_props, new_props, :selected) do
-        selected = clamp(Map.get(new_props, :selected, 0), 0, max(0, length(state.options) - 1))
-        {%{state | selected: selected}, true}
-      else
-        {state, needs_scroll_adjust?}
-      end
+    {state, needs_scroll_adjust?} = sync_options(state, prev_props, new_props)
 
     if needs_scroll_adjust? or prop_changed?(prev_props, new_props, :tab_width) or
          prop_changed?(prev_props, new_props, :width) do
@@ -143,16 +124,6 @@ defmodule ElixirOpentui.Widgets.TabSelect do
       show_underline: state.show_underline,
       show_scroll_arrows: state.show_scroll_arrows
     )
-  end
-
-  # --- Option normalization ---
-
-  defp normalize_option(%{name: _} = opt) do
-    Map.merge(%{name: "", description: nil, value: nil}, opt)
-  end
-
-  defp normalize_option(string) when is_binary(string) do
-    %{name: string, description: nil, value: nil}
   end
 
   # --- Key handling ---
@@ -221,29 +192,9 @@ defmodule ElixirOpentui.Widgets.TabSelect do
 
   # --- Event emission ---
 
-  defp emit_change(state) do
-    if state.on_change do
-      %{state | _pending: [{state.on_change, state.selected} | state._pending]}
-    else
-      state
-    end
-  end
+  defp emit_change(state), do: emit(state, state.on_change, [state.selected])
 
   defp emit_select(state) do
-    if state.on_select do
-      option = Enum.at(state.options, state.selected)
-      %{state | _pending: [{state.on_select, state.selected, option} | state._pending]}
-    else
-      state
-    end
+    emit(state, state.on_select, [state.selected, Enum.at(state.options, state.selected)])
   end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
-
-  defp clamp(val, lo, hi), do: max(lo, min(hi, val))
 end

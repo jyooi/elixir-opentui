@@ -23,6 +23,8 @@ defmodule ElixirOpentui.Widgets.TextInput do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   alias ElixirOpentui.TextBuffer
 
   @impl true
@@ -278,26 +280,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
     %{state | scroll_offset: max(0, scroll)}
   end
 
-  defp emit_change(state) do
-    if state.on_change do
-      %{state | _pending: [{state.on_change, state.value} | state._pending]}
-    else
-      state
-    end
-  end
+  defp emit_change(state), do: emit(state, state.on_change, [state.value])
 
-  defp emit_submit(state) do
-    if state.on_submit do
-      %{state | _pending: [{state.on_submit, state.value} | state._pending]}
-    else
-      state
-    end
-  end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
+  defp emit_submit(state), do: emit(state, state.on_submit, [state.value])
 end

@@ -19,6 +19,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   use ElixirOpentui.Component
 
+  import ElixirOpentui.Component
+
   alias ElixirOpentui.EditBufferNIF
 
   # Wrap mode constants consolidated in EditBufferNIF.wrap_mode_int/1
@@ -592,24 +594,11 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   # --- Change/Submit emission ---
 
-  defp emit_change(%{on_change: nil} = state), do: state
-
-  defp emit_change(%{on_change: tag} = state) do
-    text = EditBufferNIF.get_text(state.edit_buffer)
-    %{state | _pending: [{tag, text} | state._pending]}
+  defp emit_change(state) do
+    emit(state, state.on_change, [EditBufferNIF.get_text(state.edit_buffer)])
   end
 
-  defp emit_submit(%{on_submit: nil} = state), do: state
-
-  defp emit_submit(%{on_submit: tag} = state) do
-    text = EditBufferNIF.get_text(state.edit_buffer)
-    %{state | _pending: [{tag, text} | state._pending]}
-  end
-
-  defp prop_changed?(prev_props, new_props, key) do
-    prev_has? = Map.has_key?(prev_props, key)
-    new_has? = Map.has_key?(new_props, key)
-
-    prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
+  defp emit_submit(state) do
+    emit(state, state.on_submit, [EditBufferNIF.get_text(state.edit_buffer)])
   end
 end
