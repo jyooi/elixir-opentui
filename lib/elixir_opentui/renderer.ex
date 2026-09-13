@@ -26,7 +26,7 @@ defmodule ElixirOpentui.Renderer do
     %__MODULE__{cols: cols, rows: rows, front: Buffer.new(cols, rows), frame_count: 0}
   end
 
-  @doc "Paint an element tree into a fresh buffer and return {renderer, buffer}."
+  @doc false
   def paint(%__MODULE__{cols: cols, rows: rows} = renderer, tree, opts \\ []) do
     {tagged, layout_results} = Layout.compute(tree, cols, rows)
     painted = Painter.paint(tagged, layout_results, Buffer.new(cols, rows), opts)

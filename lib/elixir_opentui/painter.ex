@@ -1203,6 +1203,7 @@ defmodule ElixirOpentui.Painter do
     half_w = div(w, 2)
     right_x = x + half_w
     gutter_w = if show_line_numbers, do: 6, else: nil
+    content_w = max(0, half_w - (gutter_w || 0) - 3)
     empty = %{type: :empty, content: "", old_line: nil, new_line: nil}
 
     Enum.reduce(0..max(0, rows - 1)//1, buf, fn row, b ->
@@ -1217,18 +1218,35 @@ defmodule ElixirOpentui.Painter do
         right = Map.get(line, :right, empty)
 
         b
-        |> paint_diff_side(left, left.old_line, x, y + row, half_w - 1, gutter_w, colors)
+        |> paint_diff_side(
+          left,
+          left.old_line,
+          x,
+          y + row,
+          half_w - 1,
+          content_w,
+          gutter_w,
+          colors
+        )
         |> Buffer.draw_char(right_x - 1, y + row, "│", colors.gutter_fg, colors.bg)
-        |> paint_diff_side(right, right.new_line, right_x, y + row, half_w, gutter_w, colors)
+        |> paint_diff_side(
+          right,
+          right.new_line,
+          right_x,
+          y + row,
+          half_w,
+          content_w,
+          gutter_w,
+          colors
+        )
       end
     end)
   end
 
   # One half of a split diff row. `gutter_w` is nil when line numbers are hidden.
-  defp paint_diff_side(b, side, num, sx, sy, fill_w, gutter_w, colors) do
+  defp paint_diff_side(b, side, num, sx, sy, fill_w, content_w, gutter_w, colors) do
     {side_fg, side_bg, sign} = diff_line_style(side.type, colors)
     content_offset = (gutter_w || 0) + 2
-    content_w = max(0, fill_w - content_offset - 1)
 
     b =
       if side.type in [:remove, :add] do
