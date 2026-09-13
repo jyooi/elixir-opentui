@@ -89,7 +89,7 @@ NIF backs the text area's rope buffer and editor view.
 
 ## Demos
 
-The `demo/` directory has 20 runnable examples. Here are some highlights:
+The `demo/` directory has 18 runnable examples. Here are some highlights:
 
 ```bash
 mix run demo/widget_gallery.exs   # all widgets in one view
