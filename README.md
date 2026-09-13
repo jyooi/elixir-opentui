@@ -59,7 +59,7 @@ with a live counter you can increment and decrement with the arrow keys.
 - **Pure Elixir fallback** — everything works without the NIF too, just slower
 - **Animation system** — timeline-based with 25 easing functions, ~30 FPS live mode
 - **Syntax highlighting** — via Makeup, supports Elixir and TypeScript
-- **Markdown rendering** — via Earmark, headings, lists, code blocks, blockquotes
+- **Markdown rendering** — via EarmarkParser, headings, lists, code blocks, blockquotes
 - **Full input handling** — keyboard, mouse (SGR 1006), paste, Kitty keyboard protocol
 - **Terminal capability detection** — progressive enhancement based on what the terminal supports
 

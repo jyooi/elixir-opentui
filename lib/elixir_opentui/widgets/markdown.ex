@@ -1,6 +1,6 @@
 defmodule ElixirOpentui.Widgets.Markdown do
   @moduledoc """
-  Markdown rendering widget via Earmark.
+  Markdown rendering widget via EarmarkParser.
 
   Parses markdown content and produces a structured element tree with
   styled blocks for headings, paragraphs, code blocks, lists, etc.
@@ -130,7 +130,7 @@ defmodule ElixirOpentui.Widgets.Markdown do
   Parse markdown content into a list of block structures.
 
   Each block has a `:type` and type-specific fields. Falls back to
-  a simple line-based parser if Earmark is not available.
+  a simple line-based parser if EarmarkParser is not available.
   """
   @spec parse_markdown(String.t() | nil) :: [map()]
   def parse_markdown(content) when is_binary(content) do
@@ -248,7 +248,7 @@ defmodule ElixirOpentui.Widgets.Markdown do
     end
   end
 
-  # --- Simple fallback parser (no Earmark) ---
+  # --- Simple fallback parser (no EarmarkParser) ---
 
   defp parse_simple(content) do
     content
