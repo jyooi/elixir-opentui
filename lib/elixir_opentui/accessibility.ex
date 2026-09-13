@@ -81,7 +81,8 @@ defmodule ElixirOpentui.Accessibility do
   @spec snapshot(Runtime.model()) :: t()
   def snapshot(%{tree: nil}), do: %{focused_id: nil, frame: 0, root: nil}
 
-  def snapshot(%{tree: tree, component_states: states, event_manager: em, frame_count: frame}) do
+  def snapshot(%{tree: tree, component_states: states, event_manager: em, renderer: renderer}) do
+    frame = renderer.frame_count
     focused_id = if em, do: em.focus.focused_id, else: nil
 
     # If the tree is itself meaningful (e.g. titled panel), walk already emits

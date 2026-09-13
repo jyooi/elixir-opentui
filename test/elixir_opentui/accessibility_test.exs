@@ -200,4 +200,13 @@ defmodule ElixirOpentui.AccessibilityTest do
 
     assert :sys.get_state(rt).app_state == %{clicks: 1}
   end
+
+  test "snapshot frame reports the renderer's real frame count" do
+    rt = mount_app()
+    first = Runtime.snapshot(rt).frame
+    assert first > 0
+
+    :ok = Runtime.dispatch(rt, {:focus, :email})
+    assert Runtime.snapshot(rt).frame > first
+  end
 end
