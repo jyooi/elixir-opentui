@@ -1,12 +1,12 @@
 # ElixirOpentui
 
-A terminal UI framework for Elixir with a high-performance Zig NIF backend.
+A terminal UI framework for Elixir with a Zig NIF text engine.
 Build rich, interactive terminal applications using an Elm-inspired
 init/handle_event/render architecture and a declarative View DSL.
 
 This project is a port of [OpenTUI](https://github.com/anomalyco/opentui) to idiomatic
-Elixir. The Zig NIF backend uses OpenTUI's Zig implementation directly — the rope data
-structure, text buffer, editor view, grapheme handling, and frame buffer are all vendored
+Elixir. The Zig NIF uses OpenTUI's Zig implementation directly — the rope data
+structure, text buffer, editor view, and grapheme handling are all vendored
 from their codebase. Huge thanks to the OpenTUI team at [Anomaly](https://github.com/anomalyco)
 for building and open-sourcing such a solid foundation. This project wouldn't exist
 without their work.
@@ -55,8 +55,7 @@ with a live counter you can increment and decrement with the arrow keys.
 
 - **15+ widgets** — text input, select, checkbox, scroll box, tabs, textarea, code viewer, markdown renderer, diff viewer, and more
 - **Flexbox-inspired layout** — rows, columns, padding, margin, grow/shrink, alignment, percentage sizing
-- **Zig NIF rendering backend** — double-buffered, diff-based terminal output for minimal flicker
-- **Pure Elixir fallback** — everything works without the NIF too, just slower
+- **Diff-based rendering** — pure Elixir cell buffer, minimal terminal output for minimal flicker
 - **Animation system** — timeline-based with 25 easing functions, ~30 FPS live mode
 - **Syntax highlighting** — via Makeup, supports Elixir and TypeScript
 - **Markdown rendering** — via EarmarkParser, headings, lists, code blocks, blockquotes
@@ -86,12 +85,11 @@ what changed.
 
 Under the hood, the rendering pipeline goes: element tree → flexbox layout → paint to
 cell buffer → diff against previous frame → emit minimal ANSI escape sequences. The Zig
-NIF handles the buffer and diff operations for speed, but there's a pure Elixir fallback
-if you'd rather not compile native code.
+NIF backs the text area's rope buffer and editor view.
 
 ## Demos
 
-The `demo/` directory has 20 runnable examples. Here are some highlights:
+The `demo/` directory has 18 runnable examples. Here are some highlights:
 
 ```bash
 mix run demo/widget_gallery.exs   # all widgets in one view

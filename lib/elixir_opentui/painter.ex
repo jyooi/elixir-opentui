@@ -5,14 +5,10 @@ defmodule ElixirOpentui.Painter do
   Walks the element tree in z-order (painter's algorithm), writing
   characters and colors into the cell buffer. Each element type has
   its own painting logic.
-
-  Supports both Buffer (pure Elixir) and NativeBuffer (NIF-backed) via
-  polymorphic dispatch through buffer_mod/1.
   """
 
   alias ElixirOpentui.Border
   alias ElixirOpentui.Buffer
-  alias ElixirOpentui.NativeBuffer
   alias ElixirOpentui.Color
   alias ElixirOpentui.Element
   alias ElixirOpentui.Layout.Rect
@@ -70,9 +66,6 @@ defmodule ElixirOpentui.Painter do
     paint_node(root, layout_results, buffer, 1.0, focus_id)
   end
 
-  defp buffer_mod(%Buffer{}), do: Buffer
-  defp buffer_mod(%NativeBuffer{}), do: NativeBuffer
-
   defp paint_node(%Element{} = el, layout, buf, parent_opacity, focus_id) do
     ref = el.attrs[:_layout_ref]
     rect = Map.get(layout, ref) || Map.get(layout, el.id)
@@ -92,7 +85,7 @@ defmodule ElixirOpentui.Painter do
 
         buf =
           if el.type == :scroll_box do
-            buffer_mod(buf).push_scissor(buf, x, y, w, h)
+            Buffer.push_scissor(buf, x, y, w, h)
           else
             buf
           end
@@ -105,7 +98,7 @@ defmodule ElixirOpentui.Painter do
           end)
 
         if el.type == :scroll_box do
-          buffer_mod(buf).pop_scissor(buf)
+          Buffer.pop_scissor(buf)
         else
           buf
         end
@@ -120,13 +113,12 @@ defmodule ElixirOpentui.Painter do
       bg ->
         bg = Color.with_opacity(bg, opacity)
         fg = (el.style.fg || buf.default_fg) |> Color.with_opacity(opacity)
-        buffer_mod(buf).fill_rect(buf, x, y, w, h, " ", fg, bg)
+        Buffer.fill_rect(buf, x, y, w, h, " ", fg, bg)
     end
   end
 
   defp paint_border(buf, el, x, y, w, h, opacity, focused) do
     if el.style.border and w >= 2 and h >= 2 do
-      mod = buffer_mod(buf)
       chars = Border.chars(el.style.border_style)
 
       fg =
@@ -140,20 +132,20 @@ defmodule ElixirOpentui.Painter do
 
       buf =
         Enum.reduce(1..(w - 2)//1, buf, fn cx, b ->
-          b = mod.draw_char(b, x + cx, y, chars.h, fg, bg)
-          mod.draw_char(b, x + cx, y + h - 1, chars.h, fg, bg)
+          b = Buffer.draw_char(b, x + cx, y, chars.h, fg, bg)
+          Buffer.draw_char(b, x + cx, y + h - 1, chars.h, fg, bg)
         end)
 
       buf =
         Enum.reduce(1..(h - 2)//1, buf, fn cy, b ->
-          b = mod.draw_char(b, x, y + cy, chars.v, fg, bg)
-          mod.draw_char(b, x + w - 1, y + cy, chars.v, fg, bg)
+          b = Buffer.draw_char(b, x, y + cy, chars.v, fg, bg)
+          Buffer.draw_char(b, x + w - 1, y + cy, chars.v, fg, bg)
         end)
 
-      buf = mod.draw_char(buf, x, y, chars.tl, fg, bg)
-      buf = mod.draw_char(buf, x + w - 1, y, chars.tr, fg, bg)
-      buf = mod.draw_char(buf, x, y + h - 1, chars.bl, fg, bg)
-      buf = mod.draw_char(buf, x + w - 1, y + h - 1, chars.br, fg, bg)
+      buf = Buffer.draw_char(buf, x, y, chars.tl, fg, bg)
+      buf = Buffer.draw_char(buf, x + w - 1, y, chars.tr, fg, bg)
+      buf = Buffer.draw_char(buf, x, y + h - 1, chars.bl, fg, bg)
+      buf = Buffer.draw_char(buf, x + w - 1, y + h - 1, chars.br, fg, bg)
 
       paint_border_title(buf, el, x, y, w, fg, bg)
     else
@@ -165,7 +157,6 @@ defmodule ElixirOpentui.Painter do
     title = el.style.border_title
 
     if title && w >= 4 do
-      mod = buffer_mod(buf)
       max_display_w = w - 4
 
       {truncated, _} =
@@ -195,7 +186,7 @@ defmodule ElixirOpentui.Painter do
 
       start_x = max(x + 1, min(start_x, x + w - 1 - title_display_w))
 
-      mod.draw_text(buf, start_x, y, title_str, fg, bg)
+      Buffer.draw_text(buf, start_x, y, title_str, fg, bg)
     else
       buf
     end
@@ -209,7 +200,7 @@ defmodule ElixirOpentui.Painter do
     attrs = style_attrs(el.style)
 
     truncated = TextBuffer.slice_columns(content, 0, w)
-    buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
+    Buffer.draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
   defp paint_content(buf, %Element{type: :label} = el, x, y, w, _h, opacity, _focused) do
@@ -220,7 +211,7 @@ defmodule ElixirOpentui.Painter do
     attrs = style_attrs(el.style)
 
     truncated = TextBuffer.slice_columns(content, 0, w)
-    buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
+    Buffer.draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
   defp paint_content(buf, %Element{type: :panel} = el, x, y, w, _h, opacity, _focused) do
@@ -235,7 +226,7 @@ defmodule ElixirOpentui.Painter do
         bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
         truncated = TextBuffer.slice_columns(title, 0, w - 4)
         title_str = " #{truncated} "
-        buffer_mod(buf).draw_text(buf, x + 1, y, title_str, fg, bg)
+        Buffer.draw_text(buf, x + 1, y, title_str, fg, bg)
       else
         buf
       end
@@ -243,7 +234,6 @@ defmodule ElixirOpentui.Painter do
   end
 
   defp paint_content(buf, %Element{type: :input} = el, x, y, w, _h, opacity, focused) do
-    mod = buffer_mod(buf)
     value = Map.get(el.attrs, :value, "")
     placeholder = Map.get(el.attrs, :placeholder, "")
     cursor_pos = Map.get(el.attrs, :cursor_pos, TextBuffer.grapheme_count(value))
@@ -260,7 +250,7 @@ defmodule ElixirOpentui.Painter do
     bg = default_bg
 
     visible = TextBuffer.slice_columns(display, scroll_offset, w)
-    buf = mod.draw_text(buf, x, y, visible, fg, bg, attrs)
+    buf = Buffer.draw_text(buf, x, y, visible, fg, bg, attrs)
 
     if focused do
       c_fg =
@@ -283,7 +273,6 @@ defmodule ElixirOpentui.Painter do
             end
 
           paint_cursor_char(
-            mod,
             buf,
             el,
             x + cursor_x,
@@ -299,7 +288,7 @@ defmodule ElixirOpentui.Painter do
           buf
         end
       else
-        paint_cursor_char(mod, buf, el, x, y, " ", c_fg, c_bg, default_fg, default_bg, opacity)
+        paint_cursor_char(buf, el, x, y, " ", c_fg, c_bg, default_fg, default_bg, opacity)
       end
     else
       buf
@@ -320,11 +309,10 @@ defmodule ElixirOpentui.Painter do
       end
 
     truncated = TextBuffer.slice_columns(content, 0, w)
-    buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
+    Buffer.draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
   defp paint_content(buf, %Element{type: :select} = el, x, y, w, h, opacity, focused) do
-    mod = buffer_mod(buf)
     options = Map.get(el.attrs, :options, [])
     selected = Map.get(el.attrs, :selected, 0)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
@@ -354,10 +342,10 @@ defmodule ElixirOpentui.Painter do
 
           b =
             if focused and idx == selected do
-              b = mod.fill_rect(b, x, row_base, text_w, 1, " ", sel_fg, sel_bg, attrs)
-              mod.draw_text(b, x, row_base, opt_str, sel_fg, sel_bg, attrs)
+              b = Buffer.fill_rect(b, x, row_base, text_w, 1, " ", sel_fg, sel_bg, attrs)
+              Buffer.draw_text(b, x, row_base, opt_str, sel_fg, sel_bg, attrs)
             else
-              mod.draw_text(b, x, row_base, opt_str, fg, bg, attrs)
+              Buffer.draw_text(b, x, row_base, opt_str, fg, bg, attrs)
             end
 
           if show_description and row_base + 1 < y + h do
@@ -365,7 +353,7 @@ defmodule ElixirOpentui.Painter do
 
             if desc do
               desc_str = TextBuffer.slice_columns(desc, 0, text_w)
-              mod.draw_text(b, x, row_base + 1, desc_str, desc_fg, bg, attrs)
+              Buffer.draw_text(b, x, row_base + 1, desc_str, desc_fg, bg, attrs)
             else
               b
             end
@@ -380,7 +368,6 @@ defmodule ElixirOpentui.Painter do
     if show_scroll_indicator and length(options) > visible_items do
       paint_scroll_indicator(
         buf,
-        mod,
         x + w - 1,
         y,
         h,
@@ -414,7 +401,7 @@ defmodule ElixirOpentui.Painter do
     bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
 
     truncated = TextBuffer.slice_columns(content, 0, w)
-    buffer_mod(buf).draw_text(buf, x, y, truncated, fg, bg, attrs)
+    Buffer.draw_text(buf, x, y, truncated, fg, bg, attrs)
   end
 
   defp paint_content(buf, %Element{type: :scroll_box} = el, x, y, w, _h, opacity, _focused) do
@@ -423,14 +410,13 @@ defmodule ElixirOpentui.Painter do
     if scroll_y > 0 do
       fg = Color.with_opacity(@description_fg, opacity)
       bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)
-      buffer_mod(buf).draw_char(buf, x + w - 1, y, "▲", fg, bg)
+      Buffer.draw_char(buf, x + w - 1, y, "▲", fg, bg)
     else
       buf
     end
   end
 
   defp paint_content(buf, %Element{type: :textarea} = el, x, y, w, h, opacity, focused) do
-    mod = buffer_mod(buf)
     lines = Map.get(el.attrs, :lines, [])
     placeholder = Map.get(el.attrs, :placeholder, "")
     cursor_row = Map.get(el.attrs, :cursor_row, 0)
@@ -445,7 +431,7 @@ defmodule ElixirOpentui.Painter do
     buf =
       if lines == [] do
         placeholder_line = TextBuffer.slice_columns(placeholder, 0, w)
-        mod.draw_text(buf, x, y, placeholder_line, placeholder_fg, bg, attrs)
+        Buffer.draw_text(buf, x, y, placeholder_line, placeholder_fg, bg, attrs)
       else
         Enum.reduce(Enum.with_index(lines), buf, fn {line, row_idx}, b ->
           if row_idx < h do
@@ -453,7 +439,6 @@ defmodule ElixirOpentui.Painter do
 
             if selection do
               draw_textarea_line_with_selection(
-                mod,
                 b,
                 x,
                 y + row_idx,
@@ -467,7 +452,7 @@ defmodule ElixirOpentui.Painter do
                 attrs
               )
             else
-              mod.draw_text(b, x, y + row_idx, visible, fg, bg, attrs)
+              Buffer.draw_text(b, x, y + row_idx, visible, fg, bg, attrs)
             end
           else
             b
@@ -492,7 +477,6 @@ defmodule ElixirOpentui.Painter do
           (el.style.cursor_color || @focus_input_cursor_bg) |> Color.with_opacity(opacity)
 
         paint_cursor_char(
-          mod,
           buf,
           el,
           x + cursor_col,
@@ -515,7 +499,6 @@ defmodule ElixirOpentui.Painter do
   # --- Tab Select ---
 
   defp paint_content(buf, %Element{type: :tab_select} = el, x, y, w, _h, opacity, focused) do
-    mod = buffer_mod(buf)
     options = Map.get(el.attrs, :options, [])
     selected = Map.get(el.attrs, :selected, 0)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
@@ -538,8 +521,8 @@ defmodule ElixirOpentui.Painter do
     arrow_w = if has_left, do: 1, else: 0
     right_arrow_w = if has_right, do: 1, else: 0
 
-    buf = if has_left, do: mod.draw_char(buf, x, y, "<", dim_fg, bg), else: buf
-    buf = if has_right, do: mod.draw_char(buf, x + w - 1, y, ">", dim_fg, bg), else: buf
+    buf = if has_left, do: Buffer.draw_char(buf, x, y, "<", dim_fg, bg), else: buf
+    buf = if has_right, do: Buffer.draw_char(buf, x + w - 1, y, ">", dim_fg, bg), else: buf
 
     tab_area_x = x + arrow_w
     tab_area_w = w - arrow_w - right_arrow_w
@@ -556,10 +539,10 @@ defmodule ElixirOpentui.Painter do
           padded = TextBuffer.pad_trailing_columns(truncated, tab_width)
 
           if focused and idx == selected do
-            b = mod.fill_rect(b, tab_x, y, tab_width, 1, " ", sel_fg, sel_bg)
-            mod.draw_text(b, tab_x, y, padded, sel_fg, sel_bg)
+            b = Buffer.fill_rect(b, tab_x, y, tab_width, 1, " ", sel_fg, sel_bg)
+            Buffer.draw_text(b, tab_x, y, padded, sel_fg, sel_bg)
           else
-            mod.draw_text(b, tab_x, y, padded, fg, bg)
+            Buffer.draw_text(b, tab_x, y, padded, fg, bg)
           end
         end
       end)
@@ -567,13 +550,13 @@ defmodule ElixirOpentui.Painter do
     buf =
       if show_underline do
         underline_y = y + 1
-        buf = mod.draw_text(buf, x, underline_y, String.duplicate("─", w), dim_fg, bg)
+        buf = Buffer.draw_text(buf, x, underline_y, String.duplicate("─", w), dim_fg, bg)
 
         if focused do
           sel_tab_x = tab_area_x + (selected - scroll_offset) * tab_width
 
           if sel_tab_x >= tab_area_x and sel_tab_x + tab_width <= tab_area_x + tab_area_w do
-            mod.draw_text(
+            Buffer.draw_text(
               buf,
               sel_tab_x,
               underline_y,
@@ -596,7 +579,7 @@ defmodule ElixirOpentui.Painter do
       desc = tab_select_desc(Enum.at(options, selected))
 
       if desc do
-        mod.draw_text(buf, x, desc_y, TextBuffer.slice_columns(desc, 0, w), dim_fg, bg)
+        Buffer.draw_text(buf, x, desc_y, TextBuffer.slice_columns(desc, 0, w), dim_fg, bg)
       else
         buf
       end
@@ -608,7 +591,6 @@ defmodule ElixirOpentui.Painter do
   # --- Line Number ---
 
   defp paint_content(buf, %Element{type: :line_number} = el, x, y, _w, h, opacity, _focused) do
-    mod = buffer_mod(buf)
     line_count = Map.get(el.attrs, :line_count, 0)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
     visible_lines = Map.get(el.attrs, :visible_lines, line_count)
@@ -652,12 +634,12 @@ defmodule ElixirOpentui.Painter do
               gutter_width
             )
 
-          b = mod.draw_text(b, x, y + row, full_str, line_fg, bg)
+          b = Buffer.draw_text(b, x, y + row, full_str, line_fg, bg)
 
           sign_before_color = get_in(line_signs, [line_idx, :before_color])
 
           if sign_before != "" and sign_before_color do
-            mod.draw_text(
+            Buffer.draw_text(
               b,
               x,
               y + row,
@@ -676,7 +658,6 @@ defmodule ElixirOpentui.Painter do
   # --- Code ---
 
   defp paint_content(buf, %Element{type: :code} = el, x, y, w, h, opacity, _focused) do
-    mod = buffer_mod(buf)
     content = Map.get(el.attrs, :content, "")
     tokens = Map.get(el.attrs, :tokens)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
@@ -700,7 +681,6 @@ defmodule ElixirOpentui.Painter do
 
       paint_code_highlighted(
         buf,
-        mod,
         token_lines,
         lines,
         x,
@@ -719,7 +699,6 @@ defmodule ElixirOpentui.Painter do
     else
       paint_code_plain(
         buf,
-        mod,
         lines,
         x,
         y,
@@ -740,7 +719,6 @@ defmodule ElixirOpentui.Painter do
   # --- Diff ---
 
   defp paint_content(buf, %Element{type: :diff} = el, x, y, w, h, opacity, _focused) do
-    mod = buffer_mod(buf)
     diff_lines = Map.get(el.attrs, :lines, [])
     view = Map.get(el.attrs, :view, :unified)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
@@ -772,7 +750,6 @@ defmodule ElixirOpentui.Painter do
       :unified ->
         paint_diff_unified(
           buf,
-          mod,
           diff_lines,
           x,
           y,
@@ -786,7 +763,6 @@ defmodule ElixirOpentui.Painter do
       :split ->
         paint_diff_split(
           buf,
-          mod,
           diff_lines,
           x,
           y,
@@ -802,7 +778,6 @@ defmodule ElixirOpentui.Painter do
   # --- Markdown ---
 
   defp paint_content(buf, %Element{type: :markdown} = el, x, y, w, h, opacity, _focused) do
-    mod = buffer_mod(buf)
     blocks = Map.get(el.attrs, :blocks, [])
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
 
@@ -839,23 +814,26 @@ defmodule ElixirOpentui.Painter do
     Enum.reduce(Enum.with_index(visible), buf, fn {{text, line_fg, line_bg, line_attrs}, row},
                                                   b ->
       visible_text = TextBuffer.slice_columns(text, 0, w)
-      b = if line_bg != bg, do: mod.fill_rect(b, x, y + row, w, 1, " ", line_fg, line_bg), else: b
-      mod.draw_text(b, x, y + row, visible_text, line_fg, line_bg, line_attrs)
+
+      b =
+        if line_bg != bg,
+          do: Buffer.fill_rect(b, x, y + row, w, 1, " ", line_fg, line_bg),
+          else: b
+
+      Buffer.draw_text(b, x, y + row, visible_text, line_fg, line_bg, line_attrs)
     end)
   end
 
   # --- Frame Buffer (Canvas) ---
 
   defp paint_content(buf, %Element{type: :frame_buffer} = el, x, y, w, h, opacity, _focused) do
-    mod = buffer_mod(buf)
-
     case Map.get(el.attrs, :buffer) do
       %ElixirOpentui.Canvas{cells: cells} ->
         Enum.reduce(cells, buf, fn {{cx, cy}, {char, cell_fg, cell_bg}}, b ->
           if cx >= 0 and cx < w and cy >= 0 and cy < h do
             fg = Color.with_opacity(cell_fg, opacity)
             bg = Color.with_opacity(cell_bg, opacity)
-            mod.draw_char(b, x + cx, y + cy, char, fg, bg)
+            Buffer.draw_char(b, x + cx, y + cy, char, fg, bg)
           else
             b
           end
@@ -869,7 +847,6 @@ defmodule ElixirOpentui.Painter do
   # --- ASCII Font ---
 
   defp paint_content(buf, %Element{type: :ascii_font} = el, x, y, w, h, opacity, _focused) do
-    mod = buffer_mod(buf)
     text = Map.get(el.attrs, :text, "")
     font = Map.get(el.attrs, :font, :tiny)
 
@@ -890,7 +867,7 @@ defmodule ElixirOpentui.Painter do
             Color.with_opacity(color, opacity)
         end
 
-      buf = mod.fill_rect(buf, x, y, w, h, " ", primary_fg, bg)
+      buf = Buffer.fill_rect(buf, x, y, w, h, " ", primary_fg, bg)
 
       rows = ElixirOpentui.ASCIIFont.render_to_segments(text, font)
 
@@ -908,7 +885,7 @@ defmodule ElixirOpentui.Painter do
               |> String.graphemes()
               |> Enum.reduce({bb, col}, fn char, {bbb, c} ->
                 if c < w and char != " " do
-                  {mod.draw_char(bbb, x + c, y + row_idx, char, seg_fg, bg), c + 1}
+                  {Buffer.draw_char(bbb, x + c, y + row_idx, char, seg_fg, bg), c + 1}
                 else
                   {bbb, c + 1}
                 end
@@ -931,7 +908,7 @@ defmodule ElixirOpentui.Painter do
   defp option_description(%{description: desc}) when is_binary(desc), do: desc
   defp option_description(_), do: nil
 
-  defp paint_scroll_indicator(buf, mod, x, y, h, scroll_offset, total, visible, _fg, bg, opacity) do
+  defp paint_scroll_indicator(buf, x, y, h, scroll_offset, total, visible, _fg, bg, opacity) do
     indicator_fg = Color.with_opacity(@dim_fg, opacity)
 
     thumb_size = max(1, div(h * visible, total))
@@ -950,14 +927,13 @@ defmodule ElixirOpentui.Painter do
           true -> "│"
         end
 
-      mod.draw_char(b, x, y + row, char, indicator_fg, bg)
+      Buffer.draw_char(b, x, y + row, char, indicator_fg, bg)
     end)
   end
 
   # --- Textarea helpers ---
 
   defp paint_cursor_char(
-         mod,
          buf,
          el,
          cx,
@@ -971,19 +947,18 @@ defmodule ElixirOpentui.Painter do
        ) do
     case el.style.cursor_style do
       :underline ->
-        mod.draw_char(buf, cx, cy, char, normal_fg, normal_bg, underline: true)
+        Buffer.draw_char(buf, cx, cy, char, normal_fg, normal_bg, underline: true)
 
       :bar ->
         # Bar cursor: render character normally; terminal cursor positioning deferred
-        mod.draw_char(buf, cx, cy, char, normal_fg, normal_bg)
+        Buffer.draw_char(buf, cx, cy, char, normal_fg, normal_bg)
 
       _block ->
-        mod.draw_char(buf, cx, cy, char, block_fg, block_bg)
+        Buffer.draw_char(buf, cx, cy, char, block_fg, block_bg)
     end
   end
 
   defp draw_textarea_line_with_selection(
-         mod,
          buf,
          x,
          y,
@@ -1021,9 +996,9 @@ defmodule ElixirOpentui.Painter do
           if selected? do
             sel_fg = Color.with_opacity(bg, opacity)
             sel_bg = Color.with_opacity(fg, opacity)
-            mod.draw_char(b, x + col, y, ch, sel_fg, sel_bg, attrs)
+            Buffer.draw_char(b, x + col, y, ch, sel_fg, sel_bg, attrs)
           else
-            mod.draw_char(b, x + col, y, ch, fg, bg, attrs)
+            Buffer.draw_char(b, x + col, y, ch, fg, bg, attrs)
           end
         end
 
@@ -1047,7 +1022,7 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_hit_region(buf, el, x, y, w, h) do
     if el.id do
-      buffer_mod(buf).set_hit_region(buf, x, y, w, h, el.id)
+      Buffer.set_hit_region(buf, x, y, w, h, el.id)
     else
       buf
     end
@@ -1149,7 +1124,6 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_code_highlighted(
          buf,
-         mod,
          token_lines,
          _lines,
          x,
@@ -1173,7 +1147,7 @@ defmodule ElixirOpentui.Painter do
         if show_line_numbers do
           num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
           gutter_str = num_str <> "  "
-          mod.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
+          Buffer.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
         else
           b
         end
@@ -1188,7 +1162,7 @@ defmodule ElixirOpentui.Painter do
 
           bb =
             if col < code_w and visible != "" do
-              mod.draw_text(bb, code_x + col, y + row, visible, tok_fg, bg)
+              Buffer.draw_text(bb, code_x + col, y + row, visible, tok_fg, bg)
             else
               bb
             end
@@ -1202,7 +1176,6 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_code_plain(
          buf,
-         mod,
          lines,
          x,
          y,
@@ -1224,14 +1197,14 @@ defmodule ElixirOpentui.Painter do
         if show_line_numbers do
           num_str = TextBuffer.pad_leading_columns(to_string(line_idx + 1), digits)
           gutter_str = num_str <> "  "
-          mod.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
+          Buffer.draw_text(b, x, y + row, gutter_str, gutter_fg, bg)
         else
           b
         end
 
       line = Enum.at(lines, line_idx, "")
       visible = TextBuffer.slice_columns(line, 0, code_w)
-      mod.draw_text(b, code_x, y + row, visible, fg, bg)
+      Buffer.draw_text(b, code_x, y + row, visible, fg, bg)
     end)
   end
 
@@ -1239,7 +1212,6 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_diff_unified(
          buf,
-         mod,
          diff_lines,
          x,
          y,
@@ -1277,7 +1249,7 @@ defmodule ElixirOpentui.Painter do
         # Fill background for add/remove lines
         b =
           if type in [:add, :remove] do
-            mod.fill_rect(b, x, y + row, w, 1, " ", line_fg, line_bg)
+            Buffer.fill_rect(b, x, y + row, w, 1, " ", line_fg, line_bg)
           else
             b
           end
@@ -1294,22 +1266,21 @@ defmodule ElixirOpentui.Painter do
             new_str =
               if new_num, do: TextBuffer.pad_leading_columns(to_string(new_num), 4), else: "    "
 
-            mod.draw_text(b, x, y + row, old_str <> " " <> new_str, gutter_fg, line_bg)
+            Buffer.draw_text(b, x, y + row, old_str <> " " <> new_str, gutter_fg, line_bg)
           else
             b
           end
 
         # Draw sign and content
-        b = mod.draw_text(b, x + gutter_w, y + row, sign <> " ", line_fg, line_bg)
+        b = Buffer.draw_text(b, x + gutter_w, y + row, sign <> " ", line_fg, line_bg)
         visible = TextBuffer.slice_columns(content, 0, content_w)
-        mod.draw_text(b, content_x, y + row, visible, line_fg, line_bg)
+        Buffer.draw_text(b, content_x, y + row, visible, line_fg, line_bg)
       end
     end)
   end
 
   defp paint_diff_split(
          buf,
-         mod,
          diff_lines,
          x,
          y,
@@ -1352,7 +1323,7 @@ defmodule ElixirOpentui.Painter do
 
         b =
           if left.type in [:remove, :add] do
-            mod.fill_rect(b, x, y + row, half_w - 1, 1, " ", left_fg, left_bg)
+            Buffer.fill_rect(b, x, y + row, half_w - 1, 1, " ", left_fg, left_bg)
           else
             b
           end
@@ -1366,15 +1337,15 @@ defmodule ElixirOpentui.Painter do
                 do: TextBuffer.pad_leading_columns(to_string(old_num), 4) <> " ",
                 else: "     "
 
-            mod.draw_text(b, x, y + row, old_str, gutter_fg, left_bg)
+            Buffer.draw_text(b, x, y + row, old_str, gutter_fg, left_bg)
           else
             b
           end
 
-        b = mod.draw_text(b, x + gutter_w, y + row, left_sign <> " ", left_fg, left_bg)
+        b = Buffer.draw_text(b, x + gutter_w, y + row, left_sign <> " ", left_fg, left_bg)
 
         b =
-          mod.draw_text(
+          Buffer.draw_text(
             b,
             x + content_offset,
             y + row,
@@ -1384,7 +1355,7 @@ defmodule ElixirOpentui.Painter do
           )
 
         # --- Divider ---
-        b = mod.draw_char(b, right_x - 1, y + row, "│", gutter_fg, bg)
+        b = Buffer.draw_char(b, right_x - 1, y + row, "│", gutter_fg, bg)
 
         # --- Right side (new file) ---
         {right_fg, right_bg, right_sign} =
@@ -1392,7 +1363,7 @@ defmodule ElixirOpentui.Painter do
 
         b =
           if right.type in [:remove, :add] do
-            mod.fill_rect(b, right_x, y + row, half_w, 1, " ", right_fg, right_bg)
+            Buffer.fill_rect(b, right_x, y + row, half_w, 1, " ", right_fg, right_bg)
           else
             b
           end
@@ -1406,14 +1377,15 @@ defmodule ElixirOpentui.Painter do
                 do: TextBuffer.pad_leading_columns(to_string(new_num), 4) <> " ",
                 else: "     "
 
-            mod.draw_text(b, right_x, y + row, new_str, gutter_fg, right_bg)
+            Buffer.draw_text(b, right_x, y + row, new_str, gutter_fg, right_bg)
           else
             b
           end
 
-        b = mod.draw_text(b, right_x + gutter_w, y + row, right_sign <> " ", right_fg, right_bg)
+        b =
+          Buffer.draw_text(b, right_x + gutter_w, y + row, right_sign <> " ", right_fg, right_bg)
 
-        mod.draw_text(
+        Buffer.draw_text(
           b,
           right_x + content_offset,
           y + row,

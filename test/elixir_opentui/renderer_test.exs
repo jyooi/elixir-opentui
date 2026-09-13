@@ -15,8 +15,6 @@ defmodule ElixirOpentui.RendererTest do
       r = Renderer.new(40, 10)
       assert r.front.cols == 40
       assert r.front.rows == 10
-      assert r.back.cols == 40
-      assert r.back.rows == 10
     end
   end
 

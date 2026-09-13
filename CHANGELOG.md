@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - `ElixirOpentui.Terminal` GenServer and the `:terminal` option of `ElixirOpentui.Runtime`. Demos drive the terminal through `ElixirOpentui.DemoRunner`.
+- **BREAKING:** the native render backend. `ElixirOpentui.NativeBuffer`,
+  `ElixirOpentui.NIF` (the FrameBuffer NIF), and `ElixirOpentui.BufferBehaviour`
+  are gone. The `backend:` option on `Runtime.start_link/1`, `Renderer.new/3`,
+  and `TestRenderer.start_link/1` is gone, as are the `Renderer` `back`,
+  `native_buf`, and `backend` fields. The pure Elixir `Buffer` is the only
+  render path. `EditBufferNIF` stays because `TextArea` needs it.
+- The `claude_animation` and `frame_buffer_demo` demos.
 
 ### Changed
 

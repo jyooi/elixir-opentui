@@ -1,4 +1,4 @@
-unless ElixirOpentui.NIF.available?() do
+unless ElixirOpentui.EditBufferNIF.available?() do
   ExUnit.configure(exclude: [:nif])
 end
 

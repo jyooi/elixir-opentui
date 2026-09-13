@@ -12,7 +12,7 @@ defmodule ElixirOpentui.EventManager do
   4. Global key bindings → checked before focused element
   """
 
-  alias ElixirOpentui.{Focus, Buffer, NativeBuffer, Element, Input}
+  alias ElixirOpentui.{Focus, Buffer, Element, Input}
 
   @type handler :: (Input.event(), term() -> {:noreply, term()} | {:update, term(), term()})
 
@@ -21,7 +21,7 @@ defmodule ElixirOpentui.EventManager do
           handlers: %{optional(term()) => handler()},
           global_handlers: [handler()],
           tree: Element.t() | nil,
-          buffer: Buffer.t() | NativeBuffer.t() | nil
+          buffer: Buffer.t() | nil
         }
 
   defstruct focus: %Focus{},
@@ -116,7 +116,7 @@ defmodule ElixirOpentui.EventManager do
     # Hit-test the buffer to find which element was clicked
     hit_id =
       if state.buffer do
-        buffer_mod(state.buffer).get_hit_id(state.buffer, event.x, event.y)
+        Buffer.get_hit_id(state.buffer, event.x, event.y)
       end
 
     # Auto-focus on left click
@@ -171,7 +171,4 @@ defmodule ElixirOpentui.EventManager do
       end
     end)
   end
-
-  defp buffer_mod(%Buffer{}), do: Buffer
-  defp buffer_mod(%NativeBuffer{}), do: NativeBuffer
 end

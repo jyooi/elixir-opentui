@@ -4,7 +4,6 @@
 # make.zig c_ulong/u64 mismatch). Run via: mix run scripts/precompile.exs <file>
 #
 # Usage:
-#   mix run scripts/precompile.exs lib/elixir_opentui/nif.ex
 #   mix run scripts/precompile.exs lib/elixir_opentui/edit_buffer_nif.ex
 
 defmodule Precompile do

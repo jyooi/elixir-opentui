@@ -1,6 +1,6 @@
 # ElixirOpentui
 
-Terminal UI framework for Elixir with a Zig NIF backend.
+Terminal UI framework for Elixir with a Zig NIF text engine.
 
 ## Setup (non-obvious)
 

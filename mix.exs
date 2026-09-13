@@ -14,7 +14,7 @@ defmodule ElixirOpentui.MixProject do
       deps: deps(),
       aliases: aliases(),
       package: package(),
-      description: "A terminal UI framework for Elixir with a high-performance Zig NIF backend.",
+      description: "A terminal UI framework for Elixir with a Zig NIF text engine.",
       name: "ElixirOpentui",
       source_url: @source_url,
       docs: docs()
@@ -71,7 +71,6 @@ defmodule ElixirOpentui.MixProject do
         Rendering: [
           ElixirOpentui.Renderer,
           ElixirOpentui.Buffer,
-          ElixirOpentui.NativeBuffer,
           ElixirOpentui.Painter,
           ElixirOpentui.ANSI
         ],

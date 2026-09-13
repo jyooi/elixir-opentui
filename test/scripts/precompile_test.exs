@@ -7,8 +7,6 @@ defmodule ElixirOpentui.Scripts.PrecompileTest do
   use ExUnit.Case, async: true
 
   test "derives the real NIF module name from each NIF source file" do
-    assert Precompile.nif_module("lib/elixir_opentui/nif.ex") == ElixirOpentui.NIF
-
     assert Precompile.nif_module("lib/elixir_opentui/edit_buffer_nif.ex") ==
              ElixirOpentui.EditBufferNIF
   end
