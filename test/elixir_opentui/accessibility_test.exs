@@ -71,6 +71,16 @@ defmodule ElixirOpentui.AccessibilityTest do
     assert find_node(Runtime.snapshot(rt), :remember).state.checked == true
   end
 
+  test "set_checked sets Checkbox checked state to the given value" do
+    rt = mount_app()
+
+    :ok = Runtime.dispatch(rt, {:set_checked, :remember, true})
+    assert find_node(Runtime.snapshot(rt), :remember).state.checked == true
+
+    :ok = Runtime.dispatch(rt, {:set_checked, :remember, false})
+    assert find_node(Runtime.snapshot(rt), :remember).state.checked == false
+  end
+
   test "focus action updates focused_id visible in snapshot" do
     rt = mount_app()
     :ok = Runtime.dispatch(rt, {:focus, :email})

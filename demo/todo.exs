@@ -1,5 +1,5 @@
 # Interactive Todo List App
-# Run: cd example_app/tui_todo && mix run todo.exs
+# Run: mix run demo/todo.exs
 #
 # Tab/Shift+Tab: navigate | Enter: add todo | Space: toggle
 # d: delete todo | Left/Right: switch filter | Ctrl+C: quit
@@ -30,28 +30,31 @@ defmodule TodoApp do
       next_id: 1,
       focus_idx: 0,
       filter: :all,
-      input: TextInput.init(%{
-        id: :todo_input,
-        placeholder: "What needs to be done?",
-        width: content_w,
-        on_submit: :add_todo
-      }),
-      tab: TabSelect.init(%{
-        id: :filter_tabs,
-        options: @filter_options,
-        selected: 0,
-        tab_width: 10,
-        width: content_w,
-        wrap_selection: true,
-        show_description: false,
-        show_underline: true,
-        show_scroll_arrows: false
-      }),
-      scroll: ScrollBox.init(%{
-        id: :todo_scroll,
-        content_height: 0,
-        height: max(rows - 16, 5)
-      })
+      input:
+        TextInput.init(%{
+          id: :todo_input,
+          placeholder: "What needs to be done?",
+          width: content_w,
+          on_submit: :add_todo
+        }),
+      tab:
+        TabSelect.init(%{
+          id: :filter_tabs,
+          options: @filter_options,
+          selected: 0,
+          tab_width: 10,
+          width: content_w,
+          wrap_selection: true,
+          show_description: false,
+          show_underline: true,
+          show_scroll_arrows: false
+        }),
+      scroll:
+        ScrollBox.init(%{
+          id: :todo_scroll,
+          content_height: 0,
+          height: max(rows - 16, 5)
+        })
     }
   end
 
@@ -123,11 +126,12 @@ defmodule TodoApp do
         new_todos = state.todos ++ [todo]
         cleared_input = TextInput.update(:sync_value, %{value: ""}, %{new_input | _pending: []})
 
-        %{state |
-          todos: new_todos,
-          next_id: state.next_id + 1,
-          input: cleared_input,
-          scroll: %{state.scroll | content_height: length(new_todos)}
+        %{
+          state
+          | todos: new_todos,
+            next_id: state.next_id + 1,
+            input: cleared_input,
+            scroll: %{state.scroll | content_height: length(new_todos)}
         }
 
       _ ->
@@ -140,11 +144,12 @@ defmodule TodoApp do
     new_tab = TabSelect.update(:key, event, state.tab)
     new_filter = Enum.at(@filters, new_tab.selected) || :all
 
-    %{state |
-      tab: %{new_tab | _pending: []},
-      filter: new_filter,
-      # Clamp focus_idx if filtered list shrinks
-      focus_idx: 1
+    %{
+      state
+      | tab: %{new_tab | _pending: []},
+        filter: new_filter,
+        # Clamp focus_idx if filtered list shrinks
+        focus_idx: 1
     }
   end
 
@@ -173,12 +178,17 @@ defmodule TodoApp do
   # Toggle a todo's done state by its position in the filtered list
   defp toggle_todo(state, focus_idx) do
     filtered = filtered_todos(state)
+
     case Enum.at(filtered, focus_idx - 2) do
-      nil -> state
+      nil ->
+        state
+
       todo ->
-        new_todos = Enum.map(state.todos, fn t ->
-          if t.id == todo.id, do: %{t | done: not t.done}, else: t
-        end)
+        new_todos =
+          Enum.map(state.todos, fn t ->
+            if t.id == todo.id, do: %{t | done: not t.done}, else: t
+          end)
+
         %{state | todos: new_todos}
     end
   end
@@ -186,8 +196,11 @@ defmodule TodoApp do
   # Delete a todo and clamp focus to stay in bounds
   defp delete_todo(state, focus_idx) do
     filtered = filtered_todos(state)
+
     case Enum.at(filtered, focus_idx - 2) do
-      nil -> state
+      nil ->
+        state
+
       todo ->
         new_todos = Enum.reject(state.todos, &(&1.id == todo.id))
         new_filtered_count = length(filtered) - 1
@@ -196,10 +209,11 @@ defmodule TodoApp do
         # If no items left, jump back to input
         new_focus = if new_filtered_count == 0, do: 0, else: new_focus
 
-        %{state |
-          todos: new_todos,
-          focus_idx: new_focus,
-          scroll: %{state.scroll | content_height: length(new_todos)}
+        %{
+          state
+          | todos: new_todos,
+            focus_idx: new_focus,
+            scroll: %{state.scroll | content_height: length(new_todos)}
         }
     end
   end
@@ -235,33 +249,34 @@ defmodule TodoApp do
     status_text = " #{done_count}/#{total_count} done"
     divider = String.duplicate("─", content_w)
 
-    empty_msg = case state.filter do
-      :all -> "No todos yet. Type one above!"
-      :active -> "No active todos."
-      :done -> "No completed todos."
-    end
+    empty_msg =
+      case state.filter do
+        :all -> "No todos yet. Type one above!"
+        :active -> "No active todos."
+        :done -> "No completed todos."
+      end
 
     # Pre-compute todo lines to avoid variable scoping inside panel block
-    todo_lines = for {todo, vis_idx} <- Enum.with_index(filtered) do
-      todo_focus_idx = 2 + vis_idx
-      is_focused = state.focus_idx == todo_focus_idx
-      prefix = if is_focused, do: "> ", else: "  "
-      check_char = if todo.done, do: "[x]", else: "[ ]"
-      line_fg = if todo.done, do: dim, else: fg
-      line = String.slice("#{prefix}#{check_char} #{todo.text}", 0, content_w)
-      line_bg = if is_focused, do: Color.rgb(40, 40, 60), else: bg
-      {line, line_fg, line_bg}
-    end
+    todo_lines =
+      for {todo, vis_idx} <- Enum.with_index(filtered) do
+        todo_focus_idx = 2 + vis_idx
+        is_focused = state.focus_idx == todo_focus_idx
+        prefix = if is_focused, do: "> ", else: "  "
+        check_char = if todo.done, do: "[x]", else: "[ ]"
+        line_fg = if todo.done, do: dim, else: fg
+        line = String.slice("#{prefix}#{check_char} #{todo.text}", 0, content_w)
+        line_bg = if is_focused, do: Color.rgb(40, 40, 60), else: bg
+        {line, line_fg, line_bg}
+      end
 
-    panel id: :main, title: "Todo List", width: panel_w,
-          border: true, fg: fg, bg: bg do
-
+    panel id: :main, title: "Todo List", width: panel_w, border: true, fg: fg, bg: bg do
       text(content: "Tab: next | Shift+Tab: prev | Ctrl+C: quit", fg: dim, bg: bg)
       text(content: "Enter: add | Space: toggle | d: delete", fg: dim, bg: bg)
       text(content: "")
 
       # --- Input section ---
       label(content: input_label, fg: accent, bg: bg)
+
       input(
         id: :todo_input,
         value: ti.value,
@@ -273,10 +288,12 @@ defmodule TodoApp do
         bg: Color.rgb(40, 40, 60),
         fg: fg
       )
+
       text(content: "")
 
       # --- Filter tabs ---
       label(content: filter_label, fg: accent, bg: bg)
+
       tab_select(
         id: :filter_tabs,
         options: @filter_options,
@@ -288,6 +305,7 @@ defmodule TodoApp do
         show_underline: true,
         show_scroll_arrows: false
       )
+
       text(content: "")
 
       # --- Todo list ---

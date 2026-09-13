@@ -89,7 +89,7 @@ NIF backs the text area's rope buffer and editor view.
 
 ## Demos
 
-The `demo/` directory has 18 runnable examples. Here are some highlights:
+The `demo/` directory has 11 runnable examples. Here are some highlights:
 
 ```bash
 mix run demo/widget_gallery.exs   # all widgets in one view
@@ -99,7 +99,6 @@ mix run demo/markdown_demo.exs    # markdown renderer
 mix run demo/diff_demo.exs        # unified and split diff views
 mix run demo/animation_demo.exs   # timeline-based animations
 mix run demo/breakout.exs         # breakout game
-mix run demo/space_dodge.exs      # space dodge game
 ```
 
 All demos use `Ctrl+C` to exit.
