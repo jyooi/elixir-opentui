@@ -283,4 +283,4 @@ defmodule DiffDemo do
   def focused_id(_state), do: :diff_view
 end
 
-ElixirOpentui.Demo.DemoRunner.run(DiffDemo)
+ElixirOpentui.DemoRunner.run(DiffDemo)

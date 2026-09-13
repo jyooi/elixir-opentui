@@ -101,4 +101,4 @@ defmodule SelectDemo do
   def focused_id(_state), do: :lang_select
 end
 
-ElixirOpentui.Demo.DemoRunner.run(SelectDemo)
+ElixirOpentui.DemoRunner.run(SelectDemo)

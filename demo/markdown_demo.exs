@@ -197,4 +197,4 @@ defmodule MarkdownDemo do
   def focused_id(_state), do: :md_view
 end
 
-ElixirOpentui.Demo.DemoRunner.run(MarkdownDemo)
+ElixirOpentui.DemoRunner.run(MarkdownDemo)

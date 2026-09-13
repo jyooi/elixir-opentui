@@ -1,8 +1,8 @@
-defmodule ElixirOpentui.Demo.DemoRunnerTest do
+defmodule ElixirOpentui.DemoRunnerTest do
   use ExUnit.Case, async: true
 
   alias ElixirOpentui.ANSI
-  alias ElixirOpentui.Demo.DemoRunner
+  alias ElixirOpentui.DemoRunner
 
   # --- Source inspection tests ---
   #
@@ -18,7 +18,7 @@ defmodule ElixirOpentui.Demo.DemoRunnerTest do
     # call :shell.start_interactive from ExUnit without disrupting the test
     # runner's own terminal state.
     test "DemoRunner after block includes :cooked transition" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ ":shell.start_interactive({:noshell, :cooked})"
     end
   end
@@ -28,25 +28,25 @@ defmodule ElixirOpentui.Demo.DemoRunnerTest do
     # which requires a spawned input reader and real tty. Testing the actual
     # timing would be fragile and non-deterministic.
     test "source uses _tick_interval from state" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "_tick_interval"
       assert source =~ "Map.get(state, :_tick_interval, 33)"
     end
 
     test "source uses real wall-clock dt" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "System.monotonic_time(:millisecond)"
       assert source =~ "_last_tick"
       refute source =~ "dt = wait_ms"
     end
 
     test "initializes _last_tick before loop" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "Map.put_new(state, :_last_tick, System.monotonic_time(:millisecond))"
     end
 
     test "compensates sleep for render time" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "tick_interval - time_spent"
       assert source =~ "max(1,"
     end
@@ -56,20 +56,20 @@ defmodule ElixirOpentui.Demo.DemoRunnerTest do
     # Source inspection: starvation logic is inside the recursive event
     # handler which requires the full event loop to exercise.
     test "empty-events base case does NOT reset _last_tick" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
 
       refute source =~ ~r/handle_events.*\[\].*do\s*\n\s*state = Map\.put\(state, :_last_tick/s,
              "handle_events([], ...) must not reset _last_tick unconditionally"
     end
 
     test "empty-events base case checks tick due and fires inline" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "time_since_tick >= tick_interval"
       assert source =~ "tick_and_render(demo_mod, dt, state, renderer, ctx)"
     end
 
     test "live demos skip per-event rendering" do
-      source = File.read!("lib/elixir_opentui/demo/demo_runner.ex")
+      source = File.read!("lib/elixir_opentui/demo_runner.ex")
 
       assert source =~ ~r/if Map\.get\(new_state, :_live, false\) do\s*\n\s*\{renderer, ctx\}/s,
              "live demos should skip rendering in handle_events event clause"

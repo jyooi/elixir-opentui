@@ -600,4 +600,4 @@ defmodule CodeDemo do
   def focused_id(_state), do: :code_view
 end
 
-ElixirOpentui.Demo.DemoRunner.run(CodeDemo)
+ElixirOpentui.DemoRunner.run(CodeDemo)

@@ -1,4 +1,4 @@
-defmodule ElixirOpentui.Demo.DemoRunner do
+defmodule ElixirOpentui.DemoRunner do
   @moduledoc """
   Reusable runner for interactive widget demos.
 
@@ -362,9 +362,6 @@ defmodule ElixirOpentui.Demo.DemoRunner do
   # the terminal supports mode 2026. This eliminates flicker by buffering
   # all output until the ESU sequence, then flushing it as a single
   # atomic screen update.
-  #
-  # TODO: Add sync output wrapping to Terminal.write/2 (the GenServer path)
-  # once a use case for it exists. Currently only DemoRunner renders frames.
   defp write_frame(ctx, ansi) do
     %{tty: tty, caps: caps} = ctx
 

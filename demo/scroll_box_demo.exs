@@ -115,4 +115,4 @@ defmodule ScrollBoxDemo do
   end
 end
 
-ElixirOpentui.Demo.DemoRunner.run(ScrollBoxDemo)
+ElixirOpentui.DemoRunner.run(ScrollBoxDemo)

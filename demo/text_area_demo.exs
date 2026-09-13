@@ -85,4 +85,4 @@ defmodule TextAreaDemo do
   def focused_id(_state), do: :editor
 end
 
-ElixirOpentui.Demo.DemoRunner.run(TextAreaDemo)
+ElixirOpentui.DemoRunner.run(TextAreaDemo)
