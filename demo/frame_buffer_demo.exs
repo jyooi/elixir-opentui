@@ -219,4 +219,4 @@ defmodule FrameBufferDemo do
 
 end
 
-ElixirOpentui.Demo.DemoRunner.run(FrameBufferDemo)
+ElixirOpentui.DemoRunner.run(FrameBufferDemo)

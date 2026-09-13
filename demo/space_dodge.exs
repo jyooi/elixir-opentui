@@ -630,4 +630,4 @@ defmodule SpaceDodge do
   end
 end
 
-ElixirOpentui.Demo.DemoRunner.run(SpaceDodge)
+ElixirOpentui.DemoRunner.run(SpaceDodge)

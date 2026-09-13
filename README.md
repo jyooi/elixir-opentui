@@ -43,7 +43,7 @@ defmodule Counter do
   def focused_id(_state), do: nil
 end
 
-ElixirOpentui.Demo.DemoRunner.run(Counter)
+ElixirOpentui.DemoRunner.run(Counter)
 ```
 Save that as `counter.exs` and run it with `mix run counter.exs`. You get a bordered panel
 with a live counter you can increment and decrement with the arrow keys.

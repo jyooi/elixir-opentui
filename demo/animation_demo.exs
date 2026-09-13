@@ -67,4 +67,4 @@ defmodule AnimationDemo do
   def focused_id(_state), do: :main
 end
 
-ElixirOpentui.Demo.DemoRunner.run(AnimationDemo)
+ElixirOpentui.DemoRunner.run(AnimationDemo)

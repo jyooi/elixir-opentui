@@ -118,4 +118,4 @@ defmodule TextInputDemo do
   defp display_value(v), do: v
 end
 
-ElixirOpentui.Demo.DemoRunner.run(TextInputDemo)
+ElixirOpentui.DemoRunner.run(TextInputDemo)

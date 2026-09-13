@@ -189,4 +189,4 @@ defmodule WidgetGallery do
   end
 end
 
-ElixirOpentui.Demo.DemoRunner.run(WidgetGallery)
+ElixirOpentui.DemoRunner.run(WidgetGallery)

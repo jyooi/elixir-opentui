@@ -130,4 +130,4 @@ defmodule LineNumberDemo do
   def focused_id(_state), do: :gutter
 end
 
-ElixirOpentui.Demo.DemoRunner.run(LineNumberDemo)
+ElixirOpentui.DemoRunner.run(LineNumberDemo)

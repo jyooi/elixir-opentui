@@ -92,4 +92,4 @@ defmodule TabSelectDemo do
   def focused_id(_state), do: :lang_tabs
 end
 
-ElixirOpentui.Demo.DemoRunner.run(TabSelectDemo)
+ElixirOpentui.DemoRunner.run(TabSelectDemo)

@@ -2,7 +2,7 @@
 
 ## DemoRunner Protocol
 
-Demo modules implement four callbacks for `DemoRunner.run/1` (`lib/elixir_opentui/demo/demo_runner.ex`):
+Demo modules implement four callbacks for `DemoRunner.run/1` (`lib/elixir_opentui/demo_runner.ex`):
 
 - `init(cols, rows)` — return initial state given terminal dimensions
 - `handle_event(event, state)` — return `{:cont, new_state}` or `:quit`

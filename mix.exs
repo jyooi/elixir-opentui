@@ -75,7 +75,7 @@ defmodule ElixirOpentui.MixProject do
           ElixirOpentui.ANSI
         ],
         Layout: [ElixirOpentui.Layout],
-        Terminal: [ElixirOpentui.Terminal, ElixirOpentui.Input, ElixirOpentui.Capabilities]
+        Terminal: [ElixirOpentui.Input, ElixirOpentui.Capabilities]
       ]
     ]
   end

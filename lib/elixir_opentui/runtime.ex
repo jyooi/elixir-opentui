@@ -3,14 +3,14 @@ defmodule ElixirOpentui.Runtime do
   The MVU runtime GenServer. Owns all application and component state.
 
   Runs the main loop:
-  1. Receive events (from Terminal or test harness)
+  1. Receive events (from DemoRunner or test harness)
   2. Route through EventManager
   3. Update component states
   4. Re-render the element tree
   5. Diff and output to terminal
 
   Can run in two modes:
-  - `:live` — connected to a real Terminal driver
+  - `:live` - driven by a real terminal
   - `:headless` — for testing (no terminal, captures frames)
   """
 
@@ -20,7 +20,6 @@ defmodule ElixirOpentui.Runtime do
 
   alias ElixirOpentui.{
     Accessibility,
-    ANSI,
     Renderer,
     EventManager,
     Element,
@@ -28,8 +27,7 @@ defmodule ElixirOpentui.Runtime do
     NativeBuffer,
     Layout,
     Painter,
-    Focus,
-    Terminal
+    Focus
   }
 
   # Cap to prevent animation jumps when the VM pauses for GC, debugger, or
@@ -71,7 +69,6 @@ defmodule ElixirOpentui.Runtime do
     :renderer,
     :event_manager,
     :tree,
-    :terminal,
     :on_event,
     component_states: %{},
     mode: :headless,
@@ -227,14 +224,12 @@ defmodule ElixirOpentui.Runtime do
     cols = Keyword.get(opts, :cols, 80)
     rows = Keyword.get(opts, :rows, 24)
     mode = Keyword.get(opts, :mode, :headless)
-    terminal = Keyword.get(opts, :terminal)
     on_event = Keyword.get(opts, :on_event)
     backend = Keyword.get(opts, :backend, :elixir)
 
     state = %__MODULE__{
       renderer: Renderer.new(cols, rows, backend: backend),
       mode: mode,
-      terminal: terminal,
       on_event: on_event,
       backend: backend
     }
@@ -355,7 +350,6 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_call(:suspend, _from, state) do
     new_count = state.suspend_count + 1
-    if new_count == 1 and state.terminal, do: Terminal.suspend(state.terminal)
     state = %{state | suspend_count: new_count, control_state: :suspended}
     {:reply, :ok, state}
   end
@@ -365,8 +359,6 @@ defmodule ElixirOpentui.Runtime do
     state = %{state | suspend_count: new_count}
 
     if new_count == 0 do
-      if state.terminal, do: Terminal.resume(state.terminal)
-
       if any_live?(state) or state.live_request_count > 0 or state.explicit_start do
         state = start_tick_loop(state)
         {:reply, :ok, state}
@@ -399,11 +391,6 @@ defmodule ElixirOpentui.Runtime do
   end
 
   @impl true
-  def handle_info({:terminal_event, event}, state) do
-    new_state = process_event(state, event)
-    {:noreply, new_state}
-  end
-
   def handle_info(:tick, %{control_state: :suspended} = state) do
     {:noreply, state}
   end
@@ -429,14 +416,6 @@ defmodule ElixirOpentui.Runtime do
   end
 
   def handle_info(:tick, %{control_state: :idle} = state) do
-    {:noreply, state}
-  end
-
-  def handle_info({:clipboard_copy, text}, state) do
-    if state.terminal do
-      Terminal.write(state.terminal, ANSI.copy_to_clipboard(text))
-    end
-
     {:noreply, state}
   end
 

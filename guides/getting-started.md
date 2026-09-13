@@ -79,7 +79,7 @@ defmodule Counter do
   def focused_id(_state), do: nil
 end
 
-ElixirOpentui.Demo.DemoRunner.run(Counter)
+ElixirOpentui.DemoRunner.run(Counter)
 ```
 
 Run it:
@@ -215,7 +215,7 @@ defmodule CounterWithInput do
   def focused_id(_state), do: :name
 end
 
-ElixirOpentui.Demo.DemoRunner.run(CounterWithInput)
+ElixirOpentui.DemoRunner.run(CounterWithInput)
 ```
 
 The pattern for any widget is the same:

@@ -105,4 +105,4 @@ defmodule CheckboxDemo do
   end
 end
 
-ElixirOpentui.Demo.DemoRunner.run(CheckboxDemo)
+ElixirOpentui.DemoRunner.run(CheckboxDemo)

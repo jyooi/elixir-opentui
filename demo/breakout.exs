@@ -925,4 +925,4 @@ defmodule Breakout do
 
 end
 
-ElixirOpentui.Demo.DemoRunner.run(Breakout)
+ElixirOpentui.DemoRunner.run(Breakout)
