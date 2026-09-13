@@ -21,7 +21,7 @@ Add the dependency to `mix.exs`:
 ```elixir
 defp deps do
   [
-    {:elixir_opentui, "~> 0.1.0"}
+    {:elixir_opentui, "~> 0.2.0"}
   ]
 end
 ```

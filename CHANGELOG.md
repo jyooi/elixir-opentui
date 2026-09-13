@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-13
+
 ### Removed
 
 - **BREAKING:** unused public API, cut after the 2026-09-13 over-engineering audit:
@@ -23,9 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `get_eol_eb`, `get_next_word_boundary_eb`, `get_prev_word_boundary_eb`,
     `get_text_range`, `get_text_range_by_coords`, `move_cursor_up`,
     `move_cursor_down`, `view_get_selection` and `view_set_cursor_by_offset`.
-    The NIF source changed, so the v0.1.1 prebuilt binaries no longer match
-    and the prebuilt shasum list is empty. A build from git needs the Zig
-    toolchain (`mix zig.get`) until the next prebuilt release.
+    The NIF source changed, so the v0.1.1 prebuilt binaries do not work with
+    0.2.0 source. v0.2.0 ships its own prebuilt binaries, and `mix compile`
+    downloads them for the listed platforms.
   - `ElixirOpentui.TestRenderer` and `ElixirOpentui.TestHelpers`. Use
     `Runtime` headless mode.
   - The `:pixel` ASCII font.
