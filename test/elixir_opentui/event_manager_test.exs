@@ -116,63 +116,6 @@ defmodule ElixirOpentui.EventManagerTest do
     end
   end
 
-  describe "key dispatch to focused handler" do
-    test "key events dispatched to focused element's handler" do
-      {tree, buffer} = build_scene()
-      em = EventManager.new(tree, buffer)
-
-      test_pid = self()
-
-      handler = fn event, state ->
-        send(test_pid, {:key_received, event.key})
-        {:noreply, state}
-      end
-
-      em = EventManager.register_handler(em, :btn, handler)
-      em = %{em | focus: ElixirOpentui.Focus.focus(em.focus, :btn)}
-
-      key = %{type: :key, key: "a", ctrl: false, alt: false, shift: false}
-      EventManager.process(em, key)
-      assert_receive {:key_received, "a"}
-    end
-
-    test "no handler means no dispatch" do
-      {tree, buffer} = build_scene()
-      em = EventManager.new(tree, buffer)
-      em = %{em | focus: ElixirOpentui.Focus.focus(em.focus, :btn)}
-
-      key = %{type: :key, key: "a", ctrl: false, alt: false, shift: false}
-      {_em2, actions} = EventManager.process(em, key)
-      assert actions == []
-    end
-  end
-
-  describe "global handlers" do
-    test "global handler intercepts key before focused element" do
-      {tree, buffer} = build_scene()
-      em = EventManager.new(tree, buffer)
-
-      test_pid = self()
-
-      global = fn event, state ->
-        if event.key == "q" and event.ctrl do
-          send(test_pid, :quit)
-          {:update, state, :quit}
-        else
-          nil
-        end
-      end
-
-      em = EventManager.register_global_handler(em, global)
-      em = %{em | focus: ElixirOpentui.Focus.focus(em.focus, :btn)}
-
-      ctrl_q = %{type: :key, key: "q", ctrl: true, alt: false, shift: false}
-      {_em2, actions} = EventManager.process(em, ctrl_q)
-      assert_receive :quit
-      assert [{:update, :quit}] = actions
-    end
-  end
-
   describe "update/3" do
     test "updates tree and buffer, preserves focus" do
       {tree, buffer} = build_scene()
@@ -192,27 +135,6 @@ defmodule ElixirOpentui.EventManagerTest do
       resize = %{type: :resize, cols: 100, rows: 40}
       {_em2, actions} = EventManager.process(em, resize)
       assert [{:resize, 100, 40}] = actions
-    end
-  end
-
-  describe "paste events" do
-    test "paste dispatched to focused element" do
-      {tree, buffer} = build_scene()
-      em = EventManager.new(tree, buffer)
-
-      test_pid = self()
-
-      handler = fn event, state ->
-        send(test_pid, {:paste, event.data})
-        {:noreply, state}
-      end
-
-      em = EventManager.register_handler(em, :inp, handler)
-      em = %{em | focus: ElixirOpentui.Focus.focus(em.focus, :inp)}
-
-      paste = %{type: :paste, data: "hello world"}
-      EventManager.process(em, paste)
-      assert_receive {:paste, "hello world"}
     end
   end
 end

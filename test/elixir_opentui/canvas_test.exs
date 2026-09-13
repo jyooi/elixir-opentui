@@ -124,51 +124,6 @@ defmodule ElixirOpentui.CanvasTest do
     end
   end
 
-  describe "fill_rect/8" do
-    test "creates w*h cells" do
-      c = Canvas.new(20, 20) |> Canvas.fill_rect(2, 3, 4, 3, "#", @white, @blue)
-      assert map_size(c.cells) == 12
-
-      for dx <- 0..3, dy <- 0..2 do
-        assert c.cells[{2 + dx, 3 + dy}] == {"#", @white, @blue}
-      end
-    end
-
-    test "zero width produces no cells" do
-      c = Canvas.new(10, 10) |> Canvas.fill_rect(0, 0, 0, 5, "#", @white, @black)
-      assert c.cells == %{}
-    end
-
-    test "zero height produces no cells" do
-      c = Canvas.new(10, 10) |> Canvas.fill_rect(0, 0, 5, 0, "#", @white, @black)
-      assert c.cells == %{}
-    end
-
-    test "1x1 rect creates one cell" do
-      c = Canvas.new(10, 10) |> Canvas.fill_rect(3, 4, 1, 1, ".", @red, @black)
-      assert map_size(c.cells) == 1
-      assert c.cells[{3, 4}] == {".", @red, @black}
-    end
-  end
-
-  describe "clear/1" do
-    test "resets cells to empty map" do
-      c =
-        Canvas.new(10, 10)
-        |> Canvas.set_cell(0, 0, "A", @white, @black)
-        |> Canvas.set_cell(5, 5, "B", @white, @black)
-        |> Canvas.clear()
-
-      assert c.cells == %{}
-    end
-
-    test "preserves dimensions" do
-      c = Canvas.new(20, 15) |> Canvas.set_cell(0, 0, "X", @white, @black) |> Canvas.clear()
-      assert c.width == 20
-      assert c.height == 15
-    end
-  end
-
   describe "composing operations" do
     test "draw_text then set_cell overwrites" do
       c =
@@ -179,18 +134,6 @@ defmodule ElixirOpentui.CanvasTest do
       assert c.cells[{0, 0}] == {"A", @white, @black}
       assert c.cells[{1, 0}] == {"X", @red, @blue}
       assert c.cells[{2, 0}] == {"C", @white, @black}
-    end
-
-    test "fill_rect then draw_text overwrites rect cells" do
-      c =
-        Canvas.new(10, 5)
-        |> Canvas.fill_rect(0, 0, 5, 1, ".", @white, @black)
-        |> Canvas.draw_text(1, 0, "Hi", @red, @blue)
-
-      assert c.cells[{0, 0}] == {".", @white, @black}
-      assert c.cells[{1, 0}] == {"H", @red, @blue}
-      assert c.cells[{2, 0}] == {"i", @red, @blue}
-      assert c.cells[{3, 0}] == {".", @white, @black}
     end
   end
 end

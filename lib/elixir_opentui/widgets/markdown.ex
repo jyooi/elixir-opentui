@@ -129,15 +129,13 @@ defmodule ElixirOpentui.Widgets.Markdown do
   @doc """
   Parse markdown content into a list of block structures.
 
-  Each block has a `:type` and type-specific fields. Falls back to
-  a simple line-based parser if EarmarkParser is not available.
+  Each block has a `:type` and type-specific fields.
   """
   @spec parse_markdown(String.t() | nil) :: [map()]
   def parse_markdown(content) when is_binary(content) do
-    if earmark_available?() do
-      parse_with_earmark(content)
-    else
-      parse_simple(content)
+    case EarmarkParser.as_ast(content) do
+      {:ok, ast, _} -> ast_to_blocks(ast)
+      {:error, ast, _} -> ast_to_blocks(ast)
     end
   end
 
@@ -148,17 +146,6 @@ defmodule ElixirOpentui.Widgets.Markdown do
     new_has? = Map.has_key?(new_props, key)
 
     prev_has? != new_has? or (prev_has? and Map.get(prev_props, key) != Map.get(new_props, key))
-  end
-
-  defp earmark_available? do
-    Code.ensure_loaded?(EarmarkParser)
-  end
-
-  defp parse_with_earmark(content) do
-    case EarmarkParser.as_ast(content) do
-      {:ok, ast, _} -> ast_to_blocks(ast)
-      {:error, _, _} -> parse_simple(content)
-    end
   end
 
   defp ast_to_blocks(ast) do
@@ -247,55 +234,4 @@ defmodule ElixirOpentui.Widgets.Markdown do
       nil -> default
     end
   end
-
-  # --- Simple fallback parser (no EarmarkParser) ---
-
-  defp parse_simple(content) do
-    content
-    |> String.split("\n")
-    |> Enum.chunk_while(
-      [],
-      fn line, acc ->
-        cond do
-          String.starts_with?(line, "#") ->
-            {level, text} = parse_heading_line(line)
-            block = %{type: :heading, level: level, content: text}
-
-            case acc do
-              [] ->
-                {:cont, block, []}
-
-              lines ->
-                {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")},
-                 [block]}
-            end
-
-          String.trim(line) == "" ->
-            case acc do
-              [] ->
-                {:cont, []}
-
-              lines ->
-                {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")}, []}
-            end
-
-          true ->
-            {:cont, [line | acc]}
-        end
-      end,
-      fn
-        [] -> {:cont, []}
-        lines -> {:cont, %{type: :paragraph, content: Enum.join(Enum.reverse(lines), "\n")}, []}
-      end
-    )
-    |> List.flatten()
-  end
-
-  defp parse_heading_line(line) do
-    {hashes, rest} = String.split_at(line, count_leading_hashes(line, 0))
-    {String.length(hashes), String.trim(rest)}
-  end
-
-  defp count_leading_hashes("#" <> rest, n), do: count_leading_hashes(rest, n + 1)
-  defp count_leading_hashes(_, n), do: n
 end

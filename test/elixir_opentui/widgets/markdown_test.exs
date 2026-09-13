@@ -85,11 +85,7 @@ defmodule ElixirOpentui.Widgets.MarkdownTest do
     end
   end
 
-  @has_earmark Code.ensure_loaded?(EarmarkParser)
-
   describe "earmark parsing" do
-    @describetag skip: if(!@has_earmark, do: "Earmark not available")
-
     test "parses code blocks" do
       md = "```elixir\ndefmodule Foo do\nend\n```"
       blocks = Markdown.parse_markdown(md)

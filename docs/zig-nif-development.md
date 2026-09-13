@@ -15,12 +15,9 @@ Use the `~Z` sigil for inline Zig code within the module.
 
 Vendored code lives in `zig/opentui/`. The entry point for NIF imports is `zig/opentui/nif-api.zig`, which re-exports the symbols zigler needs.
 
-## Elixir NIF Wrappers
+## Elixir Access
 
-- `EditBuffer` — struct wrapping the NIF resource reference
-- `EditorView` — struct wrapping the NIF resource reference
-
-Both require `@enforce_keys` (canonical pattern). Access the NIF module directly (`EditBufferNIF`) — no adapter layer.
+There are no Elixir wrapper structs. `TextArea` holds the raw resource references and calls `EditBufferNIF` directly. Only add a NIF function when a widget needs it.
 
 ## Testing
 

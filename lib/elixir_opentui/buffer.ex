@@ -125,28 +125,6 @@ defmodule ElixirOpentui.Buffer do
     end
   end
 
-  @doc "Write a character with alpha blending over existing cell."
-  @spec draw_char_blend(
-          t(),
-          integer(),
-          integer(),
-          String.t(),
-          Color.t(),
-          Color.t(),
-          keyword()
-        ) :: t()
-  def draw_char_blend(buf, x, y, char, fg, bg, attrs \\ []) do
-    case get_cell(buf, x, y) do
-      nil ->
-        buf
-
-      existing ->
-        blended_fg = Color.blend(fg, existing.fg)
-        blended_bg = Color.blend(bg, existing.bg)
-        draw_char(buf, x, y, char, blended_fg, blended_bg, attrs)
-    end
-  end
-
   @doc "Write a string horizontally starting at (x, y) with optional text attributes."
   @spec draw_text(
           t(),
@@ -229,22 +207,6 @@ defmodule ElixirOpentui.Buffer do
   @spec resize(t(), non_neg_integer(), non_neg_integer()) :: t()
   def resize(%__MODULE__{default_fg: fg, default_bg: bg}, cols, rows) do
     new(cols, rows, fg: fg, bg: bg)
-  end
-
-  @doc "Extract a rectangular region as a list of rows (list of cells)."
-  @spec capture_rect(
-          t(),
-          non_neg_integer(),
-          non_neg_integer(),
-          non_neg_integer(),
-          non_neg_integer()
-        ) :: [[cell()]]
-  def capture_rect(buf, x, y, w, h) do
-    for cy <- y..(y + h - 1)//1 do
-      for cx <- x..(x + w - 1)//1 do
-        get_cell(buf, cx, cy) || blank_cell(buf.default_fg, buf.default_bg)
-      end
-    end
   end
 
   @doc "Convert the full buffer to a list of row strings (for testing/display)."

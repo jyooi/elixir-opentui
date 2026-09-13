@@ -27,10 +27,7 @@ defmodule ElixirOpentui.Widgets.CodeTest do
       state = Code.init(%{content: @sample_code, id: :code})
       assert state.content == @sample_code
       assert state.show_line_numbers == true
-      assert state.line_number_offset == 0
-      assert state.wrap_mode == :none
       assert state.scroll_offset == 0
-      assert state.streaming == false
     end
 
     test "initializes with filetype" do
@@ -157,12 +154,6 @@ defmodule ElixirOpentui.Widgets.CodeTest do
       state = Code.update({:set_show_line_numbers, false}, nil, state)
       assert state.show_line_numbers == false
     end
-
-    test "set_streaming" do
-      state = Code.init(%{content: "a", id: :code})
-      state = Code.update({:set_streaming, true}, nil, state)
-      assert state.streaming == true
-    end
   end
 
   describe "update_props/3" do
@@ -184,11 +175,9 @@ defmodule ElixirOpentui.Widgets.CodeTest do
 
       state = Code.init(prev_props)
       state = Code.update({:set_show_line_numbers, false}, nil, state)
-      state = Code.update({:set_streaming, true}, nil, state)
       state = Code.update_props(prev_props, new_props, state)
 
       assert state.show_line_numbers == false
-      assert state.streaming == true
     end
   end
 

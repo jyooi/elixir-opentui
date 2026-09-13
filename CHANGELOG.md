@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **BREAKING:** unused public API, cut after the 2026-09-13 over-engineering audit:
+  - `Animation.Timeline`: `call/3`, `sync/2,3`, `once/3`, `pause/1`, `restart/1`,
+    `playing?/1`, `current_time/1`, the `on_start`, `on_complete`, `on_loop`,
+    `on_update` and `on_pause` callbacks, the `auto_play` option, and the per-item
+    `loop`, `alternate` and `loop_delay` options of `add/3`. `new/1`, `add/3`,
+    `play/1`, `advance/2`, `value/2` and `finished?/1` stay, as do timeline-level
+    `loop` and `alternate`.
+  - `ElixirOpentui.EditBuffer` and `ElixirOpentui.EditorView` wrapper modules.
+    `TextArea` calls `EditBufferNIF` directly.
+  - `EditBufferNIF.available?/0` and 16 NIF functions: `replace_text`, `goto_line`,
+    `delete_range`, `eb_clear`, `can_undo`, `can_redo`, `clear_history`,
+    `get_eol_eb`, `get_next_word_boundary_eb`, `get_prev_word_boundary_eb`,
+    `get_text_range`, `get_text_range_by_coords`, `move_cursor_up`,
+    `move_cursor_down`, `view_get_selection` and `view_set_cursor_by_offset`.
+    The NIF source changed, so the v0.1.1 prebuilt binaries no longer match
+    and the prebuilt shasum list is empty. A build from git needs the Zig
+    toolchain (`mix zig.get`) until the next prebuilt release.
+  - `ElixirOpentui.TestRenderer` and `ElixirOpentui.TestHelpers`. Use
+    `Runtime` headless mode.
+  - The `:pixel` ASCII font.
+  - `Widgets.LineNumber`. Use the `line_number` element. The gutter width math
+    now lives in `Layout`, and the `:gutter_width` attr still overrides it.
+  - `TextBuffer` styled-span API: the struct, `new/0`, `from_text/1`,
+    `from_spans/1`, `styled/2`, `concat/1`, `to_plain/1`, `graphemes/1`,
+    `style_at/2`, `append/3`, `slice/3`, and the struct clauses of
+    `grapheme_count/1` and `display_width/1`. The string helpers stay.
+  - Widget options that `Painter` never read: `Diff` `:filetype`, `Code`
+    `:wrap_mode`, `:streaming` (and `{:set_streaming, _}`) and
+    `:line_number_offset`, and the `Markdown` fallback parser used when
+    `earmark_parser` is not installed. `Markdown` now requires `earmark_parser`.
+  - `EventManager` handler registry: `register_handler/3`,
+    `register_global_handler/2`, the `handlers` and `global_handlers` fields,
+    and paste dispatch.
+  - `Element.count/1`, `map/2`, `reduce/3`, `find_by_id/2` and the `key` field.
+  - `Buffer.draw_char_blend/7`, `Buffer.capture_rect/5`, `Canvas.fill_rect/8`,
+    `Canvas.clear/1`, `ANSI.save_cursor/0`, `ANSI.restore_cursor/0`,
+    `ANSI.cursor_shape/2`, `Color.yellow/0`, `Color.cyan/0`, `Color.magenta/0`,
+    and the `Capabilities` fields `color_support`, `terminal_program`, `tmux`
+    and `term`. `Capabilities.detect_env/0` takes no arguments now.
 - `ElixirOpentui.Terminal` GenServer and the `:terminal` option of `ElixirOpentui.Runtime`. Demos drive the terminal through `ElixirOpentui.DemoRunner`.
 - **BREAKING:** the native render backend. `ElixirOpentui.NativeBuffer`,
   `ElixirOpentui.NIF` (the FrameBuffer NIF), and `ElixirOpentui.BufferBehaviour`

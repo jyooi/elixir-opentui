@@ -15,9 +15,6 @@ defmodule ElixirOpentui.Color do
   @red {255, 0, 0, 255}
   @green {0, 255, 0, 255}
   @blue {0, 0, 255, 255}
-  @yellow {255, 255, 0, 255}
-  @cyan {0, 255, 255, 255}
-  @magenta {255, 0, 255, 255}
 
   def transparent, do: @transparent
   def black, do: @black
@@ -25,9 +22,6 @@ defmodule ElixirOpentui.Color do
   def red, do: @red
   def green, do: @green
   def blue, do: @blue
-  def yellow, do: @yellow
-  def cyan, do: @cyan
-  def magenta, do: @magenta
 
   @doc "Create an RGB color with full opacity."
   @spec rgb(component(), component(), component()) :: t()

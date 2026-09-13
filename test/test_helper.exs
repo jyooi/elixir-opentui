@@ -1,5 +1,10 @@
-unless ElixirOpentui.EditBufferNIF.available?() do
-  ExUnit.configure(exclude: [:nif])
-end
+nif_loaded? =
+  try do
+    is_reference(ElixirOpentui.EditBufferNIF.create())
+  rescue
+    _ -> false
+  end
+
+unless nif_loaded?, do: ExUnit.configure(exclude: [:nif])
 
 ExUnit.start()

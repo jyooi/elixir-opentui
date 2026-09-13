@@ -336,7 +336,7 @@ defmodule ElixirOpentui.Layout do
   end
 
   defp content_width(%Element{type: :line_number, attrs: attrs}, _avail) do
-    Map.get(attrs, :gutter_width, 4)
+    Map.get_lazy(attrs, :gutter_width, fn -> gutter_width(attrs) end)
   end
 
   defp content_width(%Element{type: :code, attrs: attrs}, avail) do
@@ -367,6 +367,23 @@ defmodule ElixirOpentui.Layout do
   end
 
   defp content_width(_el, _avail), do: 0
+
+  defp gutter_width(attrs) do
+    line_count = Map.get(attrs, :line_count, 0)
+    offset = Map.get(attrs, :line_number_offset, 0)
+    custom_max = attrs |> Map.get(:line_numbers, %{}) |> Map.values() |> Enum.max(fn -> 0 end)
+    max_num = max(line_count + offset, custom_max)
+    digits = if max_num > 0, do: trunc(:math.log10(max_num)) + 1, else: 1
+    signs = attrs |> Map.get(:line_signs, %{}) |> Map.values()
+    base = max(Map.get(attrs, :min_width, 3), digits + Map.get(attrs, :padding_right, 1) + 1)
+    base + max_sign_width(signs, :before) + max_sign_width(signs, :after)
+  end
+
+  defp max_sign_width(signs, field) do
+    signs
+    |> Enum.map(&TextBuffer.display_width(Map.get(&1, field) || ""))
+    |> Enum.max(fn -> 0 end)
+  end
 
   defp select_option_width(%{name: name}), do: TextBuffer.display_width(name)
   defp select_option_width(opt), do: TextBuffer.display_width(to_string(opt))

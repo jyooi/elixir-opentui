@@ -10,7 +10,6 @@ defmodule ElixirOpentui.MixProject do
       version: @version,
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
       aliases: aliases(),
       package: package(),
@@ -20,9 +19,6 @@ defmodule ElixirOpentui.MixProject do
       docs: docs()
     ]
   end
-
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
 
   def application do
     [
@@ -86,7 +82,7 @@ defmodule ElixirOpentui.MixProject do
       {:zigler, "~> 0.15.2", runtime: false},
       {:makeup_elixir, "~> 1.0", optional: true},
       {:makeup_ts, "~> 0.2", optional: true},
-      {:earmark_parser, "~> 1.4", optional: true}
+      {:earmark_parser, "~> 1.4"}
     ]
   end
 end

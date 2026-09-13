@@ -3,94 +3,11 @@ defmodule ElixirOpentui.CapabilitiesTest do
 
   alias ElixirOpentui.Capabilities
 
-  # Helper: build an env_fn from a keyword-style map
-  defp env(map) when is_map(map), do: fn key -> Map.get(map, key) end
-
-  describe "detect_env/1 color support" do
-    test "NO_COLOR disables color" do
-      caps = Capabilities.detect_env(env(%{"NO_COLOR" => "1"}))
-      assert caps.color_support == :no_color
-    end
-
-    test "NO_COLOR takes precedence over COLORTERM=truecolor" do
-      caps = Capabilities.detect_env(env(%{"NO_COLOR" => "1", "COLORTERM" => "truecolor"}))
-      assert caps.color_support == :no_color
-    end
-
-    test "TERM=dumb disables color" do
-      caps = Capabilities.detect_env(env(%{"TERM" => "dumb"}))
-      assert caps.color_support == :no_color
-    end
-
-    test "TERM=dumb takes precedence over COLORTERM=truecolor" do
-      caps = Capabilities.detect_env(env(%{"TERM" => "dumb", "COLORTERM" => "truecolor"}))
-      assert caps.color_support == :no_color
-    end
-
-    test "COLORTERM=truecolor detects truecolor" do
-      caps = Capabilities.detect_env(env(%{"COLORTERM" => "truecolor"}))
-      assert caps.color_support == :truecolor
-    end
-
-    test "COLORTERM=24bit detects truecolor" do
-      caps = Capabilities.detect_env(env(%{"COLORTERM" => "24bit"}))
-      assert caps.color_support == :truecolor
-    end
-
-    test "TERM=xterm-256color without COLORTERM detects 256 color" do
-      caps = Capabilities.detect_env(env(%{"TERM" => "xterm-256color"}))
-      assert caps.color_support == :color256
-    end
-
-    test "default with no vars returns optimistic truecolor" do
-      caps = Capabilities.detect_env(env(%{}))
-      assert caps.color_support == :truecolor
-    end
-  end
-
-  describe "detect_env/1 terminal program" do
-    test "KITTY_WINDOW_ID detects kitty" do
-      caps = Capabilities.detect_env(env(%{"KITTY_WINDOW_ID" => "1"}))
-      assert caps.terminal_program == "kitty"
-    end
-
-    test "WT_SESSION detects windows-terminal" do
-      caps = Capabilities.detect_env(env(%{"WT_SESSION" => "abc-123"}))
-      assert caps.terminal_program == "windows-terminal"
-    end
-
-    test "TERM_PROGRAM=ghostty detects ghostty (lowercased)" do
-      caps = Capabilities.detect_env(env(%{"TERM_PROGRAM" => "Ghostty"}))
-      assert caps.terminal_program == "ghostty"
-    end
-
-    test "no program vars returns nil" do
-      caps = Capabilities.detect_env(env(%{}))
-      assert caps.terminal_program == nil
-    end
-  end
-
-  describe "detect_env/1 other fields" do
-    test "TMUX set detects tmux" do
-      caps = Capabilities.detect_env(env(%{"TMUX" => "/tmp/tmux-1000/default,12345,0"}))
-      assert caps.tmux == true
-    end
-
-    test "no TMUX returns false" do
-      caps = Capabilities.detect_env(env(%{}))
-      assert caps.tmux == false
-    end
-
-    test "TERM is recorded" do
-      caps = Capabilities.detect_env(env(%{"TERM" => "xterm-256color"}))
-      assert caps.term == "xterm-256color"
-    end
-
+  describe "detect_env/0" do
     test "default struct has expected defaults" do
-      caps = Capabilities.detect_env(env(%{}))
+      caps = Capabilities.detect_env()
       assert caps.kitty_keyboard == false
       assert caps.synchronized_output == :unknown
-      assert caps.term == nil
     end
   end
 

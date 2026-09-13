@@ -73,7 +73,6 @@ These are optional and only needed if you use the corresponding widgets:
 ```elixir
 {:makeup, "~> 1.2", optional: true}          # for Code widget syntax highlighting
 {:makeup_elixir, "~> 1.0", optional: true}    # Elixir syntax highlighting
-{:earmark_parser, "~> 1.4", optional: true}   # for Markdown widget
 ```
 
 ## How it works
@@ -118,7 +117,7 @@ All demos use `Ctrl+C` to exit.
 | `code` / `Code` | Syntax-highlighted code display |
 | `markdown` / `Markdown` | Rendered markdown |
 | `diff` / `Diff` | Unified and split diff views |
-| `line_number` / `LineNumber` | Line number gutter with signs and colors |
+| `line_number` | Line number gutter with signs and colors |
 | `ascii_font` / `AsciiFont` | Decorative ASCII art text |
 
 ## View DSL

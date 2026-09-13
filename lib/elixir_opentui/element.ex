@@ -35,7 +35,6 @@ defmodule ElixirOpentui.Element do
           style: Style.t(),
           children: [t()],
           id: term(),
-          key: term(),
           component: module() | nil
         }
 
@@ -44,7 +43,6 @@ defmodule ElixirOpentui.Element do
             style: %Style{},
             children: [],
             id: nil,
-            key: nil,
             component: nil
 
   @layout_attrs [
@@ -100,7 +98,7 @@ defmodule ElixirOpentui.Element do
     children = List.wrap(children) |> List.flatten() |> Enum.reject(&is_nil/1)
     attrs = normalize_aliases(attrs)
     {style_attrs, rest_attrs} = Keyword.split(attrs, @layout_attrs)
-    {meta_attrs, content_attrs} = Keyword.split(rest_attrs, [:id, :key, :component])
+    {meta_attrs, content_attrs} = Keyword.split(rest_attrs, [:id, :component])
 
     %__MODULE__{
       type: type,
@@ -108,7 +106,6 @@ defmodule ElixirOpentui.Element do
       style: Style.from_attrs(style_attrs),
       children: children,
       id: Keyword.get(meta_attrs, :id),
-      key: Keyword.get(meta_attrs, :key),
       component: Keyword.get(meta_attrs, :component)
     }
   end
@@ -125,33 +122,5 @@ defmodule ElixirOpentui.Element do
     Enum.map(attrs, fn {k, v} ->
       {Map.get(@aliases, k, k), v}
     end)
-  end
-
-  @doc "Count total nodes in tree."
-  @spec count(t()) :: non_neg_integer()
-  def count(%__MODULE__{children: children}) do
-    1 + Enum.reduce(children, 0, fn child, acc -> acc + count(child) end)
-  end
-
-  @doc "Find an element by id in the tree (depth-first)."
-  @spec find_by_id(t(), term()) :: t() | nil
-  def find_by_id(%__MODULE__{id: id} = el, target) when id == target, do: el
-
-  def find_by_id(%__MODULE__{children: children}, target) do
-    Enum.find_value(children, fn child -> find_by_id(child, target) end)
-  end
-
-  @doc "Map over all elements in the tree (pre-order)."
-  @spec map(t(), (t() -> t())) :: t()
-  def map(%__MODULE__{} = el, fun) do
-    mapped = fun.(el)
-    %{mapped | children: Enum.map(mapped.children, &map(&1, fun))}
-  end
-
-  @doc "Reduce over all elements in the tree (pre-order)."
-  @spec reduce(t(), acc, (t(), acc -> acc)) :: acc when acc: term()
-  def reduce(%__MODULE__{} = el, acc, fun) do
-    acc = fun.(el, acc)
-    Enum.reduce(el.children, acc, fn child, a -> reduce(child, a, fun) end)
   end
 end

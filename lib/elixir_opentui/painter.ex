@@ -590,7 +590,7 @@ defmodule ElixirOpentui.Painter do
 
   # --- Line Number ---
 
-  defp paint_content(buf, %Element{type: :line_number} = el, x, y, _w, h, opacity, _focused) do
+  defp paint_content(buf, %Element{type: :line_number} = el, x, y, w, h, opacity, _focused) do
     line_count = Map.get(el.attrs, :line_count, 0)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
     visible_lines = Map.get(el.attrs, :visible_lines, line_count)
@@ -598,7 +598,7 @@ defmodule ElixirOpentui.Painter do
     line_colors = Map.get(el.attrs, :line_colors, %{})
     line_signs = Map.get(el.attrs, :line_signs, %{})
     show = Map.get(el.attrs, :show_line_numbers, true)
-    gutter_width = Map.get(el.attrs, :gutter_width, 4)
+    gutter_width = w
 
     fg = el.style.fg || Color.with_opacity(@dim_fg, opacity)
     bg = (el.style.bg || buf.default_bg) |> Color.with_opacity(opacity)

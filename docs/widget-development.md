@@ -32,7 +32,7 @@ Interactive widgets accumulate events in a `_pending` list that is drained by Ru
 
 ## Existing Widgets
 
-11 widgets in `lib/elixir_opentui/widgets/`: TextInput, Checkbox, Select, ScrollBox, TextArea, Code, Diff, Markdown, TabSelect, LineNumber, ScrollHelper.
+10 widgets in `lib/elixir_opentui/widgets/`: TextInput, Checkbox, Select, ScrollBox, TextArea, Code, Diff, Markdown, TabSelect, ScrollHelper. The line number gutter is the `line_number` element, sized by `Layout` and painted by `Painter`.
 
 ## Testing
 

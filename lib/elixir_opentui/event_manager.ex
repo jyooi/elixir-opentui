@@ -6,58 +6,33 @@ defmodule ElixirOpentui.EventManager do
   No side effects, no processes. The Runtime calls this to process events.
 
   Event flow:
-  1. Key events → focused element's handler (if any)
-  2. Mouse events → hit-test buffer → resolve target → dispatch to handler
-  3. Tab/Shift+Tab → focus navigation (built-in)
-  4. Global key bindings → checked before focused element
+  1. Tab/Shift+Tab → focus navigation
+  2. Mouse events → hit-test buffer → resolve target → auto-focus on left click
+  3. Resize events → resize action
   """
 
   alias ElixirOpentui.{Focus, Buffer, Element, Input}
 
-  @type handler :: (Input.event(), term() -> {:noreply, term()} | {:update, term(), term()})
-
   @type state :: %__MODULE__{
           focus: Focus.t(),
-          handlers: %{optional(term()) => handler()},
-          global_handlers: [handler()],
           tree: Element.t() | nil,
           buffer: Buffer.t() | nil
         }
 
   defstruct focus: %Focus{},
-            handlers: %{},
-            global_handlers: [],
             tree: nil,
             buffer: nil
 
   @doc "Create an event manager from an element tree."
   @spec new(Element.t(), Buffer.t()) :: state()
   def new(tree, buffer) do
-    %__MODULE__{
-      focus: Focus.from_tree(tree),
-      handlers: %{},
-      global_handlers: [],
-      tree: tree,
-      buffer: buffer
-    }
+    %__MODULE__{focus: Focus.from_tree(tree), tree: tree, buffer: buffer}
   end
 
   @doc "Update the tree and buffer after a render."
   @spec update(state(), Element.t(), Buffer.t()) :: state()
   def update(state, tree, buffer) do
     %{state | tree: tree, buffer: buffer, focus: Focus.update_tree(state.focus, tree)}
-  end
-
-  @doc "Register an event handler for a specific element id."
-  @spec register_handler(state(), term(), handler()) :: state()
-  def register_handler(state, id, handler) do
-    %{state | handlers: Map.put(state.handlers, id, handler)}
-  end
-
-  @doc "Register a global key handler (checked before focused element)."
-  @spec register_global_handler(state(), handler()) :: state()
-  def register_global_handler(state, handler) do
-    %{state | global_handlers: state.global_handlers ++ [handler]}
   end
 
   @doc """
@@ -71,10 +46,6 @@ defmodule ElixirOpentui.EventManager do
 
   def process(state, %{type: :mouse} = event) do
     process_mouse(state, event)
-  end
-
-  def process(state, %{type: :paste} = event) do
-    dispatch_to_focused(state, event)
   end
 
   def process(state, %{type: :resize} = event) do
@@ -99,14 +70,7 @@ defmodule ElixirOpentui.EventManager do
         {new_state, [{:focus_changed, new_focus.focused_id}]}
 
       true ->
-        # Try global handlers first
-        case try_global_handlers(state, event) do
-          {:handled, state, actions} ->
-            {state, actions}
-
-          :not_handled ->
-            dispatch_to_focused(state, event)
-        end
+        {state, []}
     end
   end
 
@@ -130,45 +94,6 @@ defmodule ElixirOpentui.EventManager do
         state
       end
 
-    # Dispatch to the hit element's handler
-    if hit_id && Map.has_key?(state.handlers, hit_id) do
-      handler = state.handlers[hit_id]
-      dispatch_handler(state, handler, event)
-    else
-      {state, [{:mouse, event}]}
-    end
-  end
-
-  # --- Dispatch helpers ---
-
-  defp dispatch_to_focused(state, event) do
-    case state.focus.focused_id do
-      nil ->
-        {state, []}
-
-      id ->
-        case Map.get(state.handlers, id) do
-          nil -> {state, []}
-          handler -> dispatch_handler(state, handler, event)
-        end
-    end
-  end
-
-  defp dispatch_handler(state, handler, event) do
-    case handler.(event, state) do
-      {:noreply, new_state} -> {new_state, []}
-      {:update, new_state, msg} -> {new_state, [{:update, msg}]}
-      _ -> {state, []}
-    end
-  end
-
-  defp try_global_handlers(state, event) do
-    Enum.reduce_while(state.global_handlers, :not_handled, fn handler, _acc ->
-      case handler.(event, state) do
-        {:noreply, new_state} -> {:halt, {:handled, new_state, []}}
-        {:update, new_state, msg} -> {:halt, {:handled, new_state, [{:update, msg}]}}
-        _ -> {:cont, :not_handled}
-      end
-    end)
+    {state, [{:mouse, event}]}
   end
 end

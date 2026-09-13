@@ -42,21 +42,6 @@ defmodule ElixirOpentui.Widgets.FrameBufferWidgetTest do
       assert Buffer.get_cell(buf, 4, 0).char == "o"
     end
 
-    test "fill_rect renders correctly" do
-      canvas = Canvas.new(10, 5) |> Canvas.fill_rect(1, 1, 3, 2, "#", @red, @blue)
-
-      tree =
-        Element.new(:box, [width: 20, height: 10], [
-          Element.new(:frame_buffer, buffer: canvas, width: 10, height: 5)
-        ])
-
-      buf = paint(tree)
-      cell = Buffer.get_cell(buf, 2, 2)
-      assert cell.char == "#"
-      assert cell.fg == @red
-      assert cell.bg == @blue
-    end
-
     test "clips to element bounds" do
       # Cell at (15, 3) is outside 10-wide canvas — should not render
       canvas =

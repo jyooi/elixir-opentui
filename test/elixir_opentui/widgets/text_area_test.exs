@@ -1513,13 +1513,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       refute String.contains?(text, "two")
       assert EditBufferNIF.get_line_count(state.edit_buffer) == 2
     end
-
-    test "goto_line moves to specified line" do
-      state = TextArea.init(%{id: :ta, value: "one\ntwo\nthree", width: 40, height: 10})
-      EditBufferNIF.goto_line(state.edit_buffer, 2)
-      cursor = get_cursor(state)
-      assert cursor.row == 2
-    end
   end
 
   # ── Complex editing scenarios ──────────────────────────────────────

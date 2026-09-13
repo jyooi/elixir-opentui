@@ -105,7 +105,7 @@ defmodule MarkdownDemo do
   - **Code** — syntax-highlighted source code display
   - **Diff** — unified and split diff views with line numbers
   - **Markdown** — rendered markdown content (this widget!)
-  - **LineNumber** — gutter with signs, colors, and markers
+  - **line_number** — gutter element with signs, colors, and markers
 
   ### Getting Started
 
