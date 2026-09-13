@@ -49,7 +49,8 @@ defmodule ElixirOpentui.MixProject do
         "GitHub" => @source_url,
         "OpenTUI (upstream Zig)" => "https://github.com/anomalyco/opentui"
       },
-      files: ~w(lib zig .formatter.exs mix.exs README.md LICENSE CHANGELOG.md)
+      files: ~w(lib zig .formatter.exs mix.exs README.md LICENSE CHANGELOG.md),
+      exclude_patterns: ["zig/opentui/tests"]
     ]
   end
 
@@ -84,10 +85,9 @@ defmodule ElixirOpentui.MixProject do
     [
       {:ex_doc, "~> 0.35", only: :dev, runtime: false},
       {:zigler, "~> 0.15.2", runtime: false},
-      {:makeup, "~> 1.2", optional: true},
       {:makeup_elixir, "~> 1.0", optional: true},
       {:makeup_ts, "~> 0.2", optional: true},
-      {:earmark, "~> 1.4", optional: true}
+      {:earmark_parser, "~> 1.4", optional: true}
     ]
   end
 end

@@ -151,11 +151,11 @@ defmodule ElixirOpentui.Widgets.Markdown do
   end
 
   defp earmark_available? do
-    Code.ensure_loaded?(Earmark)
+    Code.ensure_loaded?(EarmarkParser)
   end
 
   defp parse_with_earmark(content) do
-    case Earmark.as_ast(content) do
+    case EarmarkParser.as_ast(content) do
       {:ok, ast, _} -> ast_to_blocks(ast)
       {:error, _, _} -> parse_simple(content)
     end

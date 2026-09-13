@@ -96,7 +96,7 @@ These are optional and only needed if you use the corresponding widgets:
 ```elixir
 {:makeup, "~> 1.2", optional: true}          # for Code widget syntax highlighting
 {:makeup_elixir, "~> 1.0", optional: true}    # Elixir syntax highlighting
-{:earmark, "~> 1.4", optional: true}          # for Markdown widget
+{:earmark_parser, "~> 1.4", optional: true}   # for Markdown widget
 ```
 
 ## How it works
