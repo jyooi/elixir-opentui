@@ -26,8 +26,6 @@ defmodule ElixirOpentui.Capabilities do
   @spec detect_env() :: t()
   def detect_env, do: %__MODULE__{}
 
-  # --- Capability event reducer ---
-
   @doc """
   Apply a parsed capability response event to the capabilities struct.
 
@@ -45,19 +43,10 @@ defmodule ElixirOpentui.Capabilities do
   end
 
   def apply_capability(caps, %{capability: :decrqm, mode: 2026, status: status}) do
-    # DECRQM status values (per ECMA-48 / DEC STD 070):
-    #   0 = not recognized (terminal doesn't know this mode)
-    #   1 = set (mode is currently enabled)
-    #   2 = reset (mode is supported but currently disabled)
-    #   3 = permanently set (cannot be toggled off)
-    #   4 = permanently reset (cannot be toggled on)
-    # Supported = status in [1, 2, 3]; unsupported = 0, 4
     %{caps | synchronized_output: status in [1, 2, 3]}
   end
 
   def apply_capability(caps, _event), do: caps
-
-  # --- Accessor functions (resolve :unknown at read time) ---
 
   @doc "Does the terminal support synchronized output (mode 2026)? Resolves :unknown → false."
   @spec synchronized_output?(t()) :: boolean()

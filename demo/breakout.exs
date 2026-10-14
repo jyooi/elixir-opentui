@@ -1,15 +1,7 @@
-# Breakout — Classic brick-breaker game
-# Run: mix run demo/breakout.exs
-#
-# A 60 FPS arcade game showcasing Canvas pixel drawing, ASCIIFont HUD,
-# Timeline animations, particle effects, screen shake, and smooth physics.
-# Arrow keys / A,D / H,L to move paddle, Space to launch/restart, Q to quit.
-
 defmodule Breakout do
   alias ElixirOpentui.Animation.Timeline
   alias ElixirOpentui.{Canvas, Color, ASCIIFont}
 
-  # --- Constants ---
   @paddle_chars "▟█████▙"
   @paddle_width 7
   @paddle_speed 50.0
@@ -32,21 +24,19 @@ defmodule Breakout do
   @bg Color.rgb(8, 8, 20)
 
   @row_colors [
-    {0.0, 0.8, 0.50},    # red
-    {20.0, 0.85, 0.55},   # orange
-    {45.0, 0.9, 0.55},    # yellow
-    {120.0, 0.7, 0.45},   # green
-    {180.0, 0.7, 0.50},   # cyan
-    {230.0, 0.7, 0.50},   # blue
-    {275.0, 0.6, 0.50},   # purple
-    {320.0, 0.7, 0.55}    # pink
+    {0.0, 0.8, 0.50},
+    {20.0, 0.85, 0.55},
+    {45.0, 0.9, 0.55},
+    {120.0, 0.7, 0.45},
+    {180.0, 0.7, 0.50},
+    {230.0, 0.7, 0.50},
+    {275.0, 0.6, 0.50},
+    {320.0, 0.7, 0.55}
   ]
 
   @fill_chars %{3 => "█", 2 => "▓", 1 => "░"}
 
   @trail_life 80.0
-
-  # --- init ---
 
   def init(cols, rows) do
     canvas_w = max(30, cols - 6)
@@ -64,34 +54,27 @@ defmodule Breakout do
       high_score: 0,
       combo: 0,
       combo_timer: 0.0,
-      # Paddle
       paddle_x: canvas_w / 2.0 - @paddle_width / 2.0,
       paddle_y: canvas_h - 2,
       paddle_dir: :none,
       paddle_input_time: 0.0,
-      # Ball
       ball_x: 0.0,
       ball_y: 0.0,
       ball_vx: 0.0,
       ball_vy: 0.0,
       ball_speed: @ball_base_speed,
-      # Bricks
       bricks: [],
-      # Particles + trail
       particles: [],
       trail: [],
-      # Timelines
       timeline: build_main_timeline(),
       shake_timeline: nil,
       shake_x: 0,
       shake_y: 0,
-      # FPS tracking
       elapsed: 0.0,
       fps: 0,
       fps_frame_count: 0,
       fps_last_time: 0.0,
       frame_ms: 16.0,
-      # Live mode
       _live: true,
       _tick_interval: 16
     }
@@ -109,19 +92,14 @@ defmodule Breakout do
     |> Timeline.play()
   end
 
-  # --- handle_event ---
-
   def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
   def handle_event(%{type: :key, key: "q", meta: false}, _state), do: :quit
 
-  # Title screen — Space to start
   def handle_event(%{type: :key, key: " ", meta: false}, %{phase: :title} = state) do
     {:cont, %{state | phase: :serving}}
   end
 
-  # Serving — Space to launch ball
   def handle_event(%{type: :key, key: " ", meta: false}, %{phase: :serving} = state) do
-    # Launch at a slight random angle
     angle_deg = -90.0 + (:rand.uniform() - 0.5) * 30.0
     angle = angle_deg * :math.pi() / 180.0
     speed = state.ball_speed
@@ -131,12 +109,10 @@ defmodule Breakout do
     {:cont, %{state | phase: :playing, ball_vx: vx, ball_vy: vy}}
   end
 
-  # Game over — Space to restart
   def handle_event(%{type: :key, key: " ", meta: false}, %{phase: :game_over} = state) do
     {:cont, restart_game(state)}
   end
 
-  # Level complete — Space to continue
   def handle_event(%{type: :key, key: " ", meta: false}, %{phase: :level_complete} = state) do
     new_state =
       %{state | level: state.level + 1, phase: :serving}
@@ -146,7 +122,6 @@ defmodule Breakout do
     {:cont, new_state}
   end
 
-  # Pause toggle
   def handle_event(%{type: :key, key: "p", meta: false}, %{phase: :playing} = state) do
     {:cont, %{state | phase: :paused}}
   end
@@ -155,7 +130,6 @@ defmodule Breakout do
     {:cont, %{state | phase: :playing}}
   end
 
-  # Paddle movement — set direction + timestamp; actual movement happens in handle_tick
   def handle_event(%{type: :key, key: key, meta: false}, state)
       when key in [:left, "a", "h"] and state.phase in [:playing, :serving] do
     {:cont, %{state | paddle_dir: :left, paddle_input_time: state.elapsed}}
@@ -167,8 +141,6 @@ defmodule Breakout do
   end
 
   def handle_event(_event, state), do: {:cont, state}
-
-  # --- handle_tick ---
 
   def handle_tick(dt, %{phase: phase} = state) when phase in [:title, :paused] do
     tl = Timeline.advance(state.timeline, dt)
@@ -209,17 +181,14 @@ defmodule Breakout do
     tl = Timeline.advance(state.timeline, dt)
     state = update_fps(state, dt)
 
-    # Move paddle (velocity-based)
     paddle_x = apply_paddle_movement(state, dt)
     state = %{state | paddle_x: paddle_x}
 
-    # Move ball
     new_bx = state.ball_x + state.ball_vx * dt / 1000.0
     new_by = state.ball_y + state.ball_vy * dt / 1000.0
     ball_vx = state.ball_vx
     ball_vy = state.ball_vy
 
-    # Wall bounces (left/right)
     {new_bx, ball_vx} =
       cond do
         new_bx <= 0.0 -> {0.0, abs(ball_vx)}
@@ -227,7 +196,6 @@ defmodule Breakout do
         true -> {new_bx, ball_vx}
       end
 
-    # Ceiling bounce
     {new_by, ball_vy} =
       if new_by <= 0.0 do
         {0.0, abs(ball_vy)}
@@ -235,21 +203,18 @@ defmodule Breakout do
         {new_by, ball_vy}
       end
 
-    # Paddle collision
     {ball_vx, ball_vy, new_by, paddle_particles} =
       check_paddle_collision(
         new_bx, new_by, ball_vx, ball_vy,
         state.paddle_x, state.paddle_y, state.ball_speed
       )
 
-    # Brick collision
     {bricks, ball_vx, ball_vy, new_bx, new_by, score_add, brick_particles, combo_hits} =
       check_brick_collisions(
         state.bricks, new_bx, new_by, ball_vx, ball_vy,
         state.ball_x, state.ball_y, tl
       )
 
-    # Anti-stuck: nudge vertical velocity if too flat
     ball_vy =
       if abs(ball_vy) < @anti_stuck_min_vy do
         if ball_vy >= 0, do: @anti_stuck_min_vy, else: -@anti_stuck_min_vy
@@ -257,7 +222,6 @@ defmodule Breakout do
         ball_vy
       end
 
-    # Update combo
     {combo, combo_timer} =
       if combo_hits > 0 do
         {state.combo + combo_hits, 2000.0}
@@ -269,25 +233,20 @@ defmodule Breakout do
     combo_mult = max(1, combo)
     score = state.score + score_add * combo_mult
 
-    # Ball trail
     trail =
       [%{x: new_bx, y: new_by, life: @trail_life, max_life: @trail_life} | state.trail]
       |> move_trail(0.0)
 
-    # Particles
     particles =
       (state.particles ++ paddle_particles ++ brick_particles)
       |> move_particles(dt)
 
-    # Shake
     {shake_tl, sx, sy} = advance_shake(state.shake_timeline, dt)
 
-    # Check ball fell off bottom
     if new_by >= state.canvas_h do
       lives = state.lives - 1
 
       if lives <= 0 do
-        # Game over
         explosion = spawn_explosion(trunc(new_bx), state.paddle_y, 0.0, 15)
         go_shake =
           Timeline.new(duration: 600)
@@ -309,7 +268,6 @@ defmodule Breakout do
            timeline: tl, elapsed: elapsed,
            shake_timeline: go_shake, shake_x: 0, shake_y: 0}}
       else
-        # Lost a life
         life_particles = spawn_explosion(trunc(new_bx), trunc(new_by), 0.0, 10)
         life_shake =
           Timeline.new(duration: 400)
@@ -332,7 +290,6 @@ defmodule Breakout do
         {:cont, new_state}
       end
     else
-      # Check level complete
       if bricks == [] do
         clear_particles = spawn_level_clear_particles(state.canvas_w, state.canvas_h)
         clear_shake =
@@ -367,8 +324,6 @@ defmodule Breakout do
       end
     end
   end
-
-  # --- render ---
 
   def render(state) do
     import ElixirOpentui.View
@@ -444,8 +399,6 @@ defmodule Breakout do
 
   def focused_id(_state), do: nil
 
-  # --- Canvas rendering ---
-
   defp build_canvas(state) do
     w = state.canvas_w
     h = state.canvas_h
@@ -475,7 +428,6 @@ defmodule Breakout do
 
       fill = Map.get(@fill_chars, min(brick.hits, 3), "░")
 
-      # Draw brick: ▐██▌
       chars = "▐" <> String.duplicate(fill, @brick_width - 2) <> "▌"
 
       chars
@@ -563,7 +515,6 @@ defmodule Breakout do
   end
 
   defp draw_overlay(canvas, %{phase: :title}, w, h) do
-    # Draw "BREAKOUT" title centered
     title = "B R E A K O U T"
     subtitle = "Press SPACE to start"
     tx = max(0, div(w - String.length(title), 2))
@@ -603,8 +554,6 @@ defmodule Breakout do
 
   defp draw_overlay(canvas, _state, _w, _h), do: canvas
 
-  # --- Brick generation ---
-
   defp setup_level(state) do
     bricks = generate_bricks(state.canvas_w, state.level)
     ball_speed = min(@ball_max_speed, @ball_base_speed + @ball_speed_per_level * (state.level - 1))
@@ -623,7 +572,6 @@ defmodule Breakout do
       color_idx = rem(row, length(@row_colors))
       color = Enum.at(@row_colors, color_idx)
 
-      # Higher rows (top) get more hits at higher levels
       hits =
         cond do
           level >= 5 and row <= 1 -> 3
@@ -632,14 +580,11 @@ defmodule Breakout do
           true -> 1
         end
 
-      # Top rows worth more points
       points = (num_rows - row) * 10
 
       %{x: x, y: y, hits: hits, color: color, points: points, row: row}
     end
   end
-
-  # --- Paddle movement (velocity-based) ---
 
   defp apply_paddle_movement(state, dt) do
     if state.paddle_dir != :none and
@@ -654,8 +599,6 @@ defmodule Breakout do
     end
   end
 
-  # --- Ball placement ---
-
   defp place_ball_on_paddle(state) do
     bx = state.paddle_x + @paddle_width / 2.0
     by = state.paddle_y - 1.0
@@ -663,18 +606,13 @@ defmodule Breakout do
     %{state | ball_x: bx, ball_y: by, ball_vx: 0.0, ball_vy: 0.0}
   end
 
-  # --- Paddle-ball collision ---
-
   defp check_paddle_collision(bx, by, vx, vy, paddle_x, paddle_y, ball_speed) do
-    # Only check when ball is moving downward
     if vy > 0 and by >= paddle_y - 0.5 and by <= paddle_y + 0.5 and
        bx >= paddle_x and bx <= paddle_x + @paddle_width do
-      # Hit offset from paddle center: -1.0 to 1.0
       center = paddle_x + @paddle_width / 2.0
       offset = (bx - center) / (@paddle_width / 2.0)
       offset = max(-1.0, min(1.0, offset))
 
-      # Reflect angle: -75 to +75 degrees from vertical
       angle_deg = offset * @max_launch_angle
       angle = (angle_deg - 90.0) * :math.pi() / 180.0
 
@@ -682,7 +620,6 @@ defmodule Breakout do
       new_vy = :math.sin(angle) * ball_speed
       new_by = paddle_y - 1.0
 
-      # Paddle hit particles (fan upward)
       particles = spawn_paddle_particles(trunc(bx), paddle_y)
 
       {new_vx, new_vy, new_by, particles}
@@ -691,26 +628,20 @@ defmodule Breakout do
     end
   end
 
-  # --- Brick collision ---
-
   defp check_brick_collisions(bricks, bx, by, vx, vy, _prev_bx, _prev_by, _timeline) do
-    # Check each brick for AABB collision with the ball
     {remaining, new_vx, new_vy, new_bx, new_by, total_score, all_particles, hits} =
       Enum.reduce(bricks, {[], vx, vy, bx, by, 0, [], 0},
         fn brick, {kept, cvx, cvy, cbx, cby, sc, parts, hit_count} ->
           if aabb_hit?(cbx, cby, brick) do
-            # Determine reflection direction based on overlap
             {rvx, rvy, rbx, rby} = reflect_ball_off_brick(cbx, cby, cvx, cvy, brick)
 
             new_hits = brick.hits - 1
 
             if new_hits <= 0 do
-              # Brick destroyed
               new_particles = spawn_brick_break_particles(brick)
               {kept, rvx, rvy, rbx, rby,
                sc + brick.points, parts ++ new_particles, hit_count + 1}
             else
-              # Brick damaged
               spark_particles = spawn_brick_spark_particles(brick)
               {[%{brick | hits: new_hits} | kept], rvx, rvy, rbx, rby,
                sc + 5, parts ++ spark_particles, hit_count + 1}
@@ -728,10 +659,7 @@ defmodule Breakout do
       by >= brick.y - 0.5 and by <= brick.y + @brick_height - 0.5
   end
 
-  # Reflect ball off brick based on penetration depth from each side.
-  # The axis with least penetration is the collision face.
   defp reflect_ball_off_brick(bx, by, vx, vy, brick) do
-    # Distances from ball center to each brick edge
     left_pen = bx - (brick.x - 0.5)
     right_pen = (brick.x + @brick_width - 0.5) - bx
     top_pen = by - (brick.y - 0.5)
@@ -741,19 +669,15 @@ defmodule Breakout do
     min_y = min(top_pen, bottom_pen)
 
     if min_x < min_y do
-      # Horizontal collision face
       new_vx = -vx
       new_bx = if left_pen < right_pen, do: brick.x - 0.6, else: brick.x + @brick_width - 0.4
       {new_vx, vy, new_bx, by}
     else
-      # Vertical collision face
       new_vy = -vy
       new_by = if top_pen < bottom_pen, do: brick.y - 0.6, else: brick.y + @brick_height - 0.4
       {vx, new_vy, bx, new_by}
     end
   end
-
-  # --- Particles ---
 
   defp spawn_brick_break_particles(brick) do
     cx = brick.x + @brick_width / 2.0
@@ -861,8 +785,6 @@ defmodule Breakout do
     |> Enum.filter(fn t -> t.life > 0.0 end)
   end
 
-  # --- Shake ---
-
   defp advance_shake(nil, _dt), do: {nil, 0, 0}
 
   defp advance_shake(shake_tl, dt) do
@@ -873,8 +795,6 @@ defmodule Breakout do
     sy = trunc((:rand.uniform() - 0.5) * 2 * magnitude)
     {tl, sx, sy}
   end
-
-  # --- FPS tracking ---
 
   defp update_fps(state, dt) do
     elapsed = state.elapsed + dt
@@ -895,8 +815,6 @@ defmodule Breakout do
       fps_frame_count: frame_count,
       fps_last_time: fps_last_time}
   end
-
-  # --- Game flow ---
 
   defp restart_game(state) do
     %{state |

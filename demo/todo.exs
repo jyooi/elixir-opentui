@@ -1,15 +1,6 @@
-# Interactive Todo List App
-# Run: mix run demo/todo.exs
-#
-# Tab/Shift+Tab: navigate | Enter: add todo | Space: toggle
-# d: delete todo | Left/Right: switch filter | Ctrl+C: quit
-
 defmodule TodoApp do
   alias ElixirOpentui.Widgets.{TextInput, Checkbox, TabSelect, ScrollBox}
   alias ElixirOpentui.Color
-
-  # Focus zones: input field, filter tabs, then individual todo items
-  # focus_idx 0 = text input, 1 = tab filter, 2+ = todo items
 
   @filter_options [
     %{name: "All", description: "Show all todos"},
@@ -58,11 +49,8 @@ defmodule TodoApp do
     }
   end
 
-  # --- Event Handling ---
-
   def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
-  # Tab / Shift+Tab: cycle focus between input, filter tabs, and todo list
   def handle_event(%{type: :key, key: :tab, shift: true, meta: false}, state) do
     max_idx = max_focus_idx(state)
     new_idx = rem(state.focus_idx - 1 + max_idx + 1, max_idx + 1)
@@ -75,12 +63,10 @@ defmodule TodoApp do
     {:cont, %{state | focus_idx: new_idx}}
   end
 
-  # Route key events to the focused widget
   def handle_event(%{type: :key} = event, state) do
     {:cont, route_event(state.focus_idx, event, state)}
   end
 
-  # Paste goes to text input if focused
   def handle_event(%{type: :paste} = event, state) do
     if state.focus_idx == 0 do
       {:cont, %{state | input: TextInput.update(:paste, event, state.input)}}
@@ -89,7 +75,6 @@ defmodule TodoApp do
     end
   end
 
-  # Mouse scroll for the todo list
   def handle_event(%{type: :mouse, action: action} = event, state)
       when action in [:scroll_up, :scroll_down] do
     {:cont, %{state | scroll: ScrollBox.update(:mouse, event, state.scroll)}}
@@ -97,29 +82,9 @@ defmodule TodoApp do
 
   def handle_event(_event, state), do: {:cont, state}
 
-  # --- Event Routing ---
-  #
-  # TODO: This is where you implement the core event routing logic.
-  #
-  # Focus indices:
-  #   0     -> text input (handle typing + Enter to add)
-  #   1     -> filter tabs (Left/Right to switch filter)
-  #   2+    -> todo items (Space to toggle, "d"/Delete to delete)
-  #
-  # The function receives the current focus_idx, the key event,
-  # and the full state. It should return the new state.
-  #
-  # Design choices to consider:
-  #   - Should Enter on empty input be a no-op or show feedback?
-  #   - Should deleting a todo adjust focus_idx to stay in bounds?
-  #   - Should Up/Down arrows move between todos when in the list?
-  #   - When filter changes, should focus jump back to input?
-  #
-  # Focus 0: Text input — type to compose, Enter to add todo
   defp route_event(0, event, state) do
     new_input = TextInput.update(:key, event, state.input)
 
-    # Check if Enter was pressed (on_submit tag :add_todo appears in _pending)
     case Enum.find(new_input._pending, fn {tag, _} -> tag == :add_todo end) do
       {:add_todo, value} when value != "" ->
         todo = %{id: state.next_id, text: String.trim(value), done: false}
@@ -139,7 +104,6 @@ defmodule TodoApp do
     end
   end
 
-  # Focus 1: Filter tabs — Left/Right to switch between All/Active/Done
   defp route_event(1, event, state) do
     new_tab = TabSelect.update(:key, event, state.tab)
     new_filter = Enum.at(@filters, new_tab.selected) || :all
@@ -148,12 +112,10 @@ defmodule TodoApp do
       state
       | tab: %{new_tab | _pending: []},
         filter: new_filter,
-        # Clamp focus_idx if filtered list shrinks
         focus_idx: 1
     }
   end
 
-  # Focus 2+: Todo items — Space to toggle, d/Delete to remove, arrows to navigate
   defp route_event(focus_idx, %{key: " "} = _event, state) when focus_idx >= 2 do
     toggle_todo(state, focus_idx)
   end
@@ -163,19 +125,16 @@ defmodule TodoApp do
   end
 
   defp route_event(focus_idx, %{key: :up}, state) when focus_idx >= 2 do
-    # Move up within todo list, stop at first item (idx 2)
     %{state | focus_idx: max(focus_idx - 1, 2)}
   end
 
   defp route_event(focus_idx, %{key: :down}, state) when focus_idx >= 2 do
-    # Move down within todo list, stop at last item
     max_idx = max_focus_idx(state)
     %{state | focus_idx: min(focus_idx + 1, max_idx)}
   end
 
   defp route_event(_focus_idx, _event, state), do: state
 
-  # Toggle a todo's done state by its position in the filtered list
   defp toggle_todo(state, focus_idx) do
     filtered = filtered_todos(state)
 
@@ -193,7 +152,6 @@ defmodule TodoApp do
     end
   end
 
-  # Delete a todo and clamp focus to stay in bounds
   defp delete_todo(state, focus_idx) do
     filtered = filtered_todos(state)
 
@@ -204,9 +162,7 @@ defmodule TodoApp do
       todo ->
         new_todos = Enum.reject(state.todos, &(&1.id == todo.id))
         new_filtered_count = length(filtered) - 1
-        # Clamp focus: if we deleted the last item, move focus up
         new_focus = min(focus_idx, 2 + max(new_filtered_count - 1, 0))
-        # If no items left, jump back to input
         new_focus = if new_filtered_count == 0, do: 0, else: new_focus
 
         %{
@@ -217,8 +173,6 @@ defmodule TodoApp do
         }
     end
   end
-
-  # --- Rendering ---
 
   def render(state) do
     import ElixirOpentui.View
@@ -242,7 +196,6 @@ defmodule TodoApp do
     viewport_h = state.scroll.viewport_height
     scroll_y = state.scroll.scroll_y
 
-    # Compute values BEFORE panel block to avoid macro scoping issues
     input_label = if(state.focus_idx == 0, do: "> Add todo:", else: "  Add todo:")
     filter_label = if(state.focus_idx == 1, do: "> Filter:", else: "  Filter:")
     status_fg = if done_count == total_count and total_count > 0, do: green, else: fg
@@ -256,7 +209,6 @@ defmodule TodoApp do
         :done -> "No completed todos."
       end
 
-    # Pre-compute todo lines to avoid variable scoping inside panel block
     todo_lines =
       for {todo, vis_idx} <- Enum.with_index(filtered) do
         todo_focus_idx = 2 + vis_idx
@@ -274,7 +226,6 @@ defmodule TodoApp do
       text(content: "Enter: add | Space: toggle | d: delete", fg: dim, bg: bg)
       text(content: "")
 
-      # --- Input section ---
       label(content: input_label, fg: accent, bg: bg)
 
       input(
@@ -291,7 +242,6 @@ defmodule TodoApp do
 
       text(content: "")
 
-      # --- Filter tabs ---
       label(content: filter_label, fg: accent, bg: bg)
 
       tab_select(
@@ -308,7 +258,6 @@ defmodule TodoApp do
 
       text(content: "")
 
-      # --- Todo list ---
       text(content: divider, fg: divider_fg, bg: bg)
 
       if todo_lines == [] do
@@ -323,7 +272,6 @@ defmodule TodoApp do
 
       text(content: divider, fg: divider_fg, bg: bg)
 
-      # --- Status ---
       text(content: status_text, fg: status_fg, bg: bg)
     end
   end
@@ -335,8 +283,6 @@ defmodule TodoApp do
       _ -> :todo_scroll
     end
   end
-
-  # --- Helpers ---
 
   defp filtered_todos(state) do
     case state.filter do

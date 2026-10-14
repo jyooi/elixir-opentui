@@ -66,7 +66,6 @@ defmodule ElixirOpentui.OpacityTest do
       buf = paint(tree, 10, 5)
       cell = Buffer.get_cell(buf, 5, 2)
       {_r, _g, _b, a} = cell.bg
-      # 0.5 * 0.5 = 0.25 => 255 * 0.25 = ~64
       assert a in 63..65
     end
   end

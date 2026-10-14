@@ -67,7 +67,6 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       contents = Enum.map(hunk.lines, & &1.content)
       assert "line 2" in contents
       assert "line 2 modified" in contents
-      # Should not contain raw "+line 2 modified"
       refute "+line 2 modified" in contents
     end
 
@@ -75,19 +74,15 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       [hunk] = Diff.parse_diff(@sample_diff)
       lines = hunk.lines
 
-      # context: old=1, new=1
       assert Enum.at(lines, 0).old_line == 1
       assert Enum.at(lines, 0).new_line == 1
 
-      # remove: old=2, new=nil
       assert Enum.at(lines, 1).old_line == 2
       assert Enum.at(lines, 1).new_line == nil
 
-      # add: old=nil, new=2
       assert Enum.at(lines, 2).old_line == nil
       assert Enum.at(lines, 2).new_line == 2
 
-      # context: old=3, new=3
       assert Enum.at(lines, 3).old_line == 3
       assert Enum.at(lines, 3).new_line == 3
     end
@@ -133,7 +128,6 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       lines = tree.attrs.lines
 
       assert length(lines) > 0
-      # Each split line should have :left and :right
       first = hd(lines)
       assert Map.has_key?(first, :left)
       assert Map.has_key?(first, :right)
@@ -144,7 +138,6 @@ defmodule ElixirOpentui.Widgets.DiffTest do
       tree = Diff.render(state)
       lines = tree.attrs.lines
 
-      # Find the paired remove/add line
       paired =
         Enum.find(lines, fn line ->
           line.left.type == :remove and line.right.type == :add
@@ -165,7 +158,6 @@ defmodule ElixirOpentui.Widgets.DiffTest do
           line.left.type == :empty or line.right.type == :empty
         end)
 
-      # The second hunk has 1 remove and 2 adds, so there should be an empty left side
       assert length(empty_sides) > 0
     end
   end

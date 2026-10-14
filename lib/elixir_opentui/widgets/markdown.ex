@@ -96,8 +96,6 @@ defmodule ElixirOpentui.Widgets.Markdown do
     )
   end
 
-  # --- Key handling ---
-
   defp handle_key(event, state) do
     case ScrollHelper.handle_scroll_key(event,
            offset: state.scroll_offset,
@@ -109,7 +107,6 @@ defmodule ElixirOpentui.Widgets.Markdown do
     end
   end
 
-  # NOTE: must mirror painter.ex markdown_blocks_to_lines/10
   defp count_rendered_lines(blocks) do
     Enum.reduce(blocks, 0, fn block, acc ->
       acc +
@@ -125,8 +122,6 @@ defmodule ElixirOpentui.Widgets.Markdown do
         end
     end)
   end
-
-  # --- Markdown parsing ---
 
   @doc """
   Parse markdown content into a list of block structures.

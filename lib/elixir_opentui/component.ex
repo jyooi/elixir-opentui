@@ -74,8 +74,6 @@ defmodule ElixirOpentui.Component do
     end
   end
 
-  # --- Shared widget helpers ---
-
   @doc false
   @spec prop_changed?(map(), map(), term()) :: boolean()
   def prop_changed?(prev_props, new_props, key) do

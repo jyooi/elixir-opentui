@@ -127,7 +127,6 @@ defmodule ElixirOpentui.LayoutTest do
         ])
 
       results = layout(tree)
-      # flex_grow 1:2 ratio with 100 available
       assert rect_for(results, :a).w == 33
       assert rect_for(results, :b).w == 67
     end
@@ -296,8 +295,6 @@ defmodule ElixirOpentui.LayoutTest do
       results = layout(tree)
       a_rect = rect_for(results, :a)
       b_rect = rect_for(results, :b)
-      # space_around: equal space around each child
-      # 80 - 20 = 60 free, 2 items => 30 each => half space on edges
       assert a_rect.x == 15
       assert b_rect.x == 55
     end
@@ -321,7 +318,6 @@ defmodule ElixirOpentui.LayoutTest do
         )
 
       results = layout(tree)
-      # 80 - 30 = 50 free, 4 gaps (count+1) => 12 each
       assert rect_for(results, :a).x == 12
       assert rect_for(results, :b).x == 34
       assert rect_for(results, :c).x == 56
@@ -344,7 +340,6 @@ defmodule ElixirOpentui.LayoutTest do
         )
 
       results = layout(tree)
-      # 80 - 20 = 60 free, 2 gaps => 30 each
       assert rect_for(results, :child).x == 30
     end
 
@@ -366,7 +361,6 @@ defmodule ElixirOpentui.LayoutTest do
         )
 
       results = layout(tree)
-      # 24 - 6 = 18 free, 4 gaps => 4 each
       assert rect_for(results, :a).y == 4
       assert rect_for(results, :b).y == 10
       assert rect_for(results, :c).y == 16
@@ -674,7 +668,6 @@ defmodule ElixirOpentui.LayoutTest do
 
       results = layout(tree)
       af_rect = rect_for(results, :af)
-      # A=3 + letterspace=1 + B=3 = 7
       assert af_rect.w == 7
       assert af_rect.h == 2
     end
@@ -704,7 +697,6 @@ defmodule ElixirOpentui.LayoutTest do
       results = layout(tree)
       title_rect = rect_for(results, :title)
       content_rect = rect_for(results, :content)
-      # Title takes intrinsic width, content gets the rest
       assert content_rect.x == title_rect.w
       assert content_rect.w == 80 - title_rect.w
     end

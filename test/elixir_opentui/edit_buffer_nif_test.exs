@@ -5,10 +5,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
 
   alias ElixirOpentui.EditBufferNIF
 
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Edit Buffer Tests
-  # ═══════════════════════════════════════════════════════════════════════════
-
   describe "edit buffer: create and text" do
     test "create returns a reference" do
       buf = EditBufferNIF.create()
@@ -101,7 +97,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "hello")
       {row, col, _offset} = EditBufferNIF.get_cursor(buf)
-      # After set_text, cursor should be at position 0,0
       assert row == 0
       assert col == 0
     end
@@ -465,7 +460,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       EditBufferNIF.insert_char(buf, "a")
       EditBufferNIF.undo(buf)
       EditBufferNIF.insert_char(buf, "b")
-      # redo should return nil since we branched
       result = EditBufferNIF.redo(buf)
       assert result == nil
       assert EditBufferNIF.get_text(buf) == "b"
@@ -538,7 +532,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "set_cursor_by_offset across newline boundary" do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "abc\ndef")
-      # offset 4 = 'd' on second line
       EditBufferNIF.set_cursor_by_offset(buf, 4)
       {row, col, offset} = EditBufferNIF.get_cursor(buf)
       assert offset == 4
@@ -546,10 +539,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       assert col == 0
     end
   end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Editor View Tests
-  # ═══════════════════════════════════════════════════════════════════════════
 
   defp create_view(text \\ "", width \\ 40, height \\ 10) do
     buf = EditBufferNIF.create()
@@ -639,7 +628,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "set wrap mode none" do
       {_buf, view} = create_view("hello world test")
       EditBufferNIF.view_set_wrap_mode(view, 0)
-      # Should not raise
       count = EditBufferNIF.view_get_total_virtual_line_count(view)
       assert count >= 1
     end
@@ -648,7 +636,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {_buf, view} = create_view("hello world this is a test", 10, 5)
       EditBufferNIF.view_set_wrap_mode(view, 1)
       count = EditBufferNIF.view_get_total_virtual_line_count(view)
-      # 26 chars in width 10 should wrap to at least 3 virtual lines
       assert count >= 3
     end
 
@@ -670,13 +657,11 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {_buf, view} = create_view("abcdefghij\nklmnopqrst", 5, 10)
       EditBufferNIF.view_set_wrap_mode(view, 1)
       count = EditBufferNIF.view_get_total_virtual_line_count(view)
-      # Each 10-char line should wrap to 2 virtual lines in width 5
       assert count >= 4
     end
 
     test "invalid wrap mode defaults to none" do
       {_buf, view} = create_view("hello")
-      # mode 99 should default to none
       EditBufferNIF.view_set_wrap_mode(view, 99)
       count = EditBufferNIF.view_get_total_virtual_line_count(view)
       assert count >= 1
@@ -729,7 +714,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       EditBufferNIF.view_set_wrap_mode(view, 1)
       EditBufferNIF.view_move_down_visual(view)
       {vr, _vc, _lr, _lc, _offset} = EditBufferNIF.view_get_visual_cursor(view)
-      # Should move to the wrapped portion of the same logical line
       assert vr == 1
     end
   end
@@ -737,14 +721,12 @@ defmodule ElixirOpentui.EditBufferNIFTest do
   describe "editor view: scroll and viewport" do
     test "scroll margin can be set" do
       {_buf, view} = create_view("hello\nworld")
-      # Should not raise
       EditBufferNIF.view_set_scroll_margin(view, 0.2)
     end
 
     test "viewport scrolls when cursor moves beyond visible area" do
       lines = Enum.map_join(1..30, "\n", &"line #{&1}")
       {_buf, view} = create_view(lines, 40, 5)
-      # Move down many lines
       for _ <- 1..20, do: EditBufferNIF.view_move_down_visual(view)
       {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(view)
       assert oy > 0
@@ -776,7 +758,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {_buf, view} = create_view("abcdefghijklmnopqrst", 5, 10)
       EditBufferNIF.view_set_wrap_mode(view, 1)
       count = EditBufferNIF.view_get_total_virtual_line_count(view)
-      # 20 chars / 5 width = 4 virtual lines
       assert count == 4
     end
 
@@ -836,7 +817,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "get_next_word_boundary from beginning" do
       {_buf, view} = create_view("hello world")
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_next_word_boundary(view)
-      # Should jump past "hello" to the space or "world"
       assert offset > 0
     end
 
@@ -844,7 +824,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {buf, view} = create_view("hello world")
       EditBufferNIF.set_cursor(buf, 0, 11)
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_prev_word_boundary(view)
-      # Should jump back to beginning of "world"
       assert offset < 11
     end
 
@@ -863,7 +842,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
 
     test "word boundary across multiple words" do
       {_buf, view} = create_view("one two three")
-      # From beginning, next word boundary should skip past "one"
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_next_word_boundary(view)
       assert offset >= 3
     end
@@ -873,7 +851,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "get_eol returns end of logical line" do
       {_buf, view} = create_view("hello\nworld")
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_eol(view)
-      # End of first line "hello" is offset 5
       assert offset == 5
     end
 
@@ -881,7 +858,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {buf, view} = create_view("hello\nworld")
       EditBufferNIF.set_cursor(buf, 1, 0)
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_eol(view)
-      # End of "world" is offset 11
       assert offset == 11
     end
 
@@ -896,7 +872,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "get_visual_eol returns end of visual line" do
       {_buf, view} = create_view("hello\nworld")
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_eol(view)
-      # Visual end of first line
       assert offset == 5
     end
 
@@ -911,10 +886,8 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "visual_sol with char wrap" do
       {buf, view} = create_view("abcdefghij", 5, 10)
       EditBufferNIF.view_set_wrap_mode(view, 1)
-      # Move cursor to wrapped portion
       EditBufferNIF.set_cursor(buf, 0, 7)
       {_vr, vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_sol(view)
-      # Visual start of the second wrapped line should be offset 5
       assert offset == 5
       assert vc == 0
     end
@@ -922,7 +895,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "visual_eol with char wrap" do
       {_buf, view} = create_view("abcdefghij", 5, 10)
       EditBufferNIF.view_set_wrap_mode(view, 1)
-      # Cursor at beginning, visual EOL points to last char of first wrap segment
       {_vr, _vc, _lr, _lc, offset} = EditBufferNIF.view_get_visual_eol(view)
       assert offset == 4
     end
@@ -988,7 +960,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       end
 
       {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(view)
-      # Viewport should have scrolled down
       assert oy > 0
     end
   end
@@ -1032,31 +1003,21 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     end
   end
 
-  # ═══════════════════════════════════════════════════════════════════════════
-  # GC Safety Tests (Fix #2/#3: destructors + dangling reference prevention)
-  # ═══════════════════════════════════════════════════════════════════════════
-
   describe "gc safety" do
     test "EditorView survives after EditBuffer ref is dropped" do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "hello world")
       view = EditBufferNIF.create_editor_view(buf, 40, 10)
 
-      # Drop all Elixir references to EditBuffer
       buf = nil
       _ = buf
       :erlang.garbage_collect()
 
-      # EditorView should still work — its nested resource ref keeps EditBuffer alive
       {vr, vc, _lr, _lc, _offset} = EditBufferNIF.view_get_visual_cursor(view)
       assert vr == 0
       assert vc == 0
     end
   end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Right-Sized Allocation Tests (Fix #1)
-  # ═══════════════════════════════════════════════════════════════════════════
 
   describe "right-sized allocations" do
     test "large text round-trips correctly" do
@@ -1072,10 +1033,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     end
   end
 
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Display Width Tests (Fix #4)
-  # ═══════════════════════════════════════════════════════════════════════════
-
   describe "get_text_display_width" do
     test "ASCII text width equals grapheme count" do
       buf = EditBufferNIF.create()
@@ -1086,14 +1043,12 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "multiline text includes newlines in weight" do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "hello\nworld")
-      # weight = display_width(5) + newline(1) + display_width(5) = 11
       assert EditBufferNIF.get_text_display_width(buf) == 11
     end
 
     test "CJK characters are double-width" do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "你好世界")
-      # 4 CJK chars × 2 display-width = 8
       assert EditBufferNIF.get_text_display_width(buf) == 8
     end
 
@@ -1105,14 +1060,9 @@ defmodule ElixirOpentui.EditBufferNIFTest do
     test "mixed ASCII and CJK" do
       buf = EditBufferNIF.create()
       EditBufferNIF.set_text(buf, "hi你好")
-      # 2 ASCII + 2 CJK × 2 = 6
       assert EditBufferNIF.get_text_display_width(buf) == 6
     end
   end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Visible Lines Tests (Fix #5)
-  # ═══════════════════════════════════════════════════════════════════════════
 
   describe "view_get_visible_lines" do
     test "returns lines for simple text" do
@@ -1162,14 +1112,9 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {_buf, view} = create_view(text, 40, 5)
       EditBufferNIF.view_set_wrap_mode(view, 0)
       lines = EditBufferNIF.view_get_visible_lines(view)
-      # Viewport is 5 lines tall, should return at most 5 lines
       assert length(lines) <= 5
     end
   end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Selection Visual Coords Tests (Fix #6)
-  # ═══════════════════════════════════════════════════════════════════════════
 
   describe "view_selection_visual_coords" do
     test "returns 4-tuple of coordinates" do
@@ -1190,8 +1135,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
 
     test "multi-line selection" do
       {_buf, view} = create_view("hello\nworld", 40, 10)
-      # Select from offset 0 ("h") to offset 8 ("or" in "world")
-      # "hello\n" = 6 chars, so offset 8 = "wo" in "world"
       {sr, _sc, er, _ec} = EditBufferNIF.view_selection_visual_coords(view, 0, 8)
       assert sr == 0
       assert er == 1
@@ -1204,10 +1147,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       assert sc == ec
     end
   end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Viewport Scroll Tests (Fix #8)
-  # ═══════════════════════════════════════════════════════════════════════════
 
   describe "view_set_viewport" do
     test "sets viewport and reads it back" do
@@ -1227,10 +1166,8 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       {_buf, view} = create_view(text, 40, 3)
       EditBufferNIF.view_set_wrap_mode(view, 0)
 
-      # Get lines at top
       lines_top = EditBufferNIF.view_get_visible_lines(view)
 
-      # Move cursor down to line 7 so viewport follows, then set viewport to line 5
       for _ <- 1..7, do: EditBufferNIF.view_move_down_visual(view)
       EditBufferNIF.view_set_viewport(view, 0, 5, 40, 3)
       lines_scrolled = EditBufferNIF.view_get_visible_lines(view)
@@ -1238,10 +1175,6 @@ defmodule ElixirOpentui.EditBufferNIFTest do
       assert lines_top != lines_scrolled
     end
   end
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # wrap_mode_int/1 Tests (Fix #14)
-  # ═══════════════════════════════════════════════════════════════════════════
 
   describe "wrap_mode_int" do
     test "maps :none to 0" do

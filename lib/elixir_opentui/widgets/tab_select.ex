@@ -126,16 +126,12 @@ defmodule ElixirOpentui.Widgets.TabSelect do
     )
   end
 
-  # --- Key handling ---
-
   defp handle_key(%{key: :left}, state), do: move_left(state)
   defp handle_key(%{key: :right}, state), do: move_right(state)
   defp handle_key(%{key: "["}, state), do: move_left(state)
   defp handle_key(%{key: "]"}, state), do: move_right(state)
   defp handle_key(%{key: :enter}, state), do: emit_select(state)
   defp handle_key(_, state), do: state
-
-  # --- Movement ---
 
   defp move_left(state) do
     max_idx = max(0, length(state.options) - 1)
@@ -175,8 +171,6 @@ defmodule ElixirOpentui.Widgets.TabSelect do
     end
   end
 
-  # --- Scroll offset ---
-
   defp update_scroll_offset(state) do
     half_visible = div(state.max_visible_tabs, 2)
     max_scroll = max(0, length(state.options) - state.max_visible_tabs)
@@ -189,8 +183,6 @@ defmodule ElixirOpentui.Widgets.TabSelect do
 
     %{state | scroll_offset: new_offset}
   end
-
-  # --- Event emission ---
 
   defp emit_change(state), do: emit(state, state.on_change, [state.selected])
 

@@ -1,10 +1,3 @@
-# LineNumber Interactive Demo
-# Run: mix run demo/line_number_demo.exs
-#
-# Line number gutter with colors, signs, and hidden lines.
-# Up/Down to scroll, 'n' to toggle line numbers.
-# Press Ctrl+C to exit.
-
 defmodule LineNumberDemo do
   alias ElixirOpentui.Color
 
@@ -22,14 +15,12 @@ defmodule LineNumberDemo do
     end
   end)
 
-  # Highlight lines 3, 10, 25 with special colors
   @line_colors %{
     2 => Color.rgb(60, 40, 40),
     9 => Color.rgb(40, 60, 40),
     24 => Color.rgb(40, 40, 60)
   }
 
-  # Breakpoint markers on lines 3 and 10
   @line_signs %{
     2 => %{before: "●", before_color: Color.rgb(255, 80, 80)},
     9 => %{before: "▶", before_color: Color.rgb(80, 255, 80)},

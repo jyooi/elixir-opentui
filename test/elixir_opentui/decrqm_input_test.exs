@@ -5,7 +5,6 @@ defmodule ElixirOpentui.DecrqmInputTest do
 
   describe "DECRQM response parsing" do
     test "parses mode 2026 status 1 (set)" do
-      # \e[?2026;1$y
       [event] = Input.parse("\e[?2026;1$y")
       assert event.type == :capability
       assert event.capability == :decrqm
@@ -59,7 +58,6 @@ defmodule ElixirOpentui.DecrqmInputTest do
     end
 
     test "DECRQM followed by kitty keyboard response parses both" do
-      # DECRQM response + kitty keyboard query response
       events = Input.parse("\e[?2026;2$y\e[?5u")
       assert length(events) == 2
 

@@ -3,8 +3,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
 
   alias ElixirOpentui.Animation.Easing
 
-  # ── Boundary values: f(0) == 0 and f(1) == 1 for every curve ──
-
   @all_easings [
     :linear,
     :in_quad,
@@ -44,8 +42,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
       end
     end
   end
-
-  # ── Midpoint values for key curves ──
 
   describe "midpoint values" do
     test "linear at 0.5 returns 0.5" do
@@ -113,10 +109,7 @@ defmodule ElixirOpentui.Animation.EasingTest do
     end
   end
 
-  # ── Monotonicity ──
-
   describe "monotonicity" do
-    # These curves should be strictly monotonically increasing across [0, 1]
     @monotonic_curves @all_easings --
                         [
                           :in_back,
@@ -145,8 +138,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
     end
   end
 
-  # ── Parameterized back/overshoot curves ──
-
   describe "back easing overshoot" do
     test "in_back goes below 0.0 at some point" do
       values = for i <- 1..99, do: Easing.apply(:in_back, i / 100.0)
@@ -168,8 +159,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
       assert Enum.any?(values, &(&1 > 1.0)), "in_out_back should overshoot above 1 in second half"
     end
   end
-
-  # ── Specific quarter/three-quarter values ──
 
   describe "quarter and three-quarter values" do
     test "linear at 0.25 returns 0.25" do
@@ -204,8 +193,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
       assert_in_delta Easing.apply(:in_cubic, 0.75), 0.421875, 1.0e-10
     end
   end
-
-  # ── Symmetry properties ──
 
   describe "symmetry" do
     test "in_quad and out_quad are symmetric: in_quad(t) + out_quad(1-t) == 1" do
@@ -246,8 +233,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
     end
   end
 
-  # ── Expo edge cases ──
-
   describe "expo edge cases" do
     test "in_expo at very small t is near 0" do
       assert Easing.apply(:in_expo, 0.01) < 0.01
@@ -260,22 +245,17 @@ defmodule ElixirOpentui.Animation.EasingTest do
     test "in_expo grows very slowly at the start" do
       v1 = Easing.apply(:in_expo, 0.1)
       v2 = Easing.apply(:in_expo, 0.2)
-      # Both should be small for exponential-in
       assert v1 < 0.01
       assert v2 < 0.01
     end
 
     test "out_expo grows very quickly at the start" do
       v1 = Easing.apply(:out_expo, 0.1)
-      # out_expo should jump fast
       assert v1 > 0.4
     end
   end
 
-  # ── Range validation ──
-
   describe "range validation" do
-    # Non-overshoot curves should stay within [0, 1]
     @bounded_curves @monotonic_curves
 
     for easing <- @bounded_curves do
@@ -289,8 +269,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
       end
     end
   end
-
-  # ── Continuity: small input changes produce small output changes ──
 
   describe "continuity" do
     for easing <- @all_easings do
@@ -310,8 +288,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
       end
     end
   end
-
-  # ── Elastic easing overshoot ──
 
   describe "elastic easing overshoot" do
     test "in_elastic goes below 0.0 at some point" do
@@ -335,8 +311,6 @@ defmodule ElixirOpentui.Animation.EasingTest do
              "in_out_elastic should overshoot above 1 in second half"
     end
   end
-
-  # ── Bounce easing ──
 
   describe "bounce easing" do
     test "out_bounce stays in [0, 1]" do

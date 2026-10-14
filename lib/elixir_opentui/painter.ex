@@ -14,7 +14,6 @@ defmodule ElixirOpentui.Painter do
   alias ElixirOpentui.Layout.Rect
   alias ElixirOpentui.TextBuffer
 
-  # --- Focus & UI ---
   @focus_border_fg {80, 160, 255, 255}
   @focus_input_cursor_bg {200, 200, 200, 255}
   @select_highlight_bg {60, 120, 200, 255}
@@ -22,16 +21,13 @@ defmodule ElixirOpentui.Painter do
   @dim_fg {100, 100, 100, 255}
   @description_fg {150, 150, 150, 255}
 
-  # --- Gutter ---
   @gutter_fg {100, 100, 120, 255}
 
-  # --- Diff ---
   @diff_add_fg {80, 220, 80, 255}
   @diff_add_bg {26, 77, 26, 255}
   @diff_rem_fg {220, 80, 80, 255}
   @diff_rem_bg {77, 26, 26, 255}
 
-  # --- Markdown ---
   @md_heading_fg {88, 166, 255, 255}
   @md_code_fg {165, 214, 255, 255}
   @md_code_bg {22, 27, 34, 255}
@@ -39,15 +35,12 @@ defmodule ElixirOpentui.Painter do
   @md_list_fg {255, 123, 114, 255}
   @md_rule_fg {60, 60, 80, 255}
 
-  # --- Tab Select ---
   @tab_selected_fg {255, 255, 255, 255}
   @tab_selected_bg {60, 120, 200, 255}
   @tab_dim_fg {100, 100, 100, 255}
 
-  # --- Select Widget ---
   @select_fg_highlight {255, 255, 255, 255}
 
-  # --- Syntax Token Colors ---
   @token_default {230, 237, 243, 255}
   @token_colors [
                   {[:keyword, :keyword_declaration, :keyword_namespace, :keyword_reserved],
@@ -244,7 +237,6 @@ defmodule ElixirOpentui.Painter do
   end
 
   defp paint_content(buf, %Element{type: :panel} = el, x, y, w, _h, opacity, _focused) do
-    # style.border_title is rendered in paint_border — skip legacy path
     if el.style.border_title do
       buf
     else
@@ -524,8 +516,6 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  # --- Tab Select ---
-
   defp paint_content(buf, %Element{type: :tab_select} = el, x, y, w, _h, opacity, focused) do
     options = Map.get(el.attrs, :options, [])
     selected = Map.get(el.attrs, :selected, 0)
@@ -616,8 +606,6 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  # --- Line Number ---
-
   defp paint_content(buf, %Element{type: :line_number} = el, x, y, w, h, opacity, _focused) do
     line_count = Map.get(el.attrs, :line_count, 0)
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
@@ -683,8 +671,6 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  # --- Code ---
-
   defp paint_content(buf, %Element{type: :code} = el, x, y, w, h, opacity, _focused) do
     content = Map.get(el.attrs, :content, "")
     tokens = Map.get(el.attrs, :tokens)
@@ -727,8 +713,6 @@ defmodule ElixirOpentui.Painter do
       color_for
     )
   end
-
-  # --- Diff ---
 
   defp paint_content(buf, %Element{type: :diff} = el, x, y, w, h, opacity, _focused) do
     diff_lines = Map.get(el.attrs, :lines, [])
@@ -787,8 +771,6 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  # --- Markdown ---
-
   defp paint_content(buf, %Element{type: :markdown} = el, x, y, w, h, opacity, _focused) do
     blocks = Map.get(el.attrs, :blocks, [])
     scroll_offset = Map.get(el.attrs, :scroll_offset, 0)
@@ -836,8 +818,6 @@ defmodule ElixirOpentui.Painter do
     end)
   end
 
-  # --- Frame Buffer (Canvas) ---
-
   defp paint_content(buf, %Element{type: :frame_buffer} = el, x, y, w, h, opacity, _focused) do
     case Map.get(el.attrs, :buffer) do
       %ElixirOpentui.Canvas{cells: cells} ->
@@ -856,8 +836,6 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  # --- ASCII Font ---
-
   defp paint_content(buf, %Element{type: :ascii_font} = el, x, y, w, h, opacity, _focused) do
     text = Map.get(el.attrs, :text, "")
     font = Map.get(el.attrs, :font, :tiny)
@@ -871,7 +849,6 @@ defmodule ElixirOpentui.Painter do
       secondary_fg =
         case Map.get(el.attrs, :secondary_fg) do
           nil ->
-            # Dim the primary color to ~50% brightness as default secondary
             {r, g, b, a} = primary_fg
             Color.with_opacity({div(r, 2), div(g, 2), div(b, 2), a}, 1.0)
 
@@ -912,8 +889,6 @@ defmodule ElixirOpentui.Painter do
 
   defp paint_content(buf, _el, _x, _y, _w, _h, _opacity, _focused), do: buf
 
-  # --- Select helpers ---
-
   defp option_name(%{name: name}), do: name
   defp option_name(opt), do: to_string(opt)
 
@@ -943,8 +918,6 @@ defmodule ElixirOpentui.Painter do
     end)
   end
 
-  # --- Textarea helpers ---
-
   defp paint_cursor_char(
          buf,
          el,
@@ -962,7 +935,6 @@ defmodule ElixirOpentui.Painter do
         Buffer.draw_char(buf, cx, cy, char, normal_fg, normal_bg, underline: true)
 
       :bar ->
-        # Bar cursor: render character normally; terminal cursor positioning deferred
         Buffer.draw_char(buf, cx, cy, char, normal_fg, normal_bg)
 
       _block ->
@@ -985,7 +957,6 @@ defmodule ElixirOpentui.Painter do
        ) do
     %{start_row: sr, start_col: sc, end_row: er, end_col: ec} = sel
 
-    # Determine which columns in this row are selected
     {sel_start, sel_end} =
       cond do
         row_idx < sr or row_idx > er -> {w, w}
@@ -1040,16 +1011,12 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  # --- Tab Select helpers ---
-
   defp tab_select_name(%{name: name}), do: name
   defp tab_select_name(s) when is_binary(s), do: s
   defp tab_select_name(_), do: ""
 
   defp tab_select_desc(%{description: desc}) when is_binary(desc), do: desc
   defp tab_select_desc(_), do: nil
-
-  # --- Code helpers ---
 
   defp split_tokens_into_lines(tokens) do
     tokens
@@ -1065,7 +1032,6 @@ defmodule ElixirOpentui.Painter do
         [first | more] ->
           [current | rest] = lines
           current = [{type, first} | current]
-          # Each subsequent part starts a new line
           new_lines = Enum.map(more, fn part -> [{type, part}] end)
           Enum.reverse(new_lines) ++ [current | rest]
       end
@@ -1077,8 +1043,6 @@ defmodule ElixirOpentui.Painter do
   defp token_color(type, opacity) do
     Color.with_opacity(Map.get(@token_colors, type, @token_default), opacity)
   end
-
-  # --- Code painting helpers ---
 
   defp paint_code_lines(
          buf,
@@ -1126,8 +1090,6 @@ defmodule ElixirOpentui.Painter do
     end)
   end
 
-  # --- Diff painting helpers ---
-
   defp paint_diff_unified(
          buf,
          diff_lines,
@@ -1156,7 +1118,6 @@ defmodule ElixirOpentui.Painter do
         {line_fg, line_bg, sign} = diff_line_style(type, colors)
         content = Map.get(line, :content, "")
 
-        # Fill background for add/remove lines
         b =
           if type in [:add, :remove] do
             Buffer.fill_rect(b, x, y + row, w, 1, " ", line_fg, line_bg)
@@ -1164,7 +1125,6 @@ defmodule ElixirOpentui.Painter do
             b
           end
 
-        # Draw line numbers
         b =
           if show_line_numbers do
             old_num = Map.get(line, :old_line)
@@ -1181,7 +1141,6 @@ defmodule ElixirOpentui.Painter do
             b
           end
 
-        # Draw sign and content
         b = Buffer.draw_text(b, x + gutter_w, y + row, sign <> " ", line_fg, line_bg)
         visible = TextBuffer.slice_columns(content, 0, content_w)
         Buffer.draw_text(b, content_x, y + row, visible, line_fg, line_bg)
@@ -1213,7 +1172,6 @@ defmodule ElixirOpentui.Painter do
       if line == nil do
         b
       else
-        # Split lines have %{left: side, right: side} structure
         left = Map.get(line, :left, empty)
         right = Map.get(line, :right, empty)
 
@@ -1243,7 +1201,6 @@ defmodule ElixirOpentui.Painter do
     end)
   end
 
-  # One half of a split diff row. `gutter_w` is nil when line numbers are hidden.
   defp paint_diff_side(b, side, num, sx, sy, fill_w, content_w, gutter_w, colors) do
     {side_fg, side_bg, sign} = diff_line_style(side.type, colors)
     content_offset = (gutter_w || 0) + 2
@@ -1277,15 +1234,10 @@ defmodule ElixirOpentui.Painter do
     )
   end
 
-  # --- Diff helpers ---
-
   defp diff_line_style(:add, %{add_fg: fg, add_bg: bg}), do: {fg, bg, "+"}
   defp diff_line_style(:remove, %{rem_fg: fg, rem_bg: bg}), do: {fg, bg, "-"}
   defp diff_line_style(_type, %{fg: fg, bg: bg}), do: {fg, bg, " "}
 
-  # --- Markdown helpers ---
-
-  # NOTE: markdown.ex count_rendered_lines/1 mirrors this logic
   defp markdown_blocks_to_lines(
          blocks,
          w,

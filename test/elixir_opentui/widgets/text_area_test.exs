@@ -4,8 +4,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
   alias ElixirOpentui.Widgets.TextArea
   alias ElixirOpentui.EditBufferNIF
 
-  # ── Helpers ──────────────────────────────────────────────────────────
-
   defp key_event(key, opts \\ []) do
     %{
       type: :key,
@@ -51,8 +49,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       TextArea.update(:key, key_event(:right, shift: true), s)
     end)
   end
-
-  # ── Editing ─────────────────────────────────────────────────────────
 
   describe "update_props/3" do
     test "preserves local buffer state when unrelated props change" do
@@ -433,8 +429,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
   end
 
-  # ── Unicode / Emoji ─────────────────────────────────────────────────
-
   describe "unicode" do
     test "insert emoji character" do
       state = TextArea.init(%{id: :ta, value: "Hello", width: 40, height: 10})
@@ -456,17 +450,14 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       cursor = get_cursor(state)
       assert cursor.col == 0
 
-      # Move past A
       state = TextArea.update(:key, key_event(:right), state)
       cursor = get_cursor(state)
       assert cursor.col == 1
 
-      # Move past emoji (occupies 2 display-width columns)
       state = TextArea.update(:key, key_event(:right), state)
       cursor = get_cursor(state)
       assert cursor.col == 3
 
-      # Move past B
       state = TextArea.update(:key, key_event(:right), state)
       cursor = get_cursor(state)
       assert cursor.col == 4
@@ -474,7 +465,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
 
     test "backspace deletes emoji" do
       state = TextArea.init(%{id: :ta, value: "A🌟B", width: 40, height: 10})
-      # Position after emoji (col 3)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 3)
       state = TextArea.update(:key, key_event(:backspace), state)
       assert get_text(state) == "AB"
@@ -482,14 +472,11 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
 
     test "delete forward removes emoji" do
       state = TextArea.init(%{id: :ta, value: "A🌟B", width: 40, height: 10})
-      # Position at emoji (col 1)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 1)
       state = TextArea.update(:key, key_event(:delete), state)
       assert get_text(state) == "AB"
     end
   end
-
-  # ── Selection ───────────────────────────────────────────────────────
 
   describe "selection" do
     test "shift+right selects right" do
@@ -592,26 +579,22 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       state = TextArea.init(%{id: :ta, value: "hello", width: 40, height: 10})
       EditBufferNIF.set_cursor_by_offset(state.edit_buffer, 1)
       state = select_right_n(state, 3)
-      # Selection is 1..4
       assert state.selection.anchor == 1
       assert state.selection.focus == 4
       state = TextArea.update(:key, key_event(:left), state)
       assert state.selection == nil
       cursor = get_cursor(state)
-      # Collapses to start of selection, then moves left
       assert cursor.offset == 0
     end
 
     test "right arrow collapses selection to end" do
       state = TextArea.init(%{id: :ta, value: "hello", width: 40, height: 10})
       state = select_right_n(state, 3)
-      # Selection is 0..3
       assert state.selection.anchor == 0
       assert state.selection.focus == 3
       state = TextArea.update(:key, key_event(:right), state)
       assert state.selection == nil
       cursor = get_cursor(state)
-      # Collapses to end of selection, then moves right
       assert cursor.offset == 4
     end
 
@@ -672,8 +655,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert state.selection.focus == 11
     end
   end
-
-  # ── Undo/Redo ───────────────────────────────────────────────────────
 
   describe "undo/redo" do
     test "undo text insertion" do
@@ -760,8 +741,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
   end
 
-  # ── Visual lines ────────────────────────────────────────────────────
-
   describe "visual lines" do
     test "word wrap mode is set" do
       state = TextArea.init(%{id: :ta, value: "", wrap: :word, width: 10, height: 5})
@@ -822,11 +801,9 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Position at col 22 (on second visual line)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 22)
       state = TextArea.update(:key, key_event("a", alt: true), state)
       cursor = get_cursor(state)
-      # Should go to col 20 (start of second visual line), not col 0
       assert cursor.col == 20
     end
 
@@ -840,11 +817,9 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Position at col 5 (on first visual line)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 5)
       state = TextArea.update(:key, key_event("e", alt: true), state)
       cursor = get_cursor(state)
-      # Should go to col 19 (end of first visual line), not col 26 (end of logical line)
       assert cursor.col == 19
     end
 
@@ -858,18 +833,14 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Position at col 22 (second visual line)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 22)
 
-      # Visual home -> col 20
       state = TextArea.update(:key, key_event("a", alt: true), state)
       visual_home_col = get_cursor(state).col
       assert visual_home_col == 20
 
-      # Reposition
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 22)
 
-      # Logical home -> col 0
       state = TextArea.update(:key, key_event("a", ctrl: true), state)
       logical_home_col = get_cursor(state).col
       assert logical_home_col == 0
@@ -887,18 +858,14 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Position at col 5 (first visual line)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 5)
 
-      # Visual end -> col 19
       state = TextArea.update(:key, key_event("e", alt: true), state)
       visual_end_col = get_cursor(state).col
       assert visual_end_col == 19
 
-      # Reposition
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 5)
 
-      # Logical end -> col 26
       state = TextArea.update(:key, key_event("e", ctrl: true), state)
       logical_end_col = get_cursor(state).col
       assert logical_end_col == 26
@@ -916,7 +883,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Test home
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 6)
       state = TextArea.update(:key, key_event("a", alt: true), state)
       visual_home = get_cursor(state).col
@@ -926,7 +892,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       logical_home = get_cursor(state).col
       assert visual_home == logical_home
 
-      # Test end
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 6)
       state = TextArea.update(:key, key_event("e", alt: true), state)
       visual_end = get_cursor(state).col
@@ -947,18 +912,15 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Position somewhere mid-text (after some wrapping)
       EditBufferNIF.set_cursor(state.edit_buffer, 0, 25)
 
       vc = get_visual_cursor_full(state)
       assert vc.visual_row > 0
 
-      # Visual home should go to start of that visual line (not col 0 of logical line)
       state = TextArea.update(:key, key_event("a", alt: true), state)
       sol_cursor = get_cursor(state)
       assert sol_cursor.col > 0
 
-      # Visual end
       state = TextArea.update(:key, key_event("e", alt: true), state)
       eol_cursor = get_cursor(state)
       assert eol_cursor.col < 37
@@ -977,16 +939,13 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
           height: 10
         })
 
-      # Start at beginning
       vc = get_visual_cursor_full(state)
       assert vc.visual_row == 0
       assert vc.visual_col == 0
 
-      # Get total virtual line count
       total = EditBufferNIF.view_get_total_virtual_line_count(state.editor_view)
       assert total > 1
 
-      # Move down through each wrapped line
       state =
         Enum.reduce(1..(total - 1), state, fn i, s ->
           s = TextArea.update(:key, key_event(:down), s)
@@ -1016,8 +975,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert state.selection != nil
     end
   end
-
-  # ── Rendering ───────────────────────────────────────────────────────
 
   describe "rendering" do
     test "render/1 produces textarea element" do
@@ -1082,7 +1039,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     test "render element has width and height in style" do
       state = TextArea.init(%{id: :ta, value: "test", width: 80, height: 24})
       element = TextArea.render(state)
-      # width/height are layout attrs, so they go into element.style, not element.attrs
       assert element.style.width == 80
       assert element.style.height == 24
     end
@@ -1101,8 +1057,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert element.attrs.cursor_row > 0 or element.attrs.cursor_col >= 0
     end
   end
-
-  # ── Events ──────────────────────────────────────────────────────────
 
   describe "events" do
     test "Alt+Enter triggers submit (no newline)" do
@@ -1184,11 +1138,9 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
 
     test "mouse scroll up" do
-      # Create text tall enough to scroll
       lines = Enum.map_join(0..30, "\n", fn i -> "line #{i}" end)
       state = TextArea.init(%{id: :ta, value: lines, width: 40, height: 5})
 
-      # Scroll down first using mouse scroll
       state = TextArea.update(:mouse, %{type: :mouse, action: :scroll_down}, state)
       state = TextArea.update(:mouse, %{type: :mouse, action: :scroll_down}, state)
       scroll_before = state.scroll_y
@@ -1206,8 +1158,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert state.scroll_y >= 0
     end
   end
-
-  # ── Word deletion ───────────────────────────────────────────────────
 
   describe "word deletion" do
     test "Ctrl+W deletes word backward from end" do
@@ -1277,8 +1227,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
   end
 
-  # ── Word movement ───────────────────────────────────────────────────
-
   describe "word movement" do
     test "Alt+F moves to next word boundary" do
       state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
@@ -1327,7 +1275,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
 
     test "word movement at word boundaries continues to next word" do
       state = TextArea.init(%{id: :ta, value: "one two three", width: 40, height: 10})
-      # Move forward twice to pass two words
       state = TextArea.update(:key, key_event("f", alt: true), state)
       first_pos = get_cursor(state).offset
       state = TextArea.update(:key, key_event("f", alt: true), state)
@@ -1335,8 +1282,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert second_pos > first_pos
     end
   end
-
-  # ── Buffer home/end ─────────────────────────────────────────────────
 
   describe "buffer home/end" do
     test "Home moves to beginning of buffer" do
@@ -1387,8 +1332,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
   end
 
-  # ── Scroll / Viewport ──────────────────────────────────────────────
-
   describe "scroll/viewport" do
     test "viewport has valid dimensions after init" do
       state = TextArea.init(%{id: :ta, value: "hello", width: 40, height: 10})
@@ -1411,7 +1354,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     test "scrolling happens when cursor moves past viewport" do
       lines = Enum.map_join(0..30, "\n", fn i -> "line #{i}" end)
       state = TextArea.init(%{id: :ta, value: lines, width: 40, height: 5})
-      # Navigate down past the viewport using widget key events
       state = TextArea.update(:key, key_event(:end), state)
       assert state.scroll_y > 0
     end
@@ -1444,14 +1386,11 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       lines = Enum.map_join(0..50, "\n", fn i -> "line #{i}" end)
       state = TextArea.init(%{id: :ta, value: lines, width: 40, height: 5})
 
-      # Move to a line beyond viewport
       state = move_to_end(state)
       {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(state.editor_view)
       assert oy > 0
     end
   end
-
-  # ── Buffer operations ──────────────────────────────────────────────
 
   describe "buffer operations" do
     test "line count for multi-line text" do
@@ -1515,8 +1454,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
     end
   end
 
-  # ── Complex editing scenarios ──────────────────────────────────────
-
   describe "complex editing" do
     test "type, select all, delete, type again" do
       state = TextArea.init(%{id: :ta, value: "", width: 40, height: 10})
@@ -1540,7 +1477,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       state = type_string(state, "line3")
       assert get_text(state) == "line1\nline2\nline3"
 
-      # Go to beginning of line2
       EditBufferNIF.set_cursor(state.edit_buffer, 1, 0)
       state = type_string(state, ">>")
       assert get_text(state) == "line1\n>>line2\nline3"
@@ -1548,10 +1484,8 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
 
     test "select across lines and delete" do
       state = TextArea.init(%{id: :ta, value: "hello\nworld", width: 40, height: 10})
-      # Select from offset 3 to end of line 2
       EditBufferNIF.set_cursor_by_offset(state.edit_buffer, 3)
       state = select_right_n(state, 5)
-      # Selection covers "lo\nwo"
       state = TextArea.update(:key, key_event(:backspace), state)
       assert get_text(state) == "helrld"
     end
@@ -1613,8 +1547,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       assert state.wrap == :char
       assert get_text(state) == "hello wonderful world"
 
-      # Changing wrap mode via reinit preserves content conceptually
-      # (the widget doesn't have a runtime wrap mode setter, it's set at init)
       state2 =
         TextArea.init(%{
           id: :ta,
@@ -1654,9 +1586,7 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
   describe "clipboard (copy/cut)" do
     test "copy sends {:clipboard_copy, text} with selected text" do
       state = TextArea.init(%{id: :ta, value: "hello world", width: 40, height: 10})
-      # Select "hello"
       state = select_right_n(state, 5)
-      # Copy
       _state = TextArea.update(:key, key_event("c", meta: true), state)
       assert_received {:clipboard_copy, "hello"}
     end
@@ -1666,7 +1596,6 @@ defmodule ElixirOpentui.Widgets.TextAreaTest do
       state = select_right_n(state, 5)
       new_state = TextArea.update(:key, key_event("c", meta: true), state)
       assert get_text(new_state) == "hello world"
-      # Selection should still be present
       assert new_state.selection != nil
     end
 

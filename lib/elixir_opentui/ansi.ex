@@ -8,10 +8,7 @@ defmodule ElixirOpentui.ANSI do
 
   alias ElixirOpentui.{Buffer, Color}
 
-  # CSI (Control Sequence Introducer)
   @csi "\e["
-
-  # --- Cursor control ---
 
   @doc "Move cursor to (x, y). 1-indexed for ANSI."
   @spec move_to(non_neg_integer(), non_neg_integer()) :: iodata()
@@ -22,8 +19,6 @@ defmodule ElixirOpentui.ANSI do
 
   @spec show_cursor() :: iodata()
   def show_cursor, do: "\e[?25h"
-
-  # --- Screen control ---
 
   @spec clear_screen() :: iodata()
   def clear_screen, do: "\e[2J"
@@ -40,23 +35,17 @@ defmodule ElixirOpentui.ANSI do
   @spec reset() :: iodata()
   def reset, do: "\e[0m"
 
-  # --- Mouse mode ---
-
   @spec enable_mouse() :: iodata()
   def enable_mouse, do: ["\e[?1000h", "\e[?1002h", "\e[?1003h", "\e[?1006h"]
 
   @spec disable_mouse() :: iodata()
   def disable_mouse, do: ["\e[?1006l", "\e[?1003l", "\e[?1002l", "\e[?1000l"]
 
-  # --- Bracketed paste ---
-
   @spec enable_paste() :: iodata()
   def enable_paste, do: "\e[?2004h"
 
   @spec disable_paste() :: iodata()
   def disable_paste, do: "\e[?2004l"
-
-  # --- Kitty keyboard protocol ---
 
   @doc "Query current Kitty keyboard flags. Terminal responds with `\\e[?{flags}u`."
   @spec query_kitty_keyboard() :: iodata()
@@ -93,8 +82,6 @@ defmodule ElixirOpentui.ANSI do
   @spec default_kitty_flags() :: non_neg_integer()
   def default_kitty_flags, do: 5
 
-  # --- Synchronized output (mode 2026) ---
-
   @doc "Begin synchronized update — terminal buffers output until end_sync_update."
   @spec begin_sync_update() :: iodata()
   def begin_sync_update, do: "\e[?2026h"
@@ -106,8 +93,6 @@ defmodule ElixirOpentui.ANSI do
   @doc "Query DECRQM for a private mode. Response: \\e[?{mode};{status}$y"
   @spec query_decrqm(non_neg_integer()) :: iodata()
   def query_decrqm(mode), do: ["\e[?", Integer.to_string(mode), "$p"]
-
-  # --- Clipboard (OSC 52) ---
 
   @doc """
   Generate OSC 52 sequence to copy text to the system clipboard.
@@ -123,10 +108,6 @@ defmodule ElixirOpentui.ANSI do
   def copy_to_clipboard(text, selection) do
     ["\e]52;", selection, ";", Base.encode64(text), "\a"]
   end
-
-  # --- Cursor shape ---
-
-  # --- Color / attribute SGR ---
 
   @doc "Generate SGR (Select Graphic Rendition) sequence for a cell's style."
   @spec sgr(
@@ -201,8 +182,6 @@ defmodule ElixirOpentui.ANSI do
     ["48;2;#{r};#{g};#{b}" | parts]
   end
 
-  # --- Full frame rendering ---
-
   @doc "Render an entire buffer to ANSI iodata (for initial draw or full redraw)."
   @spec render_full(Buffer.t()) :: iodata()
   def render_full(%Buffer{cols: cols, rows: rows} = buf) do
@@ -228,8 +207,6 @@ defmodule ElixirOpentui.ANSI do
   def frame(content) do
     [hide_cursor(), content, show_cursor()]
   end
-
-  # --- Helpers ---
 
   defp render_row(buf, y, cols) do
     {iodata, _prev} =
@@ -267,9 +244,6 @@ defmodule ElixirOpentui.ANSI do
      cell.inverse, cell.blink, cell.hidden}
   end
 
-  # Group consecutive horizontal changes into runs for efficient cursor movement.
-  # Input: [{x, y, cell}, ...] (from Buffer.diff)
-  # Output: [{start_x, y, [cells]}, ...]
   defp group_consecutive(changes) do
     changes
     |> Enum.sort_by(fn {x, y, _} -> {y, x} end)

@@ -1,17 +1,9 @@
-# Markdown Interactive Demo
-# Run: mix run demo/markdown_demo.exs
-#
-# Rendered markdown with headings, lists, code blocks, tables, and more.
-# Up/Down/PgUp/PgDown/Home to scroll.
-# Press Ctrl+C to exit.
-
 defmodule MarkdownDemo do
   alias ElixirOpentui.Widgets.Markdown
   alias ElixirOpentui.Color
 
   @viewport 20
 
-  # Rich markdown showcasing various features (inspired by OpenTUI's markdown-demo)
   @sample_markdown """
   # ElixirOpentui Markdown Demo
 

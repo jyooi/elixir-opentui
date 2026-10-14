@@ -122,8 +122,6 @@ defmodule ElixirOpentui.Widgets.Diff do
     )
   end
 
-  # --- Key handling ---
-
   defp handle_key(event, state) do
     case ScrollHelper.handle_scroll_key(event,
            offset: state.scroll_offset,
@@ -137,8 +135,6 @@ defmodule ElixirOpentui.Widgets.Diff do
 
   defp current_lines(%{view: :unified} = state), do: state.unified_lines
   defp current_lines(%{view: :split} = state), do: state.split_lines
-
-  # --- Diff parsing ---
 
   @doc """
   Parse a unified diff string into a structured representation.
@@ -197,13 +193,11 @@ defmodule ElixirOpentui.Widgets.Diff do
 
         parse_lines(rest, hunks, current)
 
-      # Skip file headers (---/+++ lines), no-newline markers, empty lines
       true ->
         parse_lines(rest, hunks, current)
     end
   end
 
-  # {type, old line step, new line step} for a hunk body line, or nil.
   defp line_type("+" <> _), do: {:add, 0, 1}
   defp line_type("-" <> _), do: {:remove, 1, 0}
   defp line_type(" " <> _), do: {:context, 1, 1}
@@ -237,8 +231,6 @@ defmodule ElixirOpentui.Widgets.Diff do
       :split -> build_split_lines(state.parsed)
     end
   end
-
-  # --- Line building ---
 
   defp build_unified_lines(hunks) do
     Enum.flat_map(hunks, fn hunk ->
@@ -274,7 +266,6 @@ defmodule ElixirOpentui.Widgets.Diff do
         build_split_hunk(rest2, [split_line | acc])
 
       [other | rest2] ->
-        # Handle unexpected line types
         split_line = %{
           left: other,
           right: %{type: :empty, content: "", old_line: nil, new_line: nil}

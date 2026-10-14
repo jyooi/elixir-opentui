@@ -29,7 +29,6 @@ defmodule ElixirOpentui.PainterZIndexTest do
       red = Color.red()
       blue = Color.blue()
 
-      # blue is first child but has higher z-index — should still paint on top
       tree =
         Element.new(:box, [width: 10, height: 5], [
           Element.new(:box, width: 4, height: 3, bg: blue, position: :absolute, z_index: 5),
@@ -75,9 +74,6 @@ defmodule ElixirOpentui.PainterZIndexTest do
       red = Color.red()
       green = Color.green()
 
-      # First child has a nested grandchild with z_index: 99,
-      # but the first child itself has z_index: 0.
-      # Second child has z_index: 1 — should paint on top of first child's area.
       tree =
         Element.new(:box, [width: 10, height: 5], [
           Element.new(:box, [width: 4, height: 3, position: :absolute, z_index: 0], [

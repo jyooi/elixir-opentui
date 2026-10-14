@@ -1,18 +1,9 @@
-# Code Interactive Demo
-# Run: mix run demo/code_demo.exs
-#
-# Syntax-highlighted code display with line numbers.
-# Left/Right to cycle examples, L to toggle line numbers.
-# Up/Down/PgUp/PgDown/Home/End to scroll.
-# Press Ctrl+C to exit.
-
 defmodule CodeDemo do
   alias ElixirOpentui.Widgets.Code
   alias ElixirOpentui.Color
 
   @viewport 18
 
-  # Multiple code examples to cycle through (like OpenTUI's code-demo)
   @examples [
     %{
       name: "Elixir — GenServer",
@@ -517,7 +508,6 @@ defmodule CodeDemo do
 
   def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
-  # Left/Right to cycle examples
   def handle_event(%{type: :key, key: :left, ctrl: false, meta: false}, state) do
     new_idx = rem(state.example_index - 1 + length(@examples), length(@examples))
     switch_example(state, new_idx)
@@ -528,7 +518,6 @@ defmodule CodeDemo do
     switch_example(state, new_idx)
   end
 
-  # L to toggle line numbers
   def handle_event(%{type: :key, key: "l", ctrl: false, meta: false}, state) do
     show = !state.show_line_numbers
     new_code = Code.update({:set_show_line_numbers, show}, nil, state.code)

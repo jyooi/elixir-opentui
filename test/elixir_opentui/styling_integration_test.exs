@@ -83,7 +83,6 @@ defmodule ElixirOpentui.StylingIntegrationTest do
       assert cell.hidden == true
 
       ansi = IO.iodata_to_binary(ANSI.render_full(buf))
-      # SGR codes: 5=blink, 8=hidden (appear in the SGR sequence)
       assert String.contains?(ansi, "5;")
       assert String.contains?(ansi, "8;")
     end

@@ -102,8 +102,6 @@ defmodule ElixirOpentui.Animation.Timeline do
   def finished?(%__MODULE__{state: :complete}), do: true
   def finished?(_), do: false
 
-  # --- Private helpers ---
-
   defp maybe_derive_duration(%{duration: 0, items: items} = tl) do
     max_end =
       items
@@ -123,7 +121,6 @@ defmodule ElixirOpentui.Animation.Timeline do
     effective_elapsed = elapsed - item.delay
 
     if effective_elapsed < 0 do
-      # Not started: only set the initial value when nothing else has set it
       Map.put_new(values, item.property, normalize(item.from + 0.0))
     else
       progress = clamp(effective_elapsed / max(item.duration, 1), 0.0, 1.0)
@@ -161,7 +158,6 @@ defmodule ElixirOpentui.Animation.Timeline do
 
     tl = %{tl | elapsed: 0.0, loop_count: tl.loop_count + 1, items: items}
 
-    # Exact boundary: preserve values from the last frame
     if overshoot > 0, do: advance(%{tl | values: %{}}, overshoot), else: tl
   end
 

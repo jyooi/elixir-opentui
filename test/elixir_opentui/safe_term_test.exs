@@ -56,9 +56,6 @@ defmodule ElixirOpentui.SafeTermTest do
     end
 
     test "call shape rejected by AST walker even when all atoms exist" do
-      # Reference these atoms at compile time so existing_atoms_only accepts
-      # them, forcing rejection to happen in safe_term/1 instead of the parser.
-      _ = {:erlang, :length}
       assert {:error, msg} = SafeTerm.parse(":erlang.length([])")
       assert msg =~ "disallowed"
     end
@@ -97,7 +94,6 @@ defmodule ElixirOpentui.SafeTermTest do
 
   describe "atom-table exhaustion guard" do
     test "novel atoms blocked at parse time" do
-      # A fresh string every run so the atom genuinely doesn't exist.
       unique = ":never_before_seen_atom_#{System.unique_integer([:positive])}"
       assert {:error, msg} = SafeTerm.parse(unique)
       assert msg =~ "parse error"

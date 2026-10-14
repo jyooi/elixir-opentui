@@ -132,8 +132,6 @@ defmodule ElixirOpentui.Widgets.TextInput do
   defp maybe_put(attrs, _key, nil), do: attrs
   defp maybe_put(attrs, key, value), do: Keyword.put(attrs, key, value)
 
-  # --- Key handling ---
-
   defp handle_key(%{key: key, ctrl: false, alt: false} = _event, state)
        when is_binary(key) and byte_size(key) == 1 do
     insert_char(state, key)
@@ -181,7 +179,6 @@ defmodule ElixirOpentui.Widgets.TextInput do
     adjust_scroll(state)
   end
 
-  # Emacs keybindings
   defp handle_key(%{key: "b", ctrl: true}, state), do: move_left(state)
   defp handle_key(%{key: "f", ctrl: true}, state), do: move_right(state)
   defp handle_key(%{key: "d", ctrl: true}, state), do: delete_forward(state)
@@ -199,8 +196,6 @@ defmodule ElixirOpentui.Widgets.TextInput do
   end
 
   defp handle_key(_, state), do: state
-
-  # --- Movement helpers ---
 
   defp move_left(state) do
     new_pos = max(0, state.cursor_pos - 1)
@@ -225,8 +220,6 @@ defmodule ElixirOpentui.Widgets.TextInput do
       state
     end
   end
-
-  # --- Helpers ---
 
   defp insert_char(state, char) do
     if exceeds_max?(state) do

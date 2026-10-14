@@ -236,8 +236,6 @@ defmodule ElixirOpentui.Widgets.SelectTest do
       state =
         Select.init(%{options: @options, visible_count: 10, show_description: true, id: :sel})
 
-      # With show_description=true, rows_per_item=2, so visible_items = 10/2 = 5
-      # page_down should move by 5 items
       state = Select.update(:key, key(:page_down), state)
       assert state.selected == 4
     end
@@ -248,7 +246,6 @@ defmodule ElixirOpentui.Widgets.SelectTest do
       state =
         Select.init(%{options: @options, visible_count: 10, item_spacing: 1, id: :sel})
 
-      # rows_per_item = 1 + 0 + 1 = 2, visible_items = 10/2 = 5
       state = Select.update(:key, key(:page_down), state)
       assert state.selected == 4
     end

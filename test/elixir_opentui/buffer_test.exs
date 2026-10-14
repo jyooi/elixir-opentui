@@ -127,7 +127,6 @@ defmodule ElixirOpentui.BufferTest do
         assert cell.bg == Color.red()
       end
 
-      # Outside the rect should be unchanged
       assert Buffer.get_cell(buf, 0, 0).char == " "
     end
   end

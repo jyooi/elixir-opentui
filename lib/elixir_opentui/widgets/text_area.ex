@@ -23,10 +23,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   alias ElixirOpentui.EditBufferNIF
 
-  # Wrap mode constants consolidated in EditBufferNIF.wrap_mode_int/1
-
-  # --- Component callbacks ---
-
   @impl true
   def init(props) do
     width = Map.get(props, :width, 40)
@@ -163,8 +159,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     )
   end
 
-  # --- Key handling ---
-
   defp handle_key(event, state) do
     action = resolve_action(event)
     execute_action(action, event, state)
@@ -174,24 +168,20 @@ defmodule ElixirOpentui.Widgets.TextArea do
     super_ = Map.get(event, :meta, false)
 
     case {key, ctrl, alt, shift, super_} do
-      # Movement
       {:left, false, false, false, false} -> {:move, :left}
       {:right, false, false, false, false} -> {:move, :right}
       {:up, false, false, false, false} -> {:move, :up}
       {:down, false, false, false, false} -> {:move, :down}
       {"f", true, false, false, false} -> {:move, :right}
       {"b", true, false, false, false} -> {:move, :left}
-      # Selection (shift+movement)
       {:left, false, false, true, false} -> {:select, :left}
       {:right, false, false, true, false} -> {:select, :right}
       {:up, false, false, true, false} -> {:select, :up}
       {:down, false, false, true, false} -> {:select, :down}
-      # Line home/end (logical)
       {"a", true, false, false, false} -> {:move, :line_home}
       {"e", true, false, false, false} -> {:move, :line_end}
       {"a", true, false, true, false} -> {:select, :line_home}
       {"e", true, false, true, false} -> {:select, :line_end}
-      # Visual line home/end
       {"a", false, true, false, false} -> {:move, :visual_line_home}
       {"e", false, true, false, false} -> {:move, :visual_line_end}
       {"a", false, true, true, false} -> {:select, :visual_line_home}
@@ -200,7 +190,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {:right, false, false, false, true} -> {:move, :visual_line_end}
       {:left, false, false, true, true} -> {:select, :visual_line_home}
       {:right, false, false, true, true} -> {:select, :visual_line_end}
-      # Buffer home/end
       {:home, false, false, false, false} -> {:move, :buffer_home}
       {:end, false, false, false, false} -> {:move, :buffer_end}
       {:home, false, false, true, false} -> {:select, :buffer_home}
@@ -209,7 +198,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {:down, false, false, false, true} -> {:move, :buffer_end}
       {:up, false, false, true, true} -> {:select, :buffer_home}
       {:down, false, false, true, true} -> {:select, :buffer_end}
-      # Word movement
       {"f", false, true, false, false} -> {:move, :word_forward}
       {"b", false, true, false, false} -> {:move, :word_backward}
       {:right, false, true, false, false} -> {:move, :word_forward}
@@ -220,7 +208,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {"b", false, true, true, false} -> {:select, :word_backward}
       {:right, false, true, true, false} -> {:select, :word_forward}
       {:left, false, true, true, false} -> {:select, :word_backward}
-      # Deletion
       {:backspace, false, false, false, false} -> :backspace
       {:backspace, false, false, true, false} -> :backspace
       {:delete, false, false, false, false} -> :delete
@@ -235,28 +222,21 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {"d", true, false, true, false} -> :delete_line
       {"k", true, false, false, false} -> :delete_to_line_end
       {"u", true, false, false, false} -> :delete_to_line_start
-      # Editing
       {:enter, false, false, false, false} -> :newline
       {:enter, false, true, false, false} -> :submit
-      # Undo/Redo
       {"z", true, false, false, false} -> :undo
       {"y", true, false, false, false} -> :redo
       {"-", true, false, false, false} -> :undo
       {".", true, false, false, false} -> :redo
       {"z", false, false, false, true} -> :undo
       {"z", false, false, true, true} -> :redo
-      # Clipboard (Super/Cmd — matches select_all convention)
       {"c", false, false, false, true} -> :copy
       {"x", false, false, false, true} -> :cut
-      # Select all
       {"a", false, false, false, true} -> :select_all
-      # Character input - printable single chars without ctrl/alt/meta/super
       {ch, false, false, _, false} when is_binary(ch) -> :insert_char
       _ -> :noop
     end
   end
-
-  # --- Action execution ---
 
   defp execute_action(:noop, _event, state), do: state
 
@@ -274,7 +254,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     |> sync_scroll()
   end
 
-  # Deletion
   defp execute_action(:backspace, _event, state) do
     if has_selection?(state) do
       delete_selection(state)
@@ -343,14 +322,12 @@ defmodule ElixirOpentui.Widgets.TextArea do
       {row, _col, current} = EditBufferNIF.get_cursor(state.edit_buffer)
       EditBufferNIF.set_cursor(state.edit_buffer, row, 0)
       {_row2, _col2, line_start} = EditBufferNIF.get_cursor(state.edit_buffer)
-      # Restore cursor, then delete the range
       EditBufferNIF.set_cursor_by_offset(state.edit_buffer, current)
       delete_range_by_offsets(state, line_start, current)
     end
     |> emit_change()
   end
 
-  # Editing
   defp execute_action(:newline, _event, state) do
     state = maybe_delete_selection(state)
     EditBufferNIF.new_line(state.edit_buffer)
@@ -363,7 +340,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     emit_submit(state)
   end
 
-  # Undo/Redo
   defp execute_action(:undo, _event, state) do
     EditBufferNIF.undo(state.edit_buffer)
 
@@ -382,7 +358,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     |> emit_change()
   end
 
-  # Select all
   defp execute_action(:select_all, _event, state) do
     display_width = EditBufferNIF.get_text_display_width(state.edit_buffer)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, display_width)
@@ -391,7 +366,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     sync_scroll(state)
   end
 
-  # Clipboard
   defp execute_action(:copy, _event, state) do
     if has_selection?(state) do
       text = EditBufferNIF.view_get_selected_text(state.editor_view)
@@ -411,7 +385,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     end
   end
 
-  # Character input
   defp execute_action(:insert_char, %{key: ch}, state) do
     state = maybe_delete_selection(state)
     EditBufferNIF.insert_char(state.edit_buffer, ch)
@@ -419,8 +392,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
     sync_scroll(state)
     |> emit_change()
   end
-
-  # --- Mouse handling ---
 
   defp handle_mouse(%{action: :scroll_up}, state) do
     {_ox, oy, _w, _h} = EditBufferNIF.view_get_viewport(state.editor_view)
@@ -438,8 +409,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
   end
 
   defp handle_mouse(_event, state), do: state
-
-  # --- Cursor motion ---
 
   defp collapse_selection_for(:left, state), do: collapse_selection_to(:start, state)
   defp collapse_selection_for(:right, state), do: collapse_selection_to(:end, state)
@@ -475,8 +444,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
   end
-
-  # --- Selection helpers ---
 
   defp has_selection?(%{selection: nil}), do: false
   defp has_selection?(%{selection: %{anchor: a, focus: f}}) when a == f, do: false
@@ -555,7 +522,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp delete_range_by_offsets(state, from_offset, to_offset) when from_offset < to_offset do
     state = clear_selection(state)
-    # Select the range, then delete it
     EditBufferNIF.view_set_selection(state.editor_view, from_offset, to_offset)
     EditBufferNIF.view_delete_selected_text(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, from_offset)
@@ -564,8 +530,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
   end
 
   defp delete_range_by_offsets(state, _from, _to), do: state
-
-  # --- Viewport helpers ---
 
   defp sync_scroll(state) do
     case EditBufferNIF.view_get_viewport(state.editor_view) do
@@ -591,8 +555,6 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
     %{start_row: sr, start_col: sc, end_row: er, end_col: ec}
   end
-
-  # --- Change/Submit emission ---
 
   defp emit_change(state) do
     emit(state, state.on_change, [EditBufferNIF.get_text(state.edit_buffer)])

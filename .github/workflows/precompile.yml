@@ -47,7 +47,6 @@ jobs:
           for f in lib/elixir_opentui/lib/*.so; do
             [ -f "$f" ] || continue
             base=$(basename "$f")
-            # Strip the version from the filename: Module.0.1.0.triple.so -> Module.triple.so
             renamed=$(echo "$base" | sed "s/\.${VERSION_NUM}\././")
             cp "$f" "artifacts/$renamed"
           done
@@ -64,10 +63,8 @@ jobs:
         run: |
           VERSION="${{ github.event.inputs.version }}"
 
-          # Create release if it doesn't exist
           gh release view "$VERSION" || gh release create "$VERSION" --draft --title "$VERSION"
 
-          # Upload all .so files
           gh release upload "$VERSION" artifacts/*.so --clobber
 
       - name: Update precompiled.ex with shasums

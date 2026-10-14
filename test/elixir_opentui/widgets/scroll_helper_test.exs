@@ -38,8 +38,6 @@ defmodule ElixirOpentui.Widgets.ScrollHelperTest do
                ScrollHelper.handle_scroll_key(key(:end), offset: 0, total: 20, visible: 10)
     end
 
-    # --- Clamping at 0 ---
-
     test "up clamps at 0" do
       assert {:handled, 0} =
                ScrollHelper.handle_scroll_key(key(:up), offset: 0, total: 10, visible: 5)
@@ -50,10 +48,7 @@ defmodule ElixirOpentui.Widgets.ScrollHelperTest do
                ScrollHelper.handle_scroll_key(key(:page_up), offset: 2, total: 10, visible: 5)
     end
 
-    # --- Clamping at max ---
-
     test "down clamps at max offset" do
-      # total=10, visible=5 => max_offset=5
       assert {:handled, 5} =
                ScrollHelper.handle_scroll_key(key(:down), offset: 5, total: 10, visible: 5)
     end
@@ -68,22 +63,15 @@ defmodule ElixirOpentui.Widgets.ScrollHelperTest do
                ScrollHelper.handle_scroll_key(key(:end), offset: 5, total: 10, visible: 5)
     end
 
-    # --- visible: nil fallback ---
-
     test "visible nil defaults page step to 10" do
-      # page_up with step=10 from offset 5 => 0
       assert {:handled, 0} = ScrollHelper.handle_scroll_key(key(:page_up), offset: 5, total: 20)
     end
 
     test "visible nil uses total for max_offset (max_offset = 0)" do
-      # When visible is nil, max_offset = max(0, total - total) = 0
-      # So all forward scrolling clamps to 0
       assert {:handled, 0} = ScrollHelper.handle_scroll_key(key(:down), offset: 0, total: 5)
       assert {:handled, 0} = ScrollHelper.handle_scroll_key(key(:end), offset: 0, total: 5)
       assert {:handled, 0} = ScrollHelper.handle_scroll_key(key(:page_down), offset: 0, total: 20)
     end
-
-    # --- Edge cases ---
 
     test "total 0 keeps all offsets at 0" do
       assert {:handled, 0} =
@@ -105,16 +93,12 @@ defmodule ElixirOpentui.Widgets.ScrollHelperTest do
     end
 
     test "page step equals visible value" do
-      # visible=7, offset=0 => page_down should go to 7
       assert {:handled, 7} =
                ScrollHelper.handle_scroll_key(key(:page_down), offset: 0, total: 20, visible: 7)
 
-      # visible=7, offset=10 => page_up should go to 3
       assert {:handled, 3} =
                ScrollHelper.handle_scroll_key(key(:page_up), offset: 10, total: 20, visible: 7)
     end
-
-    # --- Unhandled keys ---
 
     test "unhandled key returns :unhandled" do
       assert :unhandled =

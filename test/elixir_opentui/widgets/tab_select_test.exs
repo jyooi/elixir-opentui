@@ -180,9 +180,7 @@ defmodule ElixirOpentui.Widgets.TabSelectTest do
 
   describe "scroll_offset" do
     test "scroll adjusts when selection moves past visible range" do
-      # With width 40 and tab_width 20, only 2 tabs visible
       state = TabSelect.init(%{options: @options, id: :tabs, tab_width: 20, width: 40})
-      # Move right 3 times to go past visible range
       state = TabSelect.update(:key, key(:right), state)
       state = TabSelect.update(:key, key(:right), state)
       state = TabSelect.update(:key, key(:right), state)
