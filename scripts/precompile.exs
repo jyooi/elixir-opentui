@@ -17,6 +17,8 @@ defmodule Precompile do
       {:x86_64, :linux, :gnu},
       {:x86_64, :linux, :musl},
       {:x86_64, :macos, :none}
+      # 32-bit targets (arm, x86) excluded: Zigler make.zig c_ulong/u64 bug
+      # Windows excluded: needs MSVC_ROOT/WINSDK_ROOT env vars
     ]
 
     this = self()

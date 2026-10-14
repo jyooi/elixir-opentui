@@ -310,6 +310,9 @@ defmodule ElixirOpentui.Input do
     tilde_code_to_event(code_str)
   end
 
+  # DECRQM response: `\e[?{mode};{status}$y`.
+  # The CSI parser collects the $ (0x24) as a param byte.
+  # After the split, the params are ["?{mode}", "{status}$"]. We strip the trailing $.
   defp csi_to_event(["?" <> mode_str, status_str], "y") do
     mode = to_integer(mode_str, 0)
     status = status_str |> String.trim_trailing("$") |> to_integer(0)
@@ -458,7 +461,17 @@ defmodule ElixirOpentui.Input do
 
   defp kitty_codepoint_to_key(_), do: :unknown
 
+  # Kitty modifier bits → event map fields:
+  #   bit 0 (1)   shift     → shift:.
+  #   bit 1 (2)   alt       → alt:.
+  #   bit 2 (4)   ctrl      → ctrl:.
+  #   bit 3 (8)   super     → meta: (matches OpenTUI convention).
+  #   bit 4 (16)  hyper     → dropped, no widget uses it.
+  #   bit 5 (32)  meta      → dropped, no widget uses it.
+  #   bit 6 (64)  caps_lock → dropped, not sent with flags=5.
+  #   bit 7 (128) num_lock  → dropped, not sent with flags=5.
   defp apply_kitty_modifier(event, mod) do
+    # Kitty uses 1-based modifiers, same as xterm.
     apply_modifier(event, mod)
   end
 

@@ -82,6 +82,9 @@ defmodule ElixirOpentui.DemoRunner do
         _, _ -> :ok
       end
 
+      # Switch prim_tty back to cooked mode. Note: this uses TCSANOW
+      # (not TCSADRAIN) internally — there is no output drain guarantee.
+      # For PTYs, the distinction is moot (pty_write is synchronous).
       :shell.start_interactive({:noshell, :cooked})
 
       cancel_deferred_mouse_cleanup(deferred_tmp)
@@ -111,6 +114,9 @@ defmodule ElixirOpentui.DemoRunner do
   @spec restore_terminal_sequences() :: [iodata()]
   def restore_terminal_sequences do
     [
+      # Disable Kitty keyboard: set flags to 0 first (belt-and-suspenders),
+      # then pop the stack entry. The set keeps enhancements off if the pop fails,
+      # for example in a Ghostty state machine edge case after recent keyboard events.
       ANSI.set_kitty_keyboard(0),
       ANSI.pop_kitty_keyboard(),
       ANSI.disable_modify_other_keys(),
@@ -119,6 +125,8 @@ defmodule ElixirOpentui.DemoRunner do
       ANSI.reset(),
       ANSI.show_cursor(),
       ANSI.leave_alt_screen(),
+      # Safety net: some terminals restore saved private modes on alt screen exit.
+      # This can re-enable mouse tracking. Send disable again after leaving.
       ANSI.disable_mouse()
     ]
   end
@@ -140,6 +148,10 @@ defmodule ElixirOpentui.DemoRunner do
     tmp = "/tmp/.elixir_opentui_cleanup_#{:os.getpid()}"
     File.write!(tmp, disable_seq)
 
+    # The subprocess checks if the temp file exists before writing.
+    # If the after block ran (normal exit), it deletes the file → no-op.
+    # If the BEAM was killed (abrupt exit), file exists → write cleanup.
+    # Write multiple times to cover tmux's re-enable timing window.
     cmd =
       "sleep 1 && " <>
         "test -f #{tmp} && cat #{tmp} > #{tty_path} 2>/dev/null && " <>

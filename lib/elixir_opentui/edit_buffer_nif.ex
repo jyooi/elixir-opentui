@@ -144,7 +144,7 @@ defmodule ElixirOpentui.EditBufferNIF do
 
   const EditorViewData = struct {
       editor_view: *EditorView,
-      edit_buffer_ref: EditBufferResource,
+      edit_buffer_ref: EditBufferResource, // prevents GC of parent EditBuffer
   };
 
   const EditorViewCallbacks = struct {

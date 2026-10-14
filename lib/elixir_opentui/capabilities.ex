@@ -43,6 +43,11 @@ defmodule ElixirOpentui.Capabilities do
   end
 
   def apply_capability(caps, %{capability: :decrqm, mode: 2026, status: status}) do
+    # DECRQM status values (per ECMA-48 / DEC STD 070).
+    #   0 = not recognized (terminal does not know this mode).
+    #   1 = set (currently enabled), 2 = reset (supported but currently disabled).
+    #   3 = permanently set (cannot be toggled off), 4 = permanently reset (cannot be toggled on).
+    # Supported = status in [1, 2, 3], unsupported = 0, 4.
     %{caps | synchronized_output: status in [1, 2, 3]}
   end
 
