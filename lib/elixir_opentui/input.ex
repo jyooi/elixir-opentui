@@ -18,6 +18,8 @@ defmodule ElixirOpentui.Input do
     9 => :tab,
     13 => :enter,
     127 => :backspace,
+    # PUA functional keys (57348-57357 handled by @kitty_functional_keys)
+    # PUA special keys
     57358 => :caps_lock,
     57359 => :scroll_lock,
     57360 => :num_lock,
@@ -89,6 +91,7 @@ defmodule ElixirOpentui.Input do
     57438 => :lower_volume,
     57439 => :raise_volume,
     57440 => :mute_volume,
+    # Modifier keys (reported as key events with flags >= 5)
     57441 => :left_shift,
     57442 => :left_control,
     57443 => :left_alt,
@@ -177,6 +180,7 @@ defmodule ElixirOpentui.Input do
     end
   end
 
+  # SGR mouse: `\e[< Cb ; Cx ; Cy M/m`.
   defp parse_loop(<<"\e[<", rest::binary>>, acc) do
     case parse_sgr_mouse(rest) do
       {event, remaining} -> parse_loop(remaining, [event | acc])
@@ -264,15 +268,19 @@ defmodule ElixirOpentui.Input do
     end
   end
 
+  # Kitty keyboard query response: `\e[?{flags}u`.
   defp csi_to_event(["?" <> flags_str | _], "u") do
     flags = to_integer(flags_str, 0)
     %{type: :capability, capability: :kitty_keyboard, value: flags}
   end
 
+  # Kitty key events: `\e[codepoint;modifier:event_type u`.
   defp csi_to_event(params, "u") do
     parse_kitty_key(params)
   end
 
+  # Modified keys: `\e[1;modN` where mod encodes ctrl/alt/shift.
+  # Enhanced with event_type support: `\e[1;mod:event_type N`.
   defp csi_to_event([_n, mod_str], final) when final in ["A", "B", "C", "D", "H", "F"] do
     {mod_value, event_type} = split_modifier_event_type(mod_str)
     base = csi_to_event([], final)
@@ -290,6 +298,13 @@ defmodule ElixirOpentui.Input do
   defp csi_to_event(_params, "Z"),
     do: %{key(:tab) | shift: true}
 
+  # Tilde-terminated sequences.
+  # Clause ordering (most-specific first, Elixir matches top-down):
+  # 1. modifyOtherKeys 3-param: `\e[27;mod;keycode~`.
+  # 2. Modified tilde 2-param: `\e[code;mod[:event_type]~`.
+  # 3. Legacy 1-param catch-all: `\e[N~`.
+
+  # modifyOtherKeys format: `\e[27;{modifier};{keycode}~`.
   defp csi_to_event(["27", mod_str, keycode_str], "~") do
     keycode = to_integer(keycode_str, 0)
     mod_value = to_integer(mod_str, 1)
@@ -298,6 +313,7 @@ defmodule ElixirOpentui.Input do
     apply_modifier(event, mod_value)
   end
 
+  # Modified tilde: `\e[code;mod[:event_type]~`.
   defp csi_to_event([code_str, mod_str], "~") do
     {mod_value, event_type} = split_modifier_event_type(mod_str)
     base = tilde_code_to_event(code_str)
@@ -321,6 +337,7 @@ defmodule ElixirOpentui.Input do
 
   defp csi_to_event(_, _), do: key(:unknown)
 
+  # SS3 sequence parsing (some terminals send these for F1-F4, arrows).
   defp parse_ss3(<<char, rest::binary>>) when char >= ?A and char <= ?Z do
     event =
       case char do
@@ -342,6 +359,10 @@ defmodule ElixirOpentui.Input do
 
   defp parse_ss3(_), do: nil
 
+  # SGR mouse parsing.
+  # Format: `Cb;Cx;Cy[M|m]`.
+  # M = press, m = release.
+  # Cb encodes button + modifiers.
   defp parse_sgr_mouse(data) do
     case Regex.run(~r/^(\d+);(\d+);(\d+)([Mm])/, data) do
       [full, cb_str, cx_str, cy_str, action_char] ->
@@ -424,6 +445,8 @@ defmodule ElixirOpentui.Input do
   end
 
   defp parse_kitty_key(params) do
+    # params[0] = codepoint[:shifted_codepoint[:base_layout_codepoint]].
+    # params[1] = modifier[:event_type] (optional).
     codepoint_str = List.first(params) || "0"
     mod_str = Enum.at(params, 1)
 
@@ -475,6 +498,8 @@ defmodule ElixirOpentui.Input do
     apply_modifier(event, mod)
   end
 
+  # Modifier decoding: ANSI modifier value (1 = none, 2 = shift, 3 = alt, and so on).
+  # This encoding is shared by xterm and Kitty protocols.
   defp apply_modifier(event, mod) do
     mod = mod - 1
 

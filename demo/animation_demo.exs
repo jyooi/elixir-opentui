@@ -1,3 +1,5 @@
+# Run: mix run demo/animation_demo.exs
+
 defmodule AnimationDemo do
   alias ElixirOpentui.Animation.Timeline
   alias ElixirOpentui.Color

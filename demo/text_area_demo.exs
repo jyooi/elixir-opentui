@@ -1,3 +1,5 @@
+# Run: mix run demo/text_area_demo.exs
+
 defmodule TextAreaDemo do
   alias ElixirOpentui.Widgets.TextArea
   alias ElixirOpentui.EditBufferNIF

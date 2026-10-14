@@ -1,3 +1,5 @@
+# Run: mix run demo/todo.exs
+
 defmodule TodoApp do
   alias ElixirOpentui.Widgets.{TextInput, Checkbox, TabSelect, ScrollBox}
   alias ElixirOpentui.Color
@@ -196,6 +198,7 @@ defmodule TodoApp do
     viewport_h = state.scroll.viewport_height
     scroll_y = state.scroll.scroll_y
 
+    # Compute values BEFORE panel block to avoid macro scoping issues.
     input_label = if(state.focus_idx == 0, do: "> Add todo:", else: "  Add todo:")
     filter_label = if(state.focus_idx == 1, do: "> Filter:", else: "  Filter:")
     status_fg = if done_count == total_count and total_count > 0, do: green, else: fg
@@ -209,6 +212,7 @@ defmodule TodoApp do
         :done -> "No completed todos."
       end
 
+    # Pre-compute todo lines to avoid variable scoping inside panel block.
     todo_lines =
       for {todo, vis_idx} <- Enum.with_index(filtered) do
         todo_focus_idx = 2 + vis_idx

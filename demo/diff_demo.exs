@@ -1,3 +1,5 @@
+# Run: mix run demo/diff_demo.exs
+
 defmodule DiffDemo do
   alias ElixirOpentui.Widgets.Diff
   alias ElixirOpentui.Color

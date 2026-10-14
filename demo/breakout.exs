@@ -1,3 +1,5 @@
+# Run: mix run demo/breakout.exs
+
 defmodule Breakout do
   alias ElixirOpentui.Animation.Timeline
   alias ElixirOpentui.{Canvas, Color, ASCIIFont}

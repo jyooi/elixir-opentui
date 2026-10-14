@@ -17,6 +17,7 @@ defmodule ElixirOpentui.Precompiled do
      edit_buffer_nif_shasums()}
   end
 
+  # The precompile workflow writes these shasums for each release.
   defp edit_buffer_nif_shasums do
     [
       "aarch64-freebsd-none": "16323fbc467059300216a4a3ecc1c4c6d3f053438535a717fc3b9e53c6bc7bc0",

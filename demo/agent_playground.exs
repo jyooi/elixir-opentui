@@ -1,3 +1,16 @@
+# Agent Playground: a long-running Runtime exposed over TCP so an
+# external agent can drive it interactively.
+#
+# Run: mix run --no-halt demo/agent_playground.exs
+# Port: 4040.
+#
+# Protocol: one command per line, one response line.
+#   snapshot            -> inspect()'d snapshot map.
+#   find <id>           -> inspect()'d single widget node (or "nil").
+#   appstate            -> inspect()'d app_state.
+#   dispatch <action>   -> "ok" (action is an Elixir term, for example {:toggle, :remember}).
+#   quit                -> closes this connection.
+
 defmodule AgentPlayground.LoginApp do
   use ElixirOpentui.Component
 
@@ -144,6 +157,11 @@ defmodule AgentPlayground.Bridge do
 
   defp process(other, _rt), do: "ERROR: unknown command: #{inspect(other)}"
 
+  # Network input: never `String.to_atom`, or an agent can exhaust the atom
+  # table one `find <uuid>` at a time. All widget IDs in LoginApp are atoms
+  # that already exist once the module is compiled, so `to_existing_atom`
+  # covers the real cases. Anything else falls through as a string, and
+  # `Accessibility.find_node` (which matches via `==`) cleanly returns nil.
   defp parse_id(":" <> name), do: parse_id(name)
 
   defp parse_id(name) do

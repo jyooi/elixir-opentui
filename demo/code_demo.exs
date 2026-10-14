@@ -1,3 +1,5 @@
+# Run: mix run demo/code_demo.exs
+
 defmodule CodeDemo do
   alias ElixirOpentui.Widgets.Code
   alias ElixirOpentui.Color

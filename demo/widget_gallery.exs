@@ -1,3 +1,5 @@
+# Run: mix run demo/widget_gallery.exs
+
 defmodule WidgetGallery do
   alias ElixirOpentui.Widgets.{TextInput, Checkbox, Select, ScrollBox}
   alias ElixirOpentui.Color

@@ -132,6 +132,7 @@ defmodule ElixirOpentui.TextBuffer do
 
       [cp | _] when cp >= 0x1100 ->
         cond do
+          # CJK ranges
           cp in 0x1100..0x115F -> 2
           cp in 0x2E80..0x303E -> 2
           cp in 0x3041..0x33BF -> 2

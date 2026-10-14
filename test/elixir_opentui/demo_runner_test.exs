@@ -5,6 +5,9 @@ defmodule ElixirOpentui.DemoRunnerTest do
   alias ElixirOpentui.DemoRunner
 
   describe "cooked mode cleanup" do
+    # Source inspection: restore_terminal requires a real tty fd. We cannot
+    # call :shell.start_interactive from ExUnit without disrupting the test
+    # runner's own terminal state.
     test "DemoRunner after block includes :cooked transition" do
       source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ ":shell.start_interactive({:noshell, :cooked})"

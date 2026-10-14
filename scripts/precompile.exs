@@ -1,3 +1,11 @@
+# Custom precompile script for elixir-opentui
+#
+# Targets only 64-bit platforms (32-bit ARM/x86 fail due to the
+# make.zig c_ulong/u64 mismatch in Zigler). Run via: mix run scripts/precompile.exs <file>
+#
+# Usage:
+#   mix run scripts/precompile.exs lib/elixir_opentui/edit_buffer_nif.ex
+
 defmodule Precompile do
   @moduledoc false
 

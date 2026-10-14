@@ -1,3 +1,5 @@
+# Run: mix run demo/markdown_demo.exs
+
 defmodule MarkdownDemo do
   alias ElixirOpentui.Widgets.Markdown
   alias ElixirOpentui.Color

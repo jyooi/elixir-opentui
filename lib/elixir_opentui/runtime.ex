@@ -27,6 +27,9 @@ defmodule ElixirOpentui.Runtime do
     Focus
   }
 
+  # Cap to prevent animation jumps when the VM pauses for GC, debugger, or
+  # system load. 500ms is well beyond normal frame intervals (~33ms at 30fps),
+  # so a hit on this cap means we clearly missed multiple frames.
   @max_dt 500
 
   @type component_state :: %{

@@ -1,3 +1,5 @@
+# Run: mix run demo/tab_select_demo.exs
+
 defmodule TabSelectDemo do
   alias ElixirOpentui.Widgets.TabSelect
   alias ElixirOpentui.Color

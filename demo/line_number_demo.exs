@@ -1,3 +1,5 @@
+# Run: mix run demo/line_number_demo.exs
+
 defmodule LineNumberDemo do
   alias ElixirOpentui.Color
 

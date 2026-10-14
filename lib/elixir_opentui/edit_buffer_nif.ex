@@ -152,6 +152,8 @@ defmodule ElixirOpentui.EditBufferNIF do
           // Cannot call editor_view.deinit() or text_buffer_view.deinit() because
           // they access edit_buffer internals (events, rope) which may already be
           // freed — BEAM GC doesn't guarantee destructor ordering between resources.
+          // The EditBuffer destructor handles freeing all shared state.
+          // We only free the EditorView allocation itself.
           data.editor_view.global_allocator.destroy(data.editor_view);
       }
   };
@@ -204,6 +206,7 @@ defmodule ElixirOpentui.EditBufferNIF do
       data.editor_view.moveDownVisual();
   }
 
+  // mode: 0 = none, 1 = char, 2 = word
   pub fn view_set_wrap_mode(view: EditorViewResource, mode: u8) void {
       const data = view.unpack();
       const wrap_mode: WrapMode = switch (mode) {
@@ -286,6 +289,9 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
   }
 
+  // Returns total rope weight (display width + newline count).
+  // This is the offset system used by setCursorByOffset/offsetToCoords.
+  // For CJK chars: width=2 per grapheme. For newlines: weight=1 each.
   pub fn get_text_display_width(resource: EditBufferResource) u32 {
       const data = resource.unpack();
       return data.edit_buffer.tb.rope.totalWeight();
@@ -324,6 +330,8 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(result_terms[0..n], .{});
   }
 
+  // Returns viewport-relative visual coordinates for a selection range.
+  // Uses save/restore cursor approach since getVisualCursor() handles viewport-relative translation.
   pub fn view_selection_visual_coords(view: EditorViewResource, sel_start: u32, sel_end: u32) beam.term {
       const data = view.unpack();
       const ev = data.editor_view;
@@ -345,6 +353,8 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(.{ start_vc.visual_row, start_vc.visual_col, end_vc.visual_row, end_vc.visual_col }, .{});
   }
 
+  // Sets the viewport position and size. Used for mouse scroll.
+  // moveCursor=false: do not move cursor, just change viewport scroll position.
   pub fn view_set_viewport(view: EditorViewResource, x: u32, y: u32, width: u32, height: u32) void {
       const data = view.unpack();
       data.editor_view.setViewport(api.Viewport{ .x = x, .y = y, .width = width, .height = height }, false);
