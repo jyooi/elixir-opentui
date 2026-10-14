@@ -26,10 +26,6 @@ defmodule ElixirOpentui.EditBufferNIF do
   const WidthMethod = api.WidthMethod;
   const WrapMode = api.WrapMode;
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // EditBuffer Resource
-  // ═══════════════════════════════════════════════════════════════════════
-
   const EditBufferData = struct {
       edit_buffer: *EditBuffer,
       pool: *GraphemePool,
@@ -45,7 +41,6 @@ defmodule ElixirOpentui.EditBufferNIF do
 
   pub const EditBufferResource = beam.Resource(EditBufferData, root, .{ .Callbacks = EditBufferCallbacks });
 
-  // ── create() → EditBufferResource ──────────────────────────────────────
   pub fn create() !EditBufferResource {
       const gpa = beam.allocator;
 
@@ -60,13 +55,11 @@ defmodule ElixirOpentui.EditBufferNIF do
       }, .{});
   }
 
-  // ── set_text(resource, text) → :ok ─────────────────────────────────────
   pub fn set_text(resource: EditBufferResource, text: []const u8) !void {
       const data = resource.unpack();
       try data.edit_buffer.setText(text);
   }
 
-  // ── get_text(resource) → binary ────────────────────────────────────────
   pub fn get_text(resource: EditBufferResource) ![]u8 {
       const gpa = beam.allocator;
       const data = resource.unpack();
@@ -79,68 +72,57 @@ defmodule ElixirOpentui.EditBufferNIF do
       return result;
   }
 
-  // ── get_cursor(resource) → {row, col, offset} ─────────────────────────
   pub fn get_cursor(resource: EditBufferResource) beam.term {
       const data = resource.unpack();
       const pos = data.edit_buffer.getCursorPosition();
       return beam.make(.{ pos.line, pos.visual_col, pos.offset }, .{});
   }
 
-  // ── set_cursor(resource, row, col) → :ok ───────────────────────────────
   pub fn set_cursor(resource: EditBufferResource, row: u32, col: u32) !void {
       const data = resource.unpack();
       try data.edit_buffer.setCursor(row, col);
   }
 
-  // ── set_cursor_by_offset(resource, offset) → :ok ───────────────────────
   pub fn set_cursor_by_offset(resource: EditBufferResource, offset: u32) !void {
       const data = resource.unpack();
       try data.edit_buffer.setCursorByOffset(offset);
   }
 
-  // ── insert_char(resource, text) → :ok ──────────────────────────────────
   pub fn insert_char(resource: EditBufferResource, text: []const u8) !void {
       const data = resource.unpack();
       try data.edit_buffer.insertText(text);
   }
 
-  // ── delete_char_backward(resource) → :ok ───────────────────────────────
   pub fn delete_char_backward(resource: EditBufferResource) !void {
       const data = resource.unpack();
       try data.edit_buffer.backspace();
   }
 
-  // ── delete_char_forward(resource) → :ok ────────────────────────────────
   pub fn delete_char_forward(resource: EditBufferResource) !void {
       const data = resource.unpack();
       try data.edit_buffer.deleteForward();
   }
 
-  // ── move_cursor_left(resource) → :ok ───────────────────────────────────
   pub fn move_cursor_left(resource: EditBufferResource) void {
       const data = resource.unpack();
       data.edit_buffer.moveLeft();
   }
 
-  // ── move_cursor_right(resource) → :ok ──────────────────────────────────
   pub fn move_cursor_right(resource: EditBufferResource) void {
       const data = resource.unpack();
       data.edit_buffer.moveRight();
   }
 
-  // ── new_line(resource) → :ok ───────────────────────────────────────────
   pub fn new_line(resource: EditBufferResource) !void {
       const data = resource.unpack();
       try data.edit_buffer.insertText("\n");
   }
 
-  // ── delete_line(resource) → :ok ────────────────────────────────────────
   pub fn delete_line(resource: EditBufferResource) !void {
       const data = resource.unpack();
       try data.edit_buffer.deleteLine();
   }
 
-  // ── undo(resource) → binary | nil ──────────────────────────────────────
   pub fn undo(resource: EditBufferResource) !beam.term {
       const data = resource.unpack();
       const meta = data.edit_buffer.undo() catch return beam.make(.nil, .{});
@@ -148,7 +130,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(meta, .{});
   }
 
-  // ── redo(resource) → binary | nil ──────────────────────────────────────
   pub fn redo(resource: EditBufferResource) !beam.term {
       const data = resource.unpack();
       const meta = data.edit_buffer.redo() catch return beam.make(.nil, .{});
@@ -156,15 +137,10 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(meta, .{});
   }
 
-  // ── get_line_count(resource) → u32 ─────────────────────────────────────
   pub fn get_line_count(resource: EditBufferResource) u32 {
       const data = resource.unpack();
       return data.edit_buffer.tb.lineCount();
   }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // EditorView Resource
-  // ═══════════════════════════════════════════════════════════════════════
 
   const EditorViewData = struct {
       editor_view: *EditorView,
@@ -184,7 +160,6 @@ defmodule ElixirOpentui.EditBufferNIF do
 
   pub const EditorViewResource = beam.Resource(EditorViewData, root, .{ .Callbacks = EditorViewCallbacks });
 
-  // ── create_editor_view(edit_buf_resource, width, height) → EditorViewResource
   pub fn create_editor_view(edit_buf: EditBufferResource, width: u32, height: u32) !EditorViewResource {
       const gpa = beam.allocator;
       const eb_data = edit_buf.unpack();
@@ -196,13 +171,11 @@ defmodule ElixirOpentui.EditBufferNIF do
       }, .{});
   }
 
-  // ── view_set_viewport_size(view, width, height) → :ok ─────────────────
   pub fn view_set_viewport_size(view: EditorViewResource, width: u32, height: u32) void {
       const data = view.unpack();
       data.editor_view.setViewportSize(width, height);
   }
 
-  // ── view_get_viewport(view) → {offset_x, offset_y, width, height} | nil
   pub fn view_get_viewport(view: EditorViewResource) beam.term {
       const data = view.unpack();
       if (data.editor_view.getViewport()) |vp| {
@@ -211,7 +184,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(.nil, .{});
   }
 
-  // ── view_get_visual_cursor(view) → {visual_row, visual_col, logical_row, logical_col, offset}
   pub fn view_get_visual_cursor(view: EditorViewResource) beam.term {
       const data = view.unpack();
       const vc = data.editor_view.getVisualCursor();
@@ -224,19 +196,16 @@ defmodule ElixirOpentui.EditBufferNIF do
       }, .{});
   }
 
-  // ── view_move_up_visual(view) → :ok ────────────────────────────────────
   pub fn view_move_up_visual(view: EditorViewResource) void {
       const data = view.unpack();
       data.editor_view.moveUpVisual();
   }
 
-  // ── view_move_down_visual(view) → :ok ──────────────────────────────────
   pub fn view_move_down_visual(view: EditorViewResource) void {
       const data = view.unpack();
       data.editor_view.moveDownVisual();
   }
 
-  // ── view_set_wrap_mode(view, mode) → :ok ───────────────────────────────
   // mode: 0 = none, 1 = char, 2 = word
   pub fn view_set_wrap_mode(view: EditorViewResource, mode: u8) void {
       const data = view.unpack();
@@ -249,37 +218,31 @@ defmodule ElixirOpentui.EditBufferNIF do
       data.editor_view.setWrapMode(wrap_mode);
   }
 
-  // ── view_set_scroll_margin(view, margin) → :ok ─────────────────────────
   pub fn view_set_scroll_margin(view: EditorViewResource, margin: f32) void {
       const data = view.unpack();
       data.editor_view.setScrollMargin(margin);
   }
 
-  // ── view_get_total_virtual_line_count(view) → u32 ──────────────────────
   pub fn view_get_total_virtual_line_count(view: EditorViewResource) u32 {
       const data = view.unpack();
       return data.editor_view.getTotalVirtualLineCount();
   }
 
-  // ── view_set_selection(view, start_offset, end_offset) → :ok ───────────
   pub fn view_set_selection(view: EditorViewResource, start: u32, end: u32) void {
       const data = view.unpack();
       data.editor_view.setSelection(start, end, null, null);
   }
 
-  // ── view_reset_selection(view) → :ok ───────────────────────────────────
   pub fn view_reset_selection(view: EditorViewResource) void {
       const data = view.unpack();
       data.editor_view.resetSelection();
   }
 
-  // ── view_delete_selected_text(view) → :ok ──────────────────────────────
   pub fn view_delete_selected_text(view: EditorViewResource) !void {
       const data = view.unpack();
       try data.editor_view.deleteSelectedText();
   }
 
-  // ── view_get_selected_text(view) → binary ──────────────────────────────
   pub fn view_get_selected_text(view: EditorViewResource) ![]u8 {
       const gpa = beam.allocator;
       const data = view.unpack();
@@ -296,42 +259,36 @@ defmodule ElixirOpentui.EditBufferNIF do
       return result;
   }
 
-  // ── view_get_next_word_boundary(view) → {visual_row, visual_col, logical_row, logical_col, offset}
   pub fn view_get_next_word_boundary(view: EditorViewResource) beam.term {
       const data = view.unpack();
       const vc = data.editor_view.getNextWordBoundary();
       return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
   }
 
-  // ── view_get_prev_word_boundary(view) → {visual_row, visual_col, logical_row, logical_col, offset}
   pub fn view_get_prev_word_boundary(view: EditorViewResource) beam.term {
       const data = view.unpack();
       const vc = data.editor_view.getPrevWordBoundary();
       return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
   }
 
-  // ── view_get_eol(view) → {visual_row, visual_col, logical_row, logical_col, offset}
   pub fn view_get_eol(view: EditorViewResource) beam.term {
       const data = view.unpack();
       const vc = data.editor_view.getEOL();
       return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
   }
 
-  // ── view_get_visual_sol(view) → {visual_row, visual_col, logical_row, logical_col, offset}
   pub fn view_get_visual_sol(view: EditorViewResource) beam.term {
       const data = view.unpack();
       const vc = data.editor_view.getVisualSOL();
       return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
   }
 
-  // ── view_get_visual_eol(view) → {visual_row, visual_col, logical_row, logical_col, offset}
   pub fn view_get_visual_eol(view: EditorViewResource) beam.term {
       const data = view.unpack();
       const vc = data.editor_view.getVisualEOL();
       return beam.make(.{ vc.visual_row, vc.visual_col, vc.logical_row, vc.logical_col, vc.offset }, .{});
   }
 
-  // ── get_text_display_width(resource) → u32 ───────────────────────────
   // Returns total rope weight (display width + newline count).
   // This is the offset system used by setCursorByOffset/offsetToCoords.
   // For CJK chars: width=2 per grapheme. For newlines: weight=1 each.
@@ -340,9 +297,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       return data.edit_buffer.tb.rope.totalWeight();
   }
 
-  // ── view_get_visible_lines(view) → [binary] ─────────────────────────
-  // Returns the viewport-sliced virtual lines as a list of binaries.
-  // Each line respects word/char wrapping and viewport scroll position.
   pub fn view_get_visible_lines(view: EditorViewResource) !beam.term {
       const gpa = beam.allocator;
       const data = view.unpack();
@@ -376,7 +330,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(result_terms[0..n], .{});
   }
 
-  // ── view_selection_visual_coords(view, sel_start, sel_end) → {sr, sc, er, ec}
   // Returns viewport-relative visual coordinates for a selection range.
   // Uses save/restore cursor approach since getVisualCursor() handles viewport-relative translation.
   pub fn view_selection_visual_coords(view: EditorViewResource, sel_start: u32, sel_end: u32) beam.term {
@@ -393,7 +346,6 @@ defmodule ElixirOpentui.EditBufferNIF do
       ev.edit_buffer.setCursorByOffset(sel_end) catch return beam.make(.{ @as(u32, 0), @as(u32, 0), @as(u32, 0), @as(u32, 0) }, .{});
       const end_vc = ev.getVisualCursor();
 
-      // Restore original cursor
       if (ev.edit_buffer.cursors.items.len > 0) {
           ev.edit_buffer.cursors.items[0] = saved_cursor;
       }
@@ -401,9 +353,8 @@ defmodule ElixirOpentui.EditBufferNIF do
       return beam.make(.{ start_vc.visual_row, start_vc.visual_col, end_vc.visual_row, end_vc.visual_col }, .{});
   }
 
-  // ── view_set_viewport(view, x, y, width, height) → :ok ──────────────
   // Sets the viewport position and size. Used for mouse scroll.
-  // moveCursor=false: don't move cursor, just change viewport scroll position.
+  // moveCursor=false: do not move cursor, just change viewport scroll position.
   pub fn view_set_viewport(view: EditorViewResource, x: u32, y: u32, width: u32, height: u32) void {
       const data = view.unpack();
       data.editor_view.setViewport(api.Viewport{ .x = x, .y = y, .width = width, .height = height }, false);

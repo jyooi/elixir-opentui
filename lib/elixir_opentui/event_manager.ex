@@ -54,10 +54,7 @@ defmodule ElixirOpentui.EventManager do
 
   def process(state, _event), do: {state, []}
 
-  # --- Key event processing ---
-
   defp process_key(state, event) do
-    # Tab navigation
     cond do
       event.key == :tab and not event.shift and not event.ctrl ->
         new_focus = Focus.focus_next(state.focus)
@@ -74,16 +71,12 @@ defmodule ElixirOpentui.EventManager do
     end
   end
 
-  # --- Mouse event processing ---
-
   defp process_mouse(state, event) do
-    # Hit-test the buffer to find which element was clicked
     hit_id =
       if state.buffer do
         Buffer.get_hit_id(state.buffer, event.x, event.y)
       end
 
-    # Auto-focus on left click
     state =
       if event.action == :press and event.button == :left and hit_id != nil do
         case Focus.resolve_focus_target(state.tree, hit_id) do

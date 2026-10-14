@@ -1,8 +1,4 @@
-# TextArea Interactive Demo
 # Run: mix run demo/text_area_demo.exs
-#
-# Multi-line text editor with word wrap, selection, undo/redo.
-# Type text, use arrow keys, Shift+arrows to select, Ctrl+Z undo, Ctrl+C to exit.
 
 defmodule TextAreaDemo do
   alias ElixirOpentui.Widgets.TextArea

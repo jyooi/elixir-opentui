@@ -1,14 +1,9 @@
-# Widget Gallery — All 4 Widgets in One View
 # Run: mix run demo/widget_gallery.exs
-#
-# Tab to navigate between widgets, interact with each.
-# Press Ctrl+C to exit.
 
 defmodule WidgetGallery do
   alias ElixirOpentui.Widgets.{TextInput, Checkbox, Select, ScrollBox}
   alias ElixirOpentui.Color
 
-  # Focus order: text_input -> select -> checkbox_1 -> checkbox_2 -> scroll_box
   @focus_order [:text_input, :lang_select, :check_dark, :check_notify, :scroller]
   @focus_labels %{
     text_input: "TextInput",
@@ -107,7 +102,6 @@ defmodule WidgetGallery do
       text(content: "Tab: next widget | Shift+Tab: prev | Ctrl+C: quit", fg: dim, bg: bg)
       text(content: "")
 
-      # --- TextInput ---
       label(content: section_label(:text_input, focused, "TextInput"), fg: accent, bg: bg)
       input(
         id: :text_input,
@@ -122,7 +116,6 @@ defmodule WidgetGallery do
       )
       text(content: "")
 
-      # --- Select ---
       label(content: section_label(:lang_select, focused, "Select"), fg: accent, bg: bg)
       select(
         id: :lang_select,
@@ -136,13 +129,11 @@ defmodule WidgetGallery do
       )
       text(content: "")
 
-      # --- Checkboxes ---
       label(content: section_label_multi([:check_dark, :check_notify], focused, "Checkboxes"), fg: accent, bg: bg)
       checkbox(id: :check_dark, checked: state.check_dark.checked, label: state.check_dark.label, fg: fg, bg: bg)
       checkbox(id: :check_notify, checked: state.check_notify.checked, label: state.check_notify.label, fg: fg, bg: bg)
       text(content: "")
 
-      # --- ScrollBox ---
       label(content: section_label(:scroller, focused, "ScrollBox"), fg: accent, bg: bg)
       scroll_box id: :scroller, scroll_y: scroll_y, height: @scroll_viewport do
         for line <- visible_lines do
@@ -157,8 +148,6 @@ defmodule WidgetGallery do
   end
 
   def focused_id(state), do: Enum.at(@focus_order, state.focus_idx)
-
-  # --- Private ---
 
   defp route_key(:text_input, event, state) do
     %{state | text_input: TextInput.update(:key, event, state.text_input)}

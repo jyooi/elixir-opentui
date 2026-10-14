@@ -13,8 +13,6 @@ defmodule ElixirOpentui.Input do
   - Capability query responses (\\e[?{flags}u)
   """
 
-  # --- Kitty special key codepoints (Unicode PUA + standard) ---
-
   @kitty_special_keys %{
     27 => :escape,
     9 => :tab,
@@ -28,7 +26,6 @@ defmodule ElixirOpentui.Input do
     57361 => :print_screen,
     57362 => :pause,
     57363 => :menu,
-    # F13-F35
     57376 => :f13,
     57377 => :f14,
     57378 => :f15,
@@ -52,7 +49,6 @@ defmodule ElixirOpentui.Input do
     57396 => :f33,
     57397 => :f34,
     57398 => :f35,
-    # Keypad keys
     57399 => :kp_0,
     57400 => :kp_1,
     57401 => :kp_2,
@@ -82,7 +78,6 @@ defmodule ElixirOpentui.Input do
     57425 => :kp_insert,
     57426 => :kp_delete,
     57427 => :kp_begin,
-    # Media keys
     57428 => :media_play,
     57429 => :media_pause,
     57430 => :media_play_pause,
@@ -124,7 +119,6 @@ defmodule ElixirOpentui.Input do
     57355 => :page_down,
     57356 => :home,
     57357 => :end,
-    # F1-F12
     57364 => :f1,
     57365 => :f2,
     57366 => :f3,
@@ -176,7 +170,6 @@ defmodule ElixirOpentui.Input do
 
   defp parse_loop(<<>>, acc), do: Enum.reverse(acc)
 
-  # Bracketed paste: \e[200~ ... \e[201~
   defp parse_loop(<<"\e[200~", rest::binary>>, acc) do
     case :binary.split(rest, "\e[201~") do
       [paste_data, remaining] ->
@@ -187,7 +180,7 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  # SGR mouse: \e[< Cb ; Cx ; Cy M/m
+  # SGR mouse: `\e[< Cb ; Cx ; Cy M/m`.
   defp parse_loop(<<"\e[<", rest::binary>>, acc) do
     case parse_sgr_mouse(rest) do
       {event, remaining} -> parse_loop(remaining, [event | acc])
@@ -195,7 +188,6 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  # CSI sequences: \e[ ...
   defp parse_loop(<<"\e[", rest::binary>>, acc) do
     case parse_csi(rest) do
       {event, remaining} -> parse_loop(remaining, [event | acc])
@@ -203,7 +195,6 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  # SS3 sequences: \eO ...
   defp parse_loop(<<"\eO", rest::binary>>, acc) do
     case parse_ss3(rest) do
       {event, remaining} -> parse_loop(remaining, [event | acc])
@@ -211,7 +202,6 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  # Alt+key: \e followed by a regular char
   defp parse_loop(<<"\e", char, rest::binary>>, acc) when char >= 0x20 do
     event = %{
       type: :key,
@@ -225,7 +215,6 @@ defmodule ElixirOpentui.Input do
     parse_loop(rest, [event | acc])
   end
 
-  # Bare escape
   defp parse_loop(<<"\e">>, acc) do
     [key(:escape) | acc]
     |> Enum.reverse()
@@ -237,7 +226,6 @@ defmodule ElixirOpentui.Input do
     ])
   end
 
-  # Control characters
   defp parse_loop(<<0, rest::binary>>, acc) do
     parse_loop(rest, [ctrl_key("@") | acc])
   end
@@ -256,14 +244,12 @@ defmodule ElixirOpentui.Input do
     parse_loop(rest, [event | acc])
   end
 
-  # Backspace / Delete
   defp parse_loop(<<127, rest::binary>>, acc) do
     parse_loop(rest, [
       key(:backspace) | acc
     ])
   end
 
-  # Regular UTF-8 character
   defp parse_loop(<<char::utf8, rest::binary>>, acc) do
     key = <<char::utf8>>
     shift = char in ?A..?Z
@@ -271,12 +257,9 @@ defmodule ElixirOpentui.Input do
     parse_loop(rest, [%{key(key) | shift: shift} | acc])
   end
 
-  # Skip unrecognized bytes
   defp parse_loop(<<_byte, rest::binary>>, acc) do
     parse_loop(rest, acc)
   end
-
-  # --- CSI sequence parsing ---
 
   defp parse_csi(data) do
     case collect_params_and_final(data) do
@@ -285,21 +268,19 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  # --- Kitty keyboard protocol: CSI u sequences ---
-
-  # Kitty keyboard query response: \e[?{flags}u
+  # Kitty keyboard query response: `\e[?{flags}u`.
   defp csi_to_event(["?" <> flags_str | _], "u") do
     flags = to_integer(flags_str, 0)
     %{type: :capability, capability: :kitty_keyboard, value: flags}
   end
 
-  # Kitty key events: \e[codepoint;modifier:event_type u
+  # Kitty key events: `\e[codepoint;modifier:event_type u`.
   defp csi_to_event(params, "u") do
     parse_kitty_key(params)
   end
 
-  # Modified keys: \e[1;modN where mod encodes ctrl/alt/shift
-  # Enhanced with event_type support: \e[1;mod:event_type N
+  # Modified keys: `\e[1;modN` where mod encodes ctrl/alt/shift.
+  # Enhanced with event_type support: `\e[1;mod:event_type N`.
   defp csi_to_event([_n, mod_str], final) when final in ["A", "B", "C", "D", "H", "F"] do
     {mod_value, event_type} = split_modifier_event_type(mod_str)
     base = csi_to_event([], final)
@@ -317,13 +298,13 @@ defmodule ElixirOpentui.Input do
   defp csi_to_event(_params, "Z"),
     do: %{key(:tab) | shift: true}
 
-  # --- Tilde-terminated sequences ---
+  # Tilde-terminated sequences.
   # Clause ordering (most-specific first, Elixir matches top-down):
-  # 1. modifyOtherKeys 3-param: \e[27;mod;keycode~
-  # 2. Modified tilde 2-param: \e[code;mod[:event_type]~
-  # 3. Legacy 1-param catch-all: \e[N~
+  # 1. modifyOtherKeys 3-param: `\e[27;mod;keycode~`.
+  # 2. Modified tilde 2-param: `\e[code;mod[:event_type]~`.
+  # 3. Legacy 1-param catch-all: `\e[N~`.
 
-  # modifyOtherKeys format: \e[27;{modifier};{keycode}~
+  # modifyOtherKeys format: `\e[27;{modifier};{keycode}~`.
   defp csi_to_event(["27", mod_str, keycode_str], "~") do
     keycode = to_integer(keycode_str, 0)
     mod_value = to_integer(mod_str, 1)
@@ -332,7 +313,7 @@ defmodule ElixirOpentui.Input do
     apply_modifier(event, mod_value)
   end
 
-  # Modified tilde: \e[code;mod[:event_type]~ — FIXES existing bug where modifiers were ignored
+  # Modified tilde: `\e[code;mod[:event_type]~`.
   defp csi_to_event([code_str, mod_str], "~") do
     {mod_value, event_type} = split_modifier_event_type(mod_str)
     base = tilde_code_to_event(code_str)
@@ -340,15 +321,14 @@ defmodule ElixirOpentui.Input do
     if event_type, do: Map.put(event, :event_type, event_type_atom(event_type)), else: event
   end
 
-  # Legacy tilde: \e[N~
   defp csi_to_event(params, "~") do
     code_str = List.first(params) || "0"
     tilde_code_to_event(code_str)
   end
 
-  # DECRQM response: \e[?{mode};{status}$y
-  # The $ (0x24) is collected as a param byte by the CSI parser, so after ;
-  # split the params are ["?{mode}", "{status}$"]. We strip the trailing $.
+  # DECRQM response: `\e[?{mode};{status}$y`.
+  # The CSI parser collects the $ (0x24) as a param byte.
+  # After the split, the params are ["?{mode}", "{status}$"]. We strip the trailing $.
   defp csi_to_event(["?" <> mode_str, status_str], "y") do
     mode = to_integer(mode_str, 0)
     status = status_str |> String.trim_trailing("$") |> to_integer(0)
@@ -357,8 +337,7 @@ defmodule ElixirOpentui.Input do
 
   defp csi_to_event(_, _), do: key(:unknown)
 
-  # --- SS3 sequence parsing (some terminals send these for F1-F4, arrows) ---
-
+  # SS3 sequence parsing (some terminals send these for F1-F4, arrows).
   defp parse_ss3(<<char, rest::binary>>) when char >= ?A and char <= ?Z do
     event =
       case char do
@@ -380,11 +359,10 @@ defmodule ElixirOpentui.Input do
 
   defp parse_ss3(_), do: nil
 
-  # --- SGR mouse parsing ---
-  # Format: Cb;Cx;Cy[M|m]
-  # M = press, m = release
-  # Cb encodes button + modifiers
-
+  # SGR mouse parsing.
+  # Format: `Cb;Cx;Cy[M|m]`.
+  # M = press, m = release.
+  # Cb encodes button + modifiers.
   defp parse_sgr_mouse(data) do
     case Regex.run(~r/^(\d+);(\d+);(\d+)([Mm])/, data) do
       [full, cb_str, cx_str, cy_str, action_char] ->
@@ -434,7 +412,6 @@ defmodule ElixirOpentui.Input do
 
   defp band(a, b), do: Bitwise.band(a, b)
 
-  # Collect CSI parameter bytes and the final byte
   defp collect_params_and_final(data) do
     collect_params_and_final(data, [])
   end
@@ -459,8 +436,6 @@ defmodule ElixirOpentui.Input do
 
   defp collect_params_and_final(_, _params), do: nil
 
-  # --- Key event constructors ---
-
   defp key(name) do
     %{type: :key, key: name, ctrl: false, alt: false, shift: false, meta: false}
   end
@@ -469,15 +444,12 @@ defmodule ElixirOpentui.Input do
     %{type: :key, key: letter, ctrl: true, alt: false, shift: false, meta: false}
   end
 
-  # --- Kitty key event parsing ---
-
   defp parse_kitty_key(params) do
-    # params[0] = codepoint[:shifted_codepoint[:base_layout_codepoint]]
-    # params[1] = modifier[:event_type]   (optional)
+    # params[0] = codepoint[:shifted_codepoint[:base_layout_codepoint]].
+    # params[1] = modifier[:event_type] (optional).
     codepoint_str = List.first(params) || "0"
     mod_str = Enum.at(params, 1)
 
-    # Extract the primary codepoint (before any colon sub-params)
     codepoint = codepoint_str |> String.split(":") |> List.first() |> to_integer(0)
 
     key_name = kitty_codepoint_to_key(codepoint)
@@ -507,7 +479,6 @@ defmodule ElixirOpentui.Input do
   defp kitty_codepoint_to_key(cp) when cp >= 32 and cp <= 0x10FFFF do
     <<cp::utf8>>
   rescue
-    # Invalid codepoint
     _ -> :unknown
   end
 
@@ -523,11 +494,11 @@ defmodule ElixirOpentui.Input do
   #   bit 6 (64)  caps_lock → (dropped, not sent with flags=5)
   #   bit 7 (128) num_lock  → (dropped, not sent with flags=5)
   defp apply_kitty_modifier(event, mod) do
-    # Kitty uses 1-based modifiers, same as xterm
+    # Kitty uses 1-based modifiers, same as xterm.
     apply_modifier(event, mod)
   end
 
-  # Modifier decoding: ANSI modifier value (1 = none, 2 = shift, 3 = alt, etc.)
+  # Modifier decoding: ANSI modifier value (1 = none, 2 = shift, 3 = alt, and so on).
   # This encoding is shared by xterm and Kitty protocols.
   defp apply_modifier(event, mod) do
     mod = mod - 1
@@ -541,9 +512,6 @@ defmodule ElixirOpentui.Input do
     }
   end
 
-  # Split modifier string that may contain event_type sub-param.
-  # Returns {modifier, event_type} where event_type is nil when not present.
-  # "5:3" → {5, 3}, "5:1" → {5, 1}, "5" → {5, nil}
   defp split_modifier_event_type(mod_str) do
     case String.split(mod_str, ":") do
       [mod_part, event_type_part | _] ->
@@ -554,13 +522,10 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  # Event type: 1 = press (default), 2 = repeat, 3 = release
   defp event_type_atom(1), do: :press
   defp event_type_atom(2), do: :repeat
   defp event_type_atom(3), do: :release
   defp event_type_atom(_), do: :press
-
-  # --- Tilde code mapping (shared between 1-param and 2-param tilde clauses) ---
 
   defp tilde_code_to_event(code_str) do
     code = to_integer(code_str, 0)
@@ -583,8 +548,6 @@ defmodule ElixirOpentui.Input do
       _ -> key(:unknown)
     end
   end
-
-  # --- modifyOtherKeys key mapping ---
 
   defp modify_other_keys_to_key(13), do: :enter
   defp modify_other_keys_to_key(27), do: :escape

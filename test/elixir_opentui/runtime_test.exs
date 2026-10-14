@@ -172,9 +172,6 @@ defmodule ElixirOpentui.RuntimeTest do
       Runtime.send_msg(rt, nil, :increment)
       Process.sleep(10)
 
-      # The app_module is CounterApp, but send_msg sends to component_states.
-      # For app-level updates, we use send_event with an :update action.
-      # Let's verify the frame still shows the count
       frame = Runtime.get_frame(rt)
       joined = Enum.join(frame)
       assert String.contains?(joined, "Count:")
@@ -289,7 +286,6 @@ defmodule ElixirOpentui.RuntimeTest do
       {:ok, rt} = Runtime.start_link(cols: 40, rows: 10)
       Runtime.mount(rt, SelectApp)
 
-      # Trigger the widget to emit a 3-tuple pending message
       Runtime.send_msg(rt, :sel_widget, :trigger)
       Process.sleep(20)
 

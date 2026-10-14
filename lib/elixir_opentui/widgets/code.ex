@@ -142,8 +142,6 @@ defmodule ElixirOpentui.Widgets.Code do
     )
   end
 
-  # --- Key handling for scrolling ---
-
   defp handle_key(event, state) do
     case ScrollHelper.handle_scroll_key(event,
            offset: state.scroll_offset,
@@ -164,8 +162,6 @@ defmodule ElixirOpentui.Widgets.Code do
 
     %{state | scroll_offset: min(max(0, state.scroll_offset), max_offset)}
   end
-
-  # --- Syntax highlighting ---
 
   @doc """
   Tokenize source code using Makeup for the given filetype.

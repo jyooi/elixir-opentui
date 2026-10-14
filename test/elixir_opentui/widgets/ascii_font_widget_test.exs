@@ -20,7 +20,6 @@ defmodule ElixirOpentui.Widgets.ASCIIFontWidgetTest do
         ])
 
       buf = paint(tree)
-      # Tiny "I" is just "█" on both rows
       assert Buffer.get_cell(buf, 0, 0).char == "█"
       assert Buffer.get_cell(buf, 0, 1).char == "█"
     end
@@ -32,24 +31,20 @@ defmodule ElixirOpentui.Widgets.ASCIIFontWidgetTest do
         ])
 
       buf = paint(tree)
-      # Block "I" row 0 is "██╗" — first char should be "█"
       assert Buffer.get_cell(buf, 0, 0).char == "█"
     end
 
     test "clips to width" do
-      # Very narrow container
       tree =
         Element.new(:box, [width: 2, height: 5], [
           Element.new(:ascii_font, text: "HELLO", font: :tiny, fg: @white)
         ])
 
       buf = paint(tree, 2, 5)
-      # Should not crash, just clips
       assert buf != nil
     end
 
     test "clips to height" do
-      # Container shorter than font height
       tree =
         Element.new(:box, [width: 40, height: 1], [
           Element.new(:ascii_font, text: "A", font: :block, fg: @white)
@@ -83,7 +78,6 @@ defmodule ElixirOpentui.Widgets.ASCIIFontWidgetTest do
       buf_lower = paint(tree_lower)
       buf_upper = paint(tree_upper)
 
-      # Same characters rendered at same positions
       assert Buffer.get_cell(buf_lower, 0, 0).char == Buffer.get_cell(buf_upper, 0, 0).char
     end
 
@@ -105,7 +99,6 @@ defmodule ElixirOpentui.Widgets.ASCIIFontWidgetTest do
         ])
 
       buf = paint(tree)
-      # Border offsets content by (1, 1)
       assert Buffer.get_cell(buf, 1, 1).char == "█"
     end
 
@@ -133,8 +126,6 @@ defmodule ElixirOpentui.Widgets.ASCIIFontWidgetTest do
         ])
 
       buf = paint(tree)
-      # Block A has color index 1 segments (╗, ║, etc.)
-      # The last row is all c2: "╚═╝  ╚═╝" — check first char
       cell = Buffer.get_cell(buf, 0, 5)
 
       if cell.char != " " do
@@ -149,12 +140,8 @@ defmodule ElixirOpentui.Widgets.ASCIIFontWidgetTest do
         ])
 
       buf = paint(tree)
-      # Block "I" row 0 is "██╗" — first char should be drawn
       assert Buffer.get_cell(buf, 0, 0).char == "█"
 
-      # A space cell within the font area should have the element's bg (red),
-      # NOT the parent's bg (blue), because fill_rect pre-fills with element bg
-      # Block "I" is 3 chars wide; col 4 is inside the font area but is a space
       space_cell = Buffer.get_cell(buf, 4, 0)
       assert space_cell.bg == Color.red()
     end

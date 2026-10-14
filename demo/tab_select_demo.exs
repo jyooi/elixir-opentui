@@ -1,9 +1,4 @@
-# TabSelect Interactive Demo
 # Run: mix run demo/tab_select_demo.exs
-#
-# Horizontal tab selection with scroll arrows.
-# Left/Right arrows or [/] to navigate tabs.
-# Press Ctrl+C to exit.
 
 defmodule TabSelectDemo do
   alias ElixirOpentui.Widgets.TabSelect

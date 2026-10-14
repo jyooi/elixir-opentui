@@ -4,17 +4,8 @@ defmodule ElixirOpentui.DemoRunnerTest do
   alias ElixirOpentui.ANSI
   alias ElixirOpentui.DemoRunner
 
-  # --- Source inspection tests ---
-  #
-  # These tests verify internal implementation details that cannot be tested
-  # behaviorally without a real TTY (terminal mode switching, event loop
-  # timing logic). They're intentionally kept as source inspection with
-  # this justification: the cooked mode transition and tick scheduling are
-  # side-effectful operations deeply embedded in the event loop that only
-  # execute in a live terminal session.
-
   describe "cooked mode cleanup" do
-    # Source inspection: restore_terminal requires a real tty fd; we can't
+    # Source inspection: restore_terminal requires a real tty fd. We cannot
     # call :shell.start_interactive from ExUnit without disrupting the test
     # runner's own terminal state.
     test "DemoRunner after block includes :cooked transition" do
@@ -74,8 +65,6 @@ defmodule ElixirOpentui.DemoRunnerTest do
              "live demos should skip rendering in handle_events event clause"
     end
   end
-
-  # --- Behavioral tests ---
 
   describe "restore_terminal_sequences/0" do
     test "returns all critical cleanup escape codes" do

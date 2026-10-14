@@ -20,7 +20,6 @@ defmodule ElixirOpentui.EditBufferNIFMemoryTest do
       :erlang.garbage_collect()
 
       final = :erlang.memory(:total)
-      # Memory growth should be bounded (allow 10MB margin for VM overhead)
       assert final - initial < 10_000_000
     end
   end

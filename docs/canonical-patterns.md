@@ -11,7 +11,6 @@
 
 | Area | Canonical Pattern | Notes |
 |------|-------------------|-------|
-| Section comments | `# --- Section Name ---` (ASCII) | No Unicode box-drawing characters |
 | Widget events | `_pending` list (drained by Runtime) | Not `send(self(), ...)` |
 | Scroll events | `:scroll_up` / `:scroll_down` action atoms | Not `:scroll` + `:direction` |
 | NIF wrappers | Direct module access (`EditBufferNIF`) | No adapter layer needed |

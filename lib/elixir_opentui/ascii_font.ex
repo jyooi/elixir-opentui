@@ -85,7 +85,6 @@ defmodule ElixirOpentui.ASCIIFont do
   """
   @spec parse_color_tags(String.t()) :: [{String.t(), non_neg_integer()}]
   def parse_color_tags(str) when is_binary(str) do
-    # Match <cN>...</cN> tags or plain text between them
     ~r/<c(\d+)>(.*?)<\/c\d+>|([^<]+)/
     |> Regex.scan(str)
     |> Enum.map(fn
@@ -97,9 +96,6 @@ defmodule ElixirOpentui.ASCIIFont do
 
   def parse_color_tags(_), do: []
 
-  # --- Private helpers ---
-
-  # Apply `fun` to every glyph row of `text`, one list per font line.
   defp glyph_rows(text, font, fun) do
     data = font_data(font)
     chars = text |> String.upcase() |> String.graphemes()
@@ -113,7 +109,6 @@ defmodule ElixirOpentui.ASCIIFont do
   end
 
   defp glyph_row(nil, data, row) do
-    # Unknown char fallback: space
     case Map.get(data.chars, " ") do
       nil -> " "
       space_glyph -> Enum.at(space_glyph, row, " ")

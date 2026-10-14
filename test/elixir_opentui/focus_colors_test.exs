@@ -23,7 +23,6 @@ defmodule ElixirOpentui.FocusColorsTest do
         )
 
       buf = paint_focused(tree, 10, 4)
-      # Top-left corner cell should use custom focus color
       cell = Buffer.get_cell(buf, 0, 0)
       assert cell.fg == custom_color
     end
@@ -69,7 +68,6 @@ defmodule ElixirOpentui.FocusColorsTest do
 
       buf = paint_focused(tree, 6, 1)
       cell = Buffer.get_cell(buf, 0, 0)
-      # Focused: fg becomes old bg, bg becomes old fg (inversion)
       assert cell.fg == {50, 50, 50, 255}
       assert cell.bg == {200, 200, 200, 255}
     end
@@ -154,7 +152,6 @@ defmodule ElixirOpentui.FocusColorsTest do
 
       buf = paint_focused(tree, 10, 3)
       cell = Buffer.get_cell(buf, 0, 0)
-      # Block cursor: bg should be cursor_color
       assert cell.bg == custom_cursor
     end
   end

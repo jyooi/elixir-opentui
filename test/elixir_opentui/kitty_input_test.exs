@@ -287,14 +287,12 @@ defmodule ElixirOpentui.KittyInputTest do
 
   describe "Kitty CSI u: sub-parameters (shifted codepoint, base layout)" do
     test "shifted codepoint is ignored (primary codepoint used)" do
-      # \e[97:65;2u — codepoint 97 ('a'), shifted codepoint 65 ('A'), shift modifier
       [event] = Input.parse("\e[97:65;2u")
       assert event.key == "a"
       assert event.shift == true
     end
 
     test "base layout codepoint is ignored" do
-      # \e[97:65:113u — codepoint 97, shifted 65, base layout 113
       [event] = Input.parse("\e[97:65:113u")
       assert event.key == "a"
     end

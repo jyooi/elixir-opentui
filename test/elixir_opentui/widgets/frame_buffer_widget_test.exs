@@ -43,7 +43,6 @@ defmodule ElixirOpentui.Widgets.FrameBufferWidgetTest do
     end
 
     test "clips to element bounds" do
-      # Cell at (15, 3) is outside 10-wide canvas — should not render
       canvas =
         Canvas.new(10, 5)
         |> Canvas.set_cell(15, 3, "X", @white, @black)
@@ -55,9 +54,7 @@ defmodule ElixirOpentui.Widgets.FrameBufferWidgetTest do
         ])
 
       buf = paint(tree)
-      # Y should render, X should be clipped
       assert Buffer.get_cell(buf, 2, 2).char == "Y"
-      # Position 15,3 should have default space char
       assert Buffer.get_cell(buf, 15, 3).char == " "
     end
 
@@ -70,7 +67,6 @@ defmodule ElixirOpentui.Widgets.FrameBufferWidgetTest do
         ])
 
       buf = paint(tree)
-      # Border adds 1,1 offset
       assert Buffer.get_cell(buf, 1, 1).char == "A"
     end
 
@@ -106,9 +102,7 @@ defmodule ElixirOpentui.Widgets.FrameBufferWidgetTest do
         ])
 
       buf = paint(tree)
-      # Text at row 0
       assert Buffer.get_cell(buf, 0, 0).char == "T"
-      # Canvas at row 1 (stacked below text)
       assert Buffer.get_cell(buf, 0, 1).char == "*"
     end
 

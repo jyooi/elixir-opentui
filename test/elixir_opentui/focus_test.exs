@@ -92,7 +92,6 @@ defmodule ElixirOpentui.FocusTest do
     test "full cycle returns to start" do
       focus = Focus.from_tree(sample_tree())
 
-      # 4 focusable elements, first call moves from nil -> first, so 5 calls to cycle
       focus =
         focus
         |> Focus.focus_next()
@@ -137,8 +136,6 @@ defmodule ElixirOpentui.FocusTest do
     end
 
     test "walks up to find focusable parent" do
-      # nested_input is inside plain_box. If we click plain_box,
-      # there's no focusable ancestor (plain_box is not focusable).
       tree = sample_tree()
       assert Focus.resolve_focus_target(tree, :plain_box) == nil
     end

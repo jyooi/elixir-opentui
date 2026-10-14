@@ -28,30 +28,29 @@ defmodule ElixirOpentui.DemoRunner do
   def run(demo_mod, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 300_000)
 
-    # Get terminal size before switching modes
     {cols, rows} = get_terminal_size()
 
-    # Switch to raw mode using OTP 28's native API.
+    # Switch to raw mode with the native API of OTP 28.
     # This enables lazy-read so IO.getn is the only terminal reader.
     :shell.start_interactive({:noshell, :raw})
 
-    # Ignore SIGTSTP so Ctrl+Z bytes reach the app as input instead of
-    # suspending the process.
+    # Ignore SIGTSTP so Ctrl+Z bytes reach the app as input and do not
+    # suspend the process.
     :os.set_signal(:sigtstp, :ignore)
 
     # Trap exits so the after block always runs even if the linked input
-    # reader crashes. Without this, a linked process dying with a non-normal
+    # reader crashes. Without this, a linked process that dies with a non-normal
     # reason kills the main process and skips try/after cleanup.
     Process.flag(:trap_exit, true)
 
     {:ok, tty} = :file.open(~c"/dev/tty", [:write, :raw, :binary])
 
-    # Arm the deferred mouse cleanup BEFORE entering the demo loop.
-    # If the BEAM is killed abruptly (erlang:halt from break handler, SIGINT,
-    # etc.), the after block never runs. By spawning the deferred cleanup
-    # process now, it's already waiting to fire. On normal exit, the after
-    # block deletes the temp file, cancelling the deferred cleanup (since
-    # the after block already wrote the disable sequences directly).
+    # Arm the deferred mouse cleanup BEFORE the demo loop starts.
+    # If the BEAM is killed abruptly (erlang:halt from break handler, SIGINT),
+    # the after block never runs. The deferred cleanup process starts now, so it
+    # is ready to fire. On normal exit, the after block deletes the temp file
+    # and cancels the deferred cleanup. The after block already wrote the
+    # disable sequences directly.
     deferred_tmp = arm_deferred_mouse_cleanup(tty)
 
     try do
@@ -66,11 +65,8 @@ defmodule ElixirOpentui.DemoRunner do
 
       renderer = render_frame(demo_mod, state, renderer, ctx, &Renderer.render_full/3)
 
-      # Process any input events that arrived during the detection window
       case process_buffered_events(demo_mod, buffered_events, state, renderer, ctx) do
         {state, renderer} ->
-          # Initialize _last_tick before entering the loop so the first
-          # frame gets dt ≈ tick_interval, not dt = 0.
           state = Map.put_new(state, :_last_tick, System.monotonic_time(:millisecond))
           start_time = System.monotonic_time(:millisecond)
           result = loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
@@ -86,8 +82,8 @@ defmodule ElixirOpentui.DemoRunner do
       :file.close(tty)
 
       # Fallback: write critical cleanup through stderr (fd 2), a separate
-      # I/O path from the /dev/tty fd above. Defends against the primary
-      # write being lost due to prim_tty interaction during VM shutdown.
+      # I/O path from the /dev/tty fd above. This defends against loss of the
+      # primary write through prim_tty interaction during VM shutdown.
       try do
         :io.put_chars(
           :standard_error,
@@ -107,9 +103,6 @@ defmodule ElixirOpentui.DemoRunner do
       # For PTYs, the distinction is moot (pty_write is synchronous).
       :shell.start_interactive({:noshell, :cooked})
 
-      # On normal exit, cancel the deferred cleanup by deleting its temp
-      # file — restore_terminal already wrote the disable sequences.
-      # The deferred process will harmlessly cat a missing file.
       cancel_deferred_mouse_cleanup(deferred_tmp)
 
       spawn_deferred_mouse_cleanup()
@@ -138,9 +131,8 @@ defmodule ElixirOpentui.DemoRunner do
   def restore_terminal_sequences do
     [
       # Disable Kitty keyboard: set flags to 0 first (belt-and-suspenders),
-      # then pop the stack entry. The set ensures enhancements are off even
-      # if the pop doesn't take effect (e.g. Ghostty state machine edge case
-      # when keyboard events were recently processed).
+      # then pop the stack entry. The set keeps enhancements off if the pop fails,
+      # for example in a Ghostty state machine edge case after recent keyboard events.
       ANSI.set_kitty_keyboard(0),
       ANSI.pop_kitty_keyboard(),
       ANSI.disable_modify_other_keys(),
@@ -149,21 +141,17 @@ defmodule ElixirOpentui.DemoRunner do
       ANSI.reset(),
       ANSI.show_cursor(),
       ANSI.leave_alt_screen(),
-      # Safety net: some terminals restore saved private modes on alt screen exit,
-      # which can re-enable mouse tracking. Send disable again after leaving.
+      # Safety net: some terminals restore saved private modes on alt screen exit.
+      # This can re-enable mouse tracking. Send disable again after leaving.
       ANSI.disable_mouse()
     ]
   end
 
   # Arm a deferred mouse cleanup process BEFORE the demo loop starts.
-  # This ensures cleanup happens even if the BEAM is killed abruptly
-  # (erlang:halt from break handler, SIGINT, etc.) and the after block
-  # never runs.
-  #
-  # The subprocess sleeps, then checks if the temp file still exists.
-  # On normal exit, the after block deletes the temp file (cancellation).
-  # On abrupt exit, the file remains and the subprocess writes the
-  # disable sequences to the tty.
+  # Then cleanup occurs even if the BEAM is killed abruptly (erlang:halt from
+  # break handler, SIGINT) and the after block never runs.
+  # The subprocess sleeps, then writes the disable sequences to the tty if the
+  # temp file still exists. On normal exit, the after block deletes the temp file.
   #
   # Port.open children go through erl_child_setup which calls setsid(),
   # losing access to /dev/tty. We resolve the real device path first.
@@ -194,8 +182,8 @@ defmodule ElixirOpentui.DemoRunner do
         "rm -f #{tmp}"
 
     port = Port.open({:spawn, "sh -c '#{cmd} &'"}, [:binary, :nouse_stdio])
-    # Unlink so the port's exit doesn't send {:EXIT, ...} to the demo loop.
-    # The loop catches {:EXIT, _, _} to detect input reader death — an
+    # Unlink so the exit of the port does not send {:EXIT, ...} to the demo loop.
+    # The loop catches {:EXIT, _, _} to detect input reader death. An
     # unrelated port exit would accidentally quit the demo.
     :erlang.unlink(port)
     tmp
@@ -203,8 +191,6 @@ defmodule ElixirOpentui.DemoRunner do
     _, _ -> nil
   end
 
-  # Cancel the deferred cleanup by deleting the temp file.
-  # The deferred subprocess checks `test -f` before each write.
   defp cancel_deferred_mouse_cleanup(nil), do: :ok
 
   defp cancel_deferred_mouse_cleanup(tmp) do
@@ -214,13 +200,13 @@ defmodule ElixirOpentui.DemoRunner do
   end
 
   # Spawn a deferred mouse-disable for the after-block path.
-  # Only writes disable_mouse() — the minimum needed for the tmux case
+  # Only writes disable_mouse(), the minimum for the tmux case
   # where tmux re-enables mouse tracking after the pane child exits.
   # All other terminal state (keyboard protocol, cursor, reset) was
   # already restored by restore_terminal/1 and the stderr fallback.
-  # Keeping this minimal avoids injecting visible garbage into the
-  # user's shell prompt. (The armed cleanup in arm_deferred_mouse_cleanup/1
-  # retains full sequences because it fires when the after block didn't run.)
+  # This minimal write keeps visible garbage out of the user shell prompt.
+  # (The armed cleanup in arm_deferred_mouse_cleanup/1 keeps full sequences
+  # because it fires when the after block did not run.)
   defp spawn_deferred_mouse_cleanup do
     disable_seq = IO.iodata_to_binary(ANSI.disable_mouse())
 
@@ -244,7 +230,6 @@ defmodule ElixirOpentui.DemoRunner do
   # process-local alias that won't work in setsid() children — it fails
   # with ENXIO after setsid(). We need the real device like /dev/pts/3.
   defp resolve_tty_path do
-    # Try standard fds first (stderr, stdin, stdout)
     from_fds = Enum.find_value([2, 0, 1], &tty_device_of_fd/1)
 
     from_fds || resolve_tty_via_open()
@@ -255,7 +240,7 @@ defmodule ElixirOpentui.DemoRunner do
   defp resolve_tty_via_open do
     case :file.open(~c"/dev/tty", [:read, :raw]) do
       {:ok, fd} ->
-        # :file.open returns {:file_descriptor, :prim_file, %{handle: _, r_ahead: _}}
+        # :file.open returns {:file_descriptor, :prim_file, %{handle: _, r_ahead: _}}.
         # We need to find the OS fd number. Use /proc/self/fd to scan for /dev/tty.
         path = find_tty_device_in_proc()
         :file.close(fd)
@@ -266,7 +251,6 @@ defmodule ElixirOpentui.DemoRunner do
     end
   end
 
-  # Scan /proc/self/fd/ for any fd pointing to a real tty device
   defp find_tty_device_in_proc do
     case File.ls("/proc/self/fd") do
       {:ok, entries} ->
@@ -280,7 +264,6 @@ defmodule ElixirOpentui.DemoRunner do
     end
   end
 
-  # Real tty device path behind an fd number, or nil.
   defp tty_device_of_fd(fd) do
     case File.read_link("/proc/self/fd/#{fd}") do
       {:ok, "/dev/pts/" <> _ = path} -> path
@@ -292,13 +275,12 @@ defmodule ElixirOpentui.DemoRunner do
   defp detect_capabilities(tty) do
     caps = Capabilities.detect_env()
 
-    # Send both queries in one write (pipelined — single round-trip window)
     tty_write(tty, [ANSI.query_kitty_keyboard(), ANSI.query_decrqm(2026)])
 
-    # We always wait the full detection window because we can't know how many
-    # responses to expect. A terminal supporting kitty but not DECRQM sends one
-    # response; one supporting both sends two. Use absolute deadline to prevent
-    # creeping timeout — each recursive call computes remaining = max(0, deadline - now).
+    # We always wait the full detection window because we cannot know how many
+    # responses to expect. A terminal with kitty but not DECRQM support sends one
+    # response. A terminal with both sends two. Use an absolute deadline to prevent
+    # a creeping timeout. Each recursive call computes remaining = max(0, deadline - now).
     deadline = System.monotonic_time(:millisecond) + 100
     {caps, buffered} = receive_capability_responses(caps, [], deadline)
 
@@ -347,9 +329,9 @@ defmodule ElixirOpentui.DemoRunner do
     end
   end
 
-  # Write a rendered frame, wrapping in synchronized update (BSU/ESU) when
-  # the terminal supports mode 2026. This eliminates flicker by buffering
-  # all output until the ESU sequence, then flushing it as a single
+  # Write a rendered frame. Wrap it in a synchronized update (BSU/ESU) when
+  # the terminal supports mode 2026. This eliminates flicker: the terminal
+  # buffers all output until the ESU sequence, then flushes it as a single
   # atomic screen update.
   defp write_frame(ctx, ansi) do
     %{tty: tty, caps: caps} = ctx
@@ -361,8 +343,6 @@ defmodule ElixirOpentui.DemoRunner do
     end
   end
 
-  # Render the demo state and write the frame. `render` is Renderer.render/3
-  # or Renderer.render_full/3.
   defp render_frame(demo_mod, state, renderer, ctx, render \\ &Renderer.render/3) do
     tree = demo_mod.render(state)
     {new_renderer, ansi} = render.(renderer, tree, focus_id: demo_mod.focused_id(state))
@@ -438,7 +418,7 @@ defmodule ElixirOpentui.DemoRunner do
           data = accumulate_bytes(first_byte)
           events = Input.parse(data)
 
-          # Filter capability events — late responses should update caps, not reach app code
+          # Filter capability events. Late responses update caps and do not reach app code.
           {cap_events, input_events} = Enum.split_with(events, &(&1.type == :capability))
 
           ctx =
@@ -465,7 +445,7 @@ defmodule ElixirOpentui.DemoRunner do
           loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout)
 
         {:EXIT, _pid, _reason} ->
-          # Linked input reader (or other process) died — exit the loop
+          # Linked input reader (or other process) died. Exit the loop
           # gracefully so the after block can run cleanup.
           :ok
       after
@@ -479,8 +459,6 @@ defmodule ElixirOpentui.DemoRunner do
     end
   end
 
-  # Fire one tick with real wall-clock dt (capped at 500ms), then continue
-  # the loop. Returns :ok when the demo quits.
   defp tick_then_loop(demo_mod, state, renderer, ctx, input_pid, start_time, timeout) do
     now = System.monotonic_time(:millisecond)
     dt = min(now - Map.get(state, :_last_tick, now), 500)
@@ -526,9 +504,6 @@ defmodule ElixirOpentui.DemoRunner do
        ) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
-        # Live demos defer rendering to the next tick to avoid redundant
-        # renders under sustained input (key hold). Non-live demos render
-        # immediately since they have no tick loop.
         {new_renderer, ctx} =
           if Map.get(new_state, :_live, false) do
             {renderer, ctx}

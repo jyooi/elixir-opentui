@@ -29,7 +29,7 @@ defmodule ElixirOpentui.Runtime do
 
   # Cap to prevent animation jumps when the VM pauses for GC, debugger, or
   # system load. 500ms is well beyond normal frame intervals (~33ms at 30fps),
-  # so hitting this cap means we clearly missed multiple frames.
+  # so a hit on this cap means we clearly missed multiple frames.
   @max_dt 500
 
   @type component_state :: %{
@@ -73,8 +73,6 @@ defmodule ElixirOpentui.Runtime do
     suspend_count: 0,
     tick_timer_ref: nil
   ]
-
-  # --- Public API ---
 
   @doc "Start the runtime."
   def start_link(opts \\ []) do
@@ -207,8 +205,6 @@ defmodule ElixirOpentui.Runtime do
     server |> snapshot() |> Accessibility.find_node(id)
   end
 
-  # --- GenServer callbacks ---
-
   @impl true
   def init(opts) do
     cols = Keyword.get(opts, :cols, 80)
@@ -317,7 +313,6 @@ defmodule ElixirOpentui.Runtime do
 
       {:reply, :ok, state}
     else
-      # Dropping same ref twice is a no-op
       {:reply, :ok, state}
     end
   end
@@ -393,8 +388,6 @@ defmodule ElixirOpentui.Runtime do
     {:noreply, state}
   end
 
-  # --- Private helpers ---
-
   defp process_event(state, event) do
     if state.on_event, do: state.on_event.(event)
 
@@ -447,9 +440,6 @@ defmodule ElixirOpentui.Runtime do
     end
   end
 
-  # Agent-dispatched action handler. Semantic actions mutate component state
-  # directly; key/mouse/paste reuse the existing event-processing path so
-  # agents and humans share the same routing logic.
   defp apply_agent_action(state, {:focus, id}) do
     case state.event_manager do
       nil -> state
@@ -474,9 +464,6 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp apply_agent_action(state, {:click, id}) do
-    # Focus the target, then synthesize an Enter keypress using the same
-    # shape Input.parse produces. Focused-widget routing below delivers it
-    # (to a Component's :key handler, or a :button's on_click attr).
     state = apply_agent_action(state, {:focus, id})
 
     event = %{type: :key, key: :enter, ctrl: false, alt: false, shift: false, meta: false}
@@ -496,11 +483,6 @@ defmodule ElixirOpentui.Runtime do
 
   defp apply_agent_action(state, _unknown), do: state
 
-  # EventManager only routes to registered handlers. Components live in
-  # component_states, and bare interactive elements (e.g. :button with an
-  # on_click attr) live in the tree. Bridge both here so a focused key
-  # event reaches its target regardless of which representation holds it.
-  # Tab is excluded because EventManager already consumed it for focus nav.
   defp route_key_to_focused_component(state, %{key: k}) when k in [:tab, "Tab"], do: state
 
   defp route_key_to_focused_component(state, event) do
@@ -518,15 +500,6 @@ defmodule ElixirOpentui.Runtime do
     end
   end
 
-  # Intrinsic handling for bare elements in the tree. Today: :button +
-  # on_click attr fires on Enter/Space. Extend with more cases as other
-  # bare element types grow first-class behaviors.
-  #
-  # We filter by type during lookup because ids can legitimately collide
-  # between a container (e.g. panel id: :login) and a focusable leaf
-  # (button id: :login). Focus already resolved to the button; a generic
-  # find_by_id would return the panel first (pre-order) and silently
-  # short-circuit the on_click.
   defp route_key_to_element(state, id, %{key: k}) when k in [:enter, " "] do
     case find_element_by_id_and_type(state.tree, id, :button) do
       %Element{attrs: attrs} ->
@@ -588,7 +561,6 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp tick_all(state, dt) do
-    # Tick app module
     app_state =
       if state.app_module do
         state.app_module.update(:tick, %{dt: dt}, state.app_state)
@@ -596,7 +568,6 @@ defmodule ElixirOpentui.Runtime do
         state.app_state
       end
 
-    # Tick all mounted components
     comp_states =
       Map.new(state.component_states, fn {id, comp} ->
         new_comp_state = comp.module.update(:tick, %{dt: dt}, comp.state)
@@ -606,7 +577,6 @@ defmodule ElixirOpentui.Runtime do
     %{state | app_state: app_state, component_states: comp_states}
   end
 
-  # See ElixirOpentui.Component moduledoc for the _live convention.
   @live_typo_variants [:live, :_Live, :is_live, :_live_mode]
 
   defp any_live?(state) do
@@ -679,7 +649,6 @@ defmodule ElixirOpentui.Runtime do
     %{state | tick_timer_ref: ref}
   end
 
-  # Walk the tree and initialize any component elements
   defp resolve_components(%Element{component: nil} = el, old_comp_states, new_comp_states) do
     {children, new_comp_states} =
       Enum.map_reduce(el.children, new_comp_states, fn child, acc ->

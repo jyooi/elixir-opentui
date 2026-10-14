@@ -80,7 +80,6 @@ defmodule ElixirOpentui.EventManagerTest do
       {tree, buffer} = build_scene()
       em = EventManager.new(tree, buffer)
 
-      # Click on empty area (beyond elements)
       click = %{
         type: :mouse,
         action: :press,

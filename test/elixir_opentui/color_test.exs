@@ -120,7 +120,6 @@ defmodule ElixirOpentui.ColorTest do
     end
 
     test "integer hue works" do
-      # Ensure integer arguments don't cause errors
       result = Color.hsl(120, 1.0, 0.5)
       assert result == {0, 255, 0, 255}
     end

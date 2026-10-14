@@ -1,10 +1,4 @@
-# Diff Interactive Demo
 # Run: mix run demo/diff_demo.exs
-#
-# Diff display with unified and split views.
-# V to toggle view, C to cycle examples, L to toggle line numbers.
-# Up/Down/PgUp/PgDown/Home/End to scroll.
-# Press Ctrl+C to exit.
 
 defmodule DiffDemo do
   alias ElixirOpentui.Widgets.Diff
@@ -12,7 +6,6 @@ defmodule DiffDemo do
 
   @viewport 18
 
-  # Multiple diff examples to cycle through (like OpenTUI's diff-demo)
   @examples [
     %{
       name: "Elixir — Add Mailer",
@@ -202,14 +195,12 @@ defmodule DiffDemo do
 
   def handle_event(%{type: :key, key: "c", ctrl: true, meta: false}, _state), do: :quit
 
-  # V to toggle view (like OpenTUI)
   def handle_event(%{type: :key, key: "v", ctrl: false, meta: false}, state) do
     new_view = if state.diff.view == :unified, do: :split, else: :unified
     new_diff = Diff.update({:set_view, new_view}, nil, state.diff)
     {:cont, %{state | diff: new_diff}}
   end
 
-  # C to cycle content examples (like OpenTUI)
   def handle_event(%{type: :key, key: "c", ctrl: false, meta: false}, state) do
     new_idx = rem(state.example_index + 1, length(@examples))
     example = Enum.at(@examples, new_idx)
@@ -226,7 +217,6 @@ defmodule DiffDemo do
     {:cont, %{state | example_index: new_idx, diff: new_diff}}
   end
 
-  # L to toggle line numbers (like OpenTUI)
   def handle_event(%{type: :key, key: "l", ctrl: false, meta: false}, state) do
     show = !state.show_line_numbers
     new_diff = Diff.update({:set_show_line_numbers, show}, nil, state.diff)

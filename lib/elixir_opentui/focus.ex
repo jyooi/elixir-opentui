@@ -108,8 +108,6 @@ defmodule ElixirOpentui.Focus do
     %{state | focusable_ids: new_ids, focused_id: focused}
   end
 
-  # --- Private helpers ---
-
   defp collect_focusable(%Element{} = el, acc) do
     acc =
       if el.id != nil and (el.type in @focusable_types or el.attrs[:focusable] == true) do
@@ -121,7 +119,6 @@ defmodule ElixirOpentui.Focus do
     Enum.reduce(el.children, acc, &collect_focusable/2)
   end
 
-  # Find the path from root to the element with the given id (reversed: element first, root last)
   defp find_path_to_id(%Element{id: id} = el, target_id) when id == target_id do
     [el]
   end

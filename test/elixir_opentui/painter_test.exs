@@ -60,7 +60,6 @@ defmodule ElixirOpentui.PainterTest do
         ])
 
       buf = paint(tree)
-      # Inside the child box
       inner_cell = Buffer.get_cell(buf, 5, 0)
       assert inner_cell.bg == Color.red()
     end
@@ -86,7 +85,6 @@ defmodule ElixirOpentui.PainterTest do
         ])
 
       buf = paint(tree)
-      # Content should start at (1, 1)
       assert Buffer.get_cell(buf, 1, 1).char == "I"
       assert Buffer.get_cell(buf, 2, 1).char == "n"
     end
@@ -96,7 +94,6 @@ defmodule ElixirOpentui.PainterTest do
     test "renders title on top border" do
       tree = Element.new(:panel, width: 20, height: 5, border: true, title: "Info")
       buf = paint(tree, 20, 5)
-      # Title should appear near top-left
       assert Buffer.get_cell(buf, 2, 0).char == "I"
       assert Buffer.get_cell(buf, 3, 0).char == "n"
       assert Buffer.get_cell(buf, 4, 0).char == "f"

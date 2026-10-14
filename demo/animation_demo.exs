@@ -1,8 +1,4 @@
-# Animation Demo
 # Run: mix run demo/animation_demo.exs
-#
-# A box that fades in on start.
-# Press 'f' to toggle fade in/out, 'q' or Ctrl+C to quit.
 
 defmodule AnimationDemo do
   alias ElixirOpentui.Animation.Timeline
@@ -44,7 +40,6 @@ defmodule AnimationDemo do
     import ElixirOpentui.View
 
     opacity = Timeline.value(state.timeline, :opacity)
-    # Map opacity to a visible brightness for the box content
     brightness = trunc(opacity * 255)
     fg = Color.rgb(brightness, brightness, brightness)
     bg = Color.rgb(trunc(opacity * 30), trunc(opacity * 20), trunc(opacity * 50))

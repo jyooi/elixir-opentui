@@ -40,7 +40,6 @@ defmodule ElixirOpentui.AccessibilityTest do
     rt = mount_app()
     snap = Runtime.snapshot(rt)
 
-    # Panel "Login" is the only meaningful top-level node — it becomes root.
     assert snap.root.role == :container
     assert snap.root.state == %{title: "Login"}
 

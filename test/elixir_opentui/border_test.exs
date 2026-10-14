@@ -139,7 +139,6 @@ defmodule ElixirOpentui.BorderTest do
     test "left-aligned title (default)" do
       rows = paint_titled_box("Test")
       top = hd(rows)
-      # Title appears near the start after the corner
       assert String.contains?(top, " Test ")
     end
 
@@ -158,9 +157,7 @@ defmodule ElixirOpentui.BorderTest do
     test "title truncated when too long" do
       rows = paint_titled_box("This is a very long title that exceeds width")
       top = hd(rows)
-      # Should not overflow the box width of 20
       assert String.length(top) <= 20
-      # Should still contain some text
       assert String.contains?(top, "This is")
     end
 
@@ -171,7 +168,6 @@ defmodule ElixirOpentui.BorderTest do
       rows = Painter.paint(tagged, layout, buf) |> Buffer.to_strings()
       top = hd(rows)
       assert String.starts_with?(top, "┌")
-      # Top border is corners + horizontal lines, no title text
       inner = String.slice(top, 1, 18)
       assert inner == String.duplicate("─", 18)
     end

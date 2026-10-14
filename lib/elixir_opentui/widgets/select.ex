@@ -113,8 +113,6 @@ defmodule ElixirOpentui.Widgets.Select do
     )
   end
 
-  # --- Key handling ---
-
   defp handle_key(%{key: :up, shift: true}, state) do
     move_by(state, -state.fast_scroll_step)
   end
@@ -126,7 +124,6 @@ defmodule ElixirOpentui.Widgets.Select do
   defp handle_key(%{key: :up}, state), do: move_by(state, -1)
   defp handle_key(%{key: :down}, state), do: move_by(state, 1)
 
-  # Vim keybindings
   defp handle_key(%{key: "k", ctrl: false}, state), do: move_by(state, -1)
   defp handle_key(%{key: "j", ctrl: false}, state), do: move_by(state, 1)
 
@@ -164,8 +161,6 @@ defmodule ElixirOpentui.Widgets.Select do
 
   defp handle_key(_, state), do: state
 
-  # --- Movement ---
-
   defp move_by(state, delta) do
     max_idx = max(0, length(state.options) - 1)
     new_idx = state.selected + delta
@@ -188,8 +183,6 @@ defmodule ElixirOpentui.Widgets.Select do
       state |> adjust_scroll() |> emit_change()
     end
   end
-
-  # --- Helpers ---
 
   defp rows_per_item(state) do
     base = 1

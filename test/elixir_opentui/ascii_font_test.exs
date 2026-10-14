@@ -3,8 +3,6 @@ defmodule ElixirOpentui.ASCIIFontTest do
 
   alias ElixirOpentui.ASCIIFont
 
-  # --- Color tag parsing ---
-
   describe "parse_color_tags/1" do
     test "parses two-color tagged string" do
       result = ASCIIFont.parse_color_tags("<c1>██</c1><c2>╗</c2>")
@@ -45,19 +43,15 @@ defmodule ElixirOpentui.ASCIIFontTest do
     end
   end
 
-  # --- dimensions ---
-
   describe "dimensions/2" do
     test "single char tiny" do
       {w, h} = ASCIIFont.dimensions("A", :tiny)
-      # Tiny A is "▄▀█" = 3 graphemes wide, 2 lines tall
       assert w == 3
       assert h == 2
     end
 
     test "two chars tiny with letterspace" do
       {w, h} = ASCIIFont.dimensions("AB", :tiny)
-      # A=3, letterspace=1, B=3 → 7
       assert w == 7
       assert h == 2
     end
@@ -70,7 +64,6 @@ defmodule ElixirOpentui.ASCIIFontTest do
 
     test "single char block font" do
       {w, h} = ASCIIFont.dimensions("A", :block)
-      # Block A first row: " █████╗ " = 9 visible graphemes
       assert h == 6
       assert w > 0
     end
@@ -93,12 +86,9 @@ defmodule ElixirOpentui.ASCIIFontTest do
 
     test "longer text accumulates widths" do
       {w, _} = ASCIIFont.dimensions("HELLO", :tiny)
-      # H=3, E=3, L=3, L=3, O=3 + 4*letterspace(1) = 19
       assert w == 19
     end
   end
-
-  # --- render_to_segments ---
 
   describe "render_to_segments/2" do
     test "single char returns correct number of rows" do
@@ -148,7 +138,6 @@ defmodule ElixirOpentui.ASCIIFontTest do
       rows = ASCIIFont.render_to_segments("AB", :tiny)
       assert length(rows) == 2
 
-      # Each row should have segments for A + letterspace + B
       for row <- rows do
         text = row |> Enum.map(&elem(&1, 0)) |> Enum.join()
         assert String.length(text) > 0
@@ -161,8 +150,6 @@ defmodule ElixirOpentui.ASCIIFontTest do
     end
   end
 
-  # --- render_to_lines ---
-
   describe "render_to_lines/2" do
     test "tiny A renders correctly" do
       lines = ASCIIFont.render_to_lines("A", :tiny)
@@ -172,7 +159,6 @@ defmodule ElixirOpentui.ASCIIFontTest do
     test "multi-char correctly spaced" do
       lines = ASCIIFont.render_to_lines("AB", :tiny)
       assert length(lines) == 2
-      # A row0="▄▀█" + " " + B row0="█▄▄" → "▄▀█ █▄▄"
       assert Enum.at(lines, 0) == "▄▀█ █▄▄"
     end
 
@@ -185,7 +171,7 @@ defmodule ElixirOpentui.ASCIIFontTest do
     test "block font strips color tags" do
       lines = ASCIIFont.render_to_lines("I", :block)
       assert length(lines) == 6
-      # No <c1>/<c2> tags should remain
+
       for line <- lines do
         refute String.contains?(line, "<c1>")
         refute String.contains?(line, "<c2>")
@@ -194,13 +180,10 @@ defmodule ElixirOpentui.ASCIIFontTest do
 
     test "block font I renders expected shape" do
       lines = ASCIIFont.render_to_lines("I", :block)
-      # Block I: "██╗", "██║", "██║", "██║", "██║", "╚═╝"
       assert Enum.at(lines, 0) == "██╗"
       assert Enum.at(lines, 5) == "╚═╝"
     end
   end
-
-  # --- font_height ---
 
   describe "font_height/1" do
     test "tiny is 2" do
@@ -211,8 +194,6 @@ defmodule ElixirOpentui.ASCIIFontTest do
       assert ASCIIFont.font_height(:block) == 6
     end
   end
-
-  # --- Per-font glyph spot checks ---
 
   describe "glyph verification" do
     test "tiny O glyph" do
