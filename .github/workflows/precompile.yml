@@ -47,6 +47,7 @@ jobs:
           for f in lib/elixir_opentui/lib/*.so; do
             [ -f "$f" ] || continue
             base=$(basename "$f")
+            # Strip the version from the filename: Module.0.1.0.triple.so -> Module.triple.so
             renamed=$(echo "$base" | sed "s/\.${VERSION_NUM}\././")
             cp "$f" "artifacts/$renamed"
           done

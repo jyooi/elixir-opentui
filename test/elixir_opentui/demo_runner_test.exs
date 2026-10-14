@@ -15,6 +15,9 @@ defmodule ElixirOpentui.DemoRunnerTest do
   end
 
   describe "configurable tick interval" do
+    # Source inspection: the tick interval is used inside the receive loop
+    # which requires a spawned input reader and real tty. Testing the actual
+    # timing would be fragile and non-deterministic.
     test "source uses _tick_interval from state" do
       source = File.read!("lib/elixir_opentui/demo_runner.ex")
       assert source =~ "_tick_interval"
@@ -41,6 +44,8 @@ defmodule ElixirOpentui.DemoRunnerTest do
   end
 
   describe "tick starvation fix" do
+    # Source inspection: starvation logic is inside the recursive event
+    # handler which requires the full event loop to exercise.
     test "empty-events base case does NOT reset _last_tick" do
       source = File.read!("lib/elixir_opentui/demo_runner.ex")
 
