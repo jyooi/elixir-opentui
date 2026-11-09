@@ -5,7 +5,7 @@
 Widgets use the `ElixirOpentui.Component` behaviour (`lib/elixir_opentui/component.ex`):
 
 - `init(props)` — return initial state from props map
-- `update_props(prev_props, new_props, state)` — optional, reconcile state when the parent changes props
+- `update_props(prev_props, new_props, state)` - optional, reconcile state when the parent changes props
 - `update(msg, event, state)` — handle messages, return new state
 - `render(state)` — return an `Element.t()` tree using the View DSL
 

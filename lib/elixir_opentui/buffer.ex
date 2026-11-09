@@ -2,7 +2,7 @@ defmodule ElixirOpentui.Buffer do
   @moduledoc """
   Cell-based terminal buffer. Each cell stores a character, fg/bg colors, and attributes.
 
-  Maps to OpenTUI's OptimizedBuffer. This is the "framebuffer" — layout and painting
+  Maps to OpenTUI's OptimizedBuffer. This is the "framebuffer" - layout and painting
   write cells into this buffer, and the renderer diffs it against the previous frame
   to produce minimal ANSI output.
   """
