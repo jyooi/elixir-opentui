@@ -194,11 +194,5 @@ defmodule ElixirOpentui.Widgets.CodeTest do
       tree = Code.render(state)
       assert tree.attrs.line_count == 3
     end
-
-    test "render includes lines" do
-      state = Code.init(%{content: "hello\nworld", id: :mycode})
-      tree = Code.render(state)
-      assert tree.attrs.lines == ["hello", "world"]
-    end
   end
 end

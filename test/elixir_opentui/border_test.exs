@@ -45,7 +45,7 @@ defmodule ElixirOpentui.BorderTest do
     end
 
     test "raises FunctionClauseError for unknown style" do
-      assert_raise FunctionClauseError, fn -> Border.chars(:dubble) end
+      assert_raise FunctionClauseError, fn -> apply(Border, :chars, [:dubble]) end
     end
   end
 

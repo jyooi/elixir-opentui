@@ -46,7 +46,7 @@ defmodule ElixirOpentui.MixProject do
         "OpenTUI (upstream Zig)" => "https://github.com/anomalyco/opentui"
       },
       files: ~w(lib zig .formatter.exs mix.exs README.md LICENSE CHANGELOG.md),
-      exclude_patterns: ["zig/opentui/tests"]
+      exclude_patterns: ["zig/opentui/tests", ".zig-cache"]
     ]
   end
 

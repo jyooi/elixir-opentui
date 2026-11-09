@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A fresh build with a prebuilt NIF failed with `File.CopyError`, because `priv/lib` did not exist.
+- `EditBufferNIF.get_text/1`, `view_get_selected_text/1` and `view_get_visible_lines/1` leaked
+  their result on each call. `TextArea` leaked memory on each render and each edit.
+- An editor view did not keep its edit buffer alive. The VM crashed when the buffer was
+  garbage collected first. The view destructor now also frees the view internals.
+- The Hex package included the local `zig/opentui/.zig-cache` directory.
+- `TextInput` ignored characters outside ASCII.
+- `Timeline.play/1` on a completed timeline cleared the values, so `value/2` raised until
+  the next `advance/2`.
+- `Markdown` got one row for each block from `Layout`, not one row for each rendered line.
+- `Runtime.dispatch/2` dropped `{:paste, data}`. It now goes to the focused widget.
+- `Runtime.start/1`, `request_live/1` and `stop/1` ended a suspension.
+- The accessibility snapshot reported no tabs for `:tab_select`, `scroll_top: 0` for
+  `:scroll_box`, an empty label for a button with `content:`, and `visible: true` for
+  hidden elements.
+- `Input.parse/1`: Alt with a multi-byte character gave an invalid key, Escape then DEL was
+  not Alt+Backspace, and wheel left and right were reported as button presses. They are
+  now `:scroll_left` and `:scroll_right`.
+- `Buffer.diff/2` raised for a zero-size buffer.
+- Line number colors got the opacity two times.
+
+### Changed
+
+- `Markdown.render/1` sets `:line_count` in place of `:block_count`.
+- `Code.render/1` does not set the unused `:lines` attr.
+
 ## [0.2.0] - 2026-09-13
 
 ### Removed
@@ -84,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved key event pattern matching consistency across demos and example app
 - Refactored CLAUDE.md and AGENTS.md for progressive disclosure
 
+[0.2.0]: https://github.com/jyooi/elixir-opentui/releases/tag/v0.2.0
 [0.1.1]: https://github.com/jyooi/elixir-opentui/releases/tag/v0.1.1
 
 ## [0.1.0] - 2026-03-04

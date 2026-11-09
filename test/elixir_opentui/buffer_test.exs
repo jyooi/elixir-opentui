@@ -277,4 +277,11 @@ defmodule ElixirOpentui.BufferTest do
       assert Buffer.get_cell(buf, 3, 0).italic == false
     end
   end
+
+  describe "diff/2 with empty buffers" do
+    test "returns no changes for a zero-size buffer" do
+      assert Buffer.diff(Buffer.new(0, 0), Buffer.new(0, 0)) == []
+      assert Buffer.diff(Buffer.new(0, 5), Buffer.new(0, 5)) == []
+    end
+  end
 end

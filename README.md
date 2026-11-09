@@ -68,11 +68,12 @@ See the [Getting Started guide](guides/getting-started.md) for setup and require
 
 ### Optional dependencies
 
-These are optional and only needed if you use the corresponding widgets:
+The `Code` widget highlights syntax only when the lexer for the language is installed.
+Add the lexers that you need to your own `deps`:
 
 ```elixir
-{:makeup, "~> 1.2", optional: true}          # for Code widget syntax highlighting
-{:makeup_elixir, "~> 1.0", optional: true}    # Elixir syntax highlighting
+{:makeup_elixir, "~> 1.0"}   # Elixir syntax highlighting
+{:makeup_ts, "~> 0.2"}       # TypeScript and JavaScript syntax highlighting
 ```
 
 ## How it works
@@ -118,7 +119,8 @@ All demos use `Ctrl+C` to exit.
 | `markdown` / `Markdown` | Rendered markdown |
 | `diff` / `Diff` | Unified and split diff views |
 | `line_number` | Line number gutter with signs and colors |
-| `ascii_font` / `AsciiFont` | Decorative ASCII art text |
+| `ascii_font` | Decorative ASCII art text |
+| `frame_buffer` / `Canvas` | Free-form drawing surface, one cell at a time |
 
 ## View DSL
 

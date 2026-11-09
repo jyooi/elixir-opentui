@@ -594,7 +594,6 @@ defmodule Breakout do
       case state.paddle_dir do
         :left -> max(0.0, state.paddle_x - @paddle_speed * dt / 1000.0)
         :right -> min(state.canvas_w - @paddle_width + 0.0, state.paddle_x + @paddle_speed * dt / 1000.0)
-        :none -> state.paddle_x
       end
     else
       state.paddle_x

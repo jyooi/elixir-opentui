@@ -238,11 +238,7 @@ defmodule ElixirOpentui.TextBuffer do
     |> IO.iodata_to_binary()
   end
 
-  defp pad_columns(_text, total_columns, pad_char, direction) when total_columns <= 0 do
-    _ = direction
-    _ = pad_char
-    ""
-  end
+  defp pad_columns(_text, total_columns, _pad_char, _direction) when total_columns <= 0, do: ""
 
   defp pad_columns(text, total_columns, pad_char, direction) do
     current_width = display_width(text)

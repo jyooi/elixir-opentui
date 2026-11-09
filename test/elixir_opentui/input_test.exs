@@ -303,4 +303,21 @@ defmodule ElixirOpentui.InputTest do
       assert Enum.map(events, & &1.key) == [:up, :down, :right]
     end
   end
+
+  describe "alt-prefixed keys" do
+    test "alt with a multi-byte character keeps the full character" do
+      assert [%{key: "é", alt: true, ctrl: false}] = Input.parse("\eé")
+    end
+
+    test "escape then DEL is alt+backspace" do
+      assert [%{key: :backspace, alt: true}] = Input.parse("\e\x7F")
+    end
+  end
+
+  describe "horizontal scroll" do
+    test "wheel left and right are scroll events, not button presses" do
+      assert [%{action: :scroll_left, button: :none}] = Input.parse("\e[<66;1;1M")
+      assert [%{action: :scroll_right, button: :none}] = Input.parse("\e[<67;1;1M")
+    end
+  end
 end

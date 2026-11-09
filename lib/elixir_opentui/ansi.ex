@@ -254,14 +254,14 @@ defmodule ElixirOpentui.ANSI do
           {:cont, {x, y, x, [cell]}}
 
         {x, y, cell}, {start_x, curr_y, prev_x, cells} when y == curr_y and x == prev_x + 1 ->
-          {:cont, {start_x, curr_y, x, cells ++ [cell]}}
+          {:cont, {start_x, curr_y, x, [cell | cells]}}
 
         {x, y, cell}, {start_x, curr_y, _prev_x, cells} ->
-          {:cont, {start_x, curr_y, cells}, {x, y, x, [cell]}}
+          {:cont, {start_x, curr_y, Enum.reverse(cells)}, {x, y, x, [cell]}}
       end,
       fn
         nil -> {:cont, nil}
-        {start_x, y, _prev_x, cells} -> {:cont, {start_x, y, cells}, nil}
+        {start_x, y, _prev_x, cells} -> {:cont, {start_x, y, Enum.reverse(cells)}, nil}
       end
     )
   end

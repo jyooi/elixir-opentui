@@ -60,16 +60,14 @@ defmodule ElixirOpentui.EditBufferNIF do
       try data.edit_buffer.setText(text);
   }
 
-  pub fn get_text(resource: EditBufferResource) ![]u8 {
+  pub fn get_text(resource: EditBufferResource) !beam.term {
       const gpa = beam.allocator;
       const data = resource.unpack();
       const byte_size = @max(1, data.edit_buffer.tb.getByteSize());
       const buf = try gpa.alloc(u8, byte_size);
       defer gpa.free(buf);
       const len = data.edit_buffer.getText(buf);
-      const result = try gpa.alloc(u8, len);
-      @memcpy(result, buf[0..len]);
-      return result;
+      return beam.make(buf[0..len], .{});
   }
 
   pub fn get_cursor(resource: EditBufferResource) beam.term {
@@ -144,17 +142,13 @@ defmodule ElixirOpentui.EditBufferNIF do
 
   const EditorViewData = struct {
       editor_view: *EditorView,
-      edit_buffer_ref: EditBufferResource, // prevents GC of parent EditBuffer
+      edit_buffer_ref: EditBufferResource,
   };
 
   const EditorViewCallbacks = struct {
       pub fn dtor(data: *EditorViewData) void {
-          // Cannot call editor_view.deinit() or text_buffer_view.deinit() because
-          // they access edit_buffer internals (events, rope) which may already be
-          // freed — BEAM GC doesn't guarantee destructor ordering between resources.
-          // The EditBuffer destructor handles freeing all shared state.
-          // We only free the EditorView allocation itself.
-          data.editor_view.global_allocator.destroy(data.editor_view);
+          data.editor_view.deinit();
+          data.edit_buffer_ref.release();
       }
   };
 
@@ -164,11 +158,14 @@ defmodule ElixirOpentui.EditBufferNIF do
       const gpa = beam.allocator;
       const eb_data = edit_buf.unpack();
       const editor_view = EditorView.init(gpa, eb_data.edit_buffer, width, height) catch return error.OutOfMemory;
+      errdefer editor_view.deinit();
 
-      return EditorViewResource.create(.{
+      const view = try EditorViewResource.create(.{
           .editor_view = editor_view,
           .edit_buffer_ref = edit_buf,
       }, .{});
+      edit_buf.keep();
+      return view;
   }
 
   pub fn view_set_viewport_size(view: EditorViewResource, width: u32, height: u32) void {
@@ -243,20 +240,14 @@ defmodule ElixirOpentui.EditBufferNIF do
       try data.editor_view.deleteSelectedText();
   }
 
-  pub fn view_get_selected_text(view: EditorViewResource) ![]u8 {
+  pub fn view_get_selected_text(view: EditorViewResource) !beam.term {
       const gpa = beam.allocator;
       const data = view.unpack();
       const byte_size = @max(1, data.editor_view.edit_buffer.tb.getByteSize());
       const buf = try gpa.alloc(u8, byte_size);
       defer gpa.free(buf);
       const len = data.editor_view.getSelectedTextIntoBuffer(buf);
-      if (len == 0) {
-          const empty = try gpa.alloc(u8, 0);
-          return empty;
-      }
-      const result = try gpa.alloc(u8, len);
-      @memcpy(result, buf[0..len]);
-      return result;
+      return beam.make(buf[0..len], .{});
   }
 
   pub fn view_get_next_word_boundary(view: EditorViewResource) beam.term {
@@ -322,9 +313,7 @@ defmodule ElixirOpentui.EditBufferNIF do
           const end_col = start_col + vline.width;
 
           const len = ev.edit_buffer.getTextRangeByCoords(src_line, start_col, src_line, end_col, temp_buf);
-          const line_bin = try gpa.alloc(u8, len);
-          @memcpy(line_bin, temp_buf[0..len]);
-          result_terms[i] = beam.make(line_bin, .{});
+          result_terms[i] = beam.make(temp_buf[0..len], .{});
       }
 
       return beam.make(result_terms[0..n], .{});

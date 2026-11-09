@@ -5,12 +5,13 @@
 Widgets use the `ElixirOpentui.Component` behaviour (`lib/elixir_opentui/component.ex`):
 
 - `init(props)` — return initial state from props map
+- `update_props(prev_props, new_props, state)` — optional, reconcile state when the parent changes props
 - `update(msg, event, state)` — handle messages, return new state
 - `render(state)` — return an `Element.t()` tree using the View DSL
 
 ## Adding a New Widget
 
-A new widget needs four integration points:
+A new widget needs these integration points:
 
 1. **Element type** — register the atom (e.g. `:mywidget`) in `lib/elixir_opentui/element.ex`
 2. **View macro** — add a macro in `lib/elixir_opentui/view.ex` so users can write `mywidget do...end`
@@ -20,7 +21,7 @@ A new widget needs four integration points:
 
 ## Style System
 
-Layout uses flexbox properties: `width`, `height`, `flex_grow`, `flex_shrink`, `flex_direction`, `padding`, `margin`, `gap`. Colors are `{r, g, b}` tuples. Borders: `:single`, `:double`, `:rounded`, `:heavy`.
+Layout uses flexbox properties: `width`, `height`, `flex_grow`, `flex_shrink`, `flex_direction`, `padding`, `margin`, `gap`. Colors are `{r, g, b, a}` tuples, see `ElixirOpentui.Color`. Borders: `:single`, `:double`, `:rounded`, `:heavy`.
 
 ## Key Events
 

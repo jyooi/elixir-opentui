@@ -1,7 +1,7 @@
 defmodule ElixirOpentui.FocusColorsTest do
   use ExUnit.Case, async: true
 
-  alias ElixirOpentui.{Buffer, Element, Layout, Painter, Color}
+  alias ElixirOpentui.{Buffer, Element, Layout, Painter}
 
   defp paint_focused(tree, w, h) do
     {tagged, layout} = Layout.compute(tree, w, h)

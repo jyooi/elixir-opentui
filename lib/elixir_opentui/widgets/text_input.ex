@@ -5,7 +5,7 @@ defmodule ElixirOpentui.Widgets.TextInput do
   Manages cursor position, text editing, scroll offset for long text,
   and emits on_change/on_submit messages to the parent via `_pending`.
 
-  ## Props (mount-time only)
+  ## Props
   - `:value` — initial text value
   - `:placeholder` — placeholder text when empty
   - `:on_change` — message tag sent as `{tag, new_value}` on edit
@@ -132,9 +132,8 @@ defmodule ElixirOpentui.Widgets.TextInput do
   defp maybe_put(attrs, _key, nil), do: attrs
   defp maybe_put(attrs, key, value), do: Keyword.put(attrs, key, value)
 
-  defp handle_key(%{key: key, ctrl: false, alt: false} = _event, state)
-       when is_binary(key) and byte_size(key) == 1 do
-    insert_char(state, key)
+  defp handle_key(%{key: key, ctrl: false, alt: false}, state) when is_binary(key) do
+    if String.length(key) == 1, do: insert_char(state, key), else: state
   end
 
   defp handle_key(%{key: :enter}, state) do

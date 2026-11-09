@@ -335,4 +335,19 @@ defmodule ElixirOpentui.Widgets.TextInputTest do
       assert tree.attrs.value == "test"
     end
   end
+
+  describe "non-ASCII input" do
+    test "inserts a multi-byte character from Input.parse/1" do
+      [event] = ElixirOpentui.Input.parse("é")
+      state = TextInput.update(:key, event, TextInput.init(%{value: "caf"}))
+      assert state.value == "café"
+      assert state.cursor_pos == 4
+    end
+
+    test "inserts a wide character" do
+      [event] = ElixirOpentui.Input.parse("中")
+      state = TextInput.update(:key, event, TextInput.init(%{}))
+      assert state.value == "中"
+    end
+  end
 end

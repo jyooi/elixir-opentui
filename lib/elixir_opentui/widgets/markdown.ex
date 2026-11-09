@@ -89,7 +89,7 @@ defmodule ElixirOpentui.Widgets.Markdown do
       id: state.id,
       content: state.content,
       blocks: state.blocks,
-      block_count: length(state.blocks),
+      line_count: state.rendered_line_count,
       scroll_offset: state.scroll_offset,
       visible_lines: state.visible_lines,
       code_filetype: state.code_filetype
@@ -142,28 +142,8 @@ defmodule ElixirOpentui.Widgets.Markdown do
     Enum.flat_map(ast, &ast_node_to_block/1)
   end
 
-  defp ast_node_to_block({"h1", _, children, _}) do
-    [%{type: :heading, level: 1, content: extract_text(children)}]
-  end
-
-  defp ast_node_to_block({"h2", _, children, _}) do
-    [%{type: :heading, level: 2, content: extract_text(children)}]
-  end
-
-  defp ast_node_to_block({"h3", _, children, _}) do
-    [%{type: :heading, level: 3, content: extract_text(children)}]
-  end
-
-  defp ast_node_to_block({"h4", _, children, _}) do
-    [%{type: :heading, level: 4, content: extract_text(children)}]
-  end
-
-  defp ast_node_to_block({"h5", _, children, _}) do
-    [%{type: :heading, level: 5, content: extract_text(children)}]
-  end
-
-  defp ast_node_to_block({"h6", _, children, _}) do
-    [%{type: :heading, level: 6, content: extract_text(children)}]
+  defp ast_node_to_block({"h" <> level, _, children, _}) when level in ~w(1 2 3 4 5 6) do
+    [%{type: :heading, level: String.to_integer(level), content: extract_text(children)}]
   end
 
   defp ast_node_to_block({"p", _, children, _}) do
@@ -211,10 +191,6 @@ defmodule ElixirOpentui.Widgets.Markdown do
   defp extract_text(_), do: ""
 
   defp extract_text_node(text) when is_binary(text), do: text
-  defp extract_text_node({"code", _, [code], _}), do: code
-  defp extract_text_node({"em", _, children, _}), do: extract_text(children)
-  defp extract_text_node({"strong", _, children, _}), do: extract_text(children)
-  defp extract_text_node({"a", _, children, _}), do: extract_text(children)
   defp extract_text_node({_tag, _, children, _}), do: extract_text(children)
   defp extract_text_node(_), do: ""
 

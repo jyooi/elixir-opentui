@@ -25,8 +25,17 @@ Tag NIF-dependent tests with `@tag :nif`. Test files at `test/elixir_opentui/<mo
 
 ## Force Source Compilation
 
-Skip prebuilt NIFs for local testing:
+A normal build downloads the prebuilt NIF of the last release.
+That build ignores local changes to the Zig code in `edit_buffer_nif.ex` and `zig/opentui/`.
+Compile from source to test such changes:
 
 ```
-ZIGLER_PRECOMPILE_FORCE_RECOMPILE=true mix compile
+ZIGLER_PRECOMPILE_FORCE_RECOMPILE=true mix test
 ```
+
+Tests that need the Zig code of the repository have the `:nif_source` tag.
+`test/test_helper.exs` excludes that tag unless `ZIGLER_PRECOMPILE_FORCE_RECOMPILE=true` is set.
+CI sets it.
+
+Zig 0.15.2 cannot link an executable against a C runtime that has `.sframe` sections (binutils 2.45 and later).
+On such a system the source build stops with `unhandled relocation type R_X86_64_PC64`.

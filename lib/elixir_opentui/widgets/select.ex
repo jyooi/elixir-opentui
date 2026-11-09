@@ -5,7 +5,7 @@ defmodule ElixirOpentui.Widgets.Select do
   Displays a list of options, allows arrow/vim key navigation,
   and emits on_change/on_select messages to the parent via `_pending`.
 
-  ## Props (mount-time only)
+  ## Props
   - `:options` — list of option strings or maps `%{name: "", description: nil, value: nil}`
   - `:selected` — currently selected index (default 0)
   - `:on_change` — message tag sent as `{tag, selected_index}` on navigation
