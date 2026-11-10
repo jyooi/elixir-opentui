@@ -11,7 +11,8 @@ export const state = (v) => {
   return `${loop[v.srv.control]}, ${chains}, ${due}`;
 };
 
-const name = (request) => (request === "event" ? "an event" : request);
+const names = { event: "an event", stale: "a tick message from a cancelled timer" };
+const name = (request) => names[request] ?? request;
 
 export const step = (action, from, to) => {
   if (action === "TimerFires") return "the tick timer fires";

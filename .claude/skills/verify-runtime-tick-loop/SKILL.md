@@ -18,7 +18,7 @@ This skill checks three rules about that loop for every order of calls and timer
 | `TicksWhenDue` | When ticks are wanted and the runtime is not suspended, a tick is on the way. | Animations stop until the next event. |
 
 "Ticks are wanted" means `should_tick?/1` is true: some state has `_live`, a live reference exists, or `start/1` was the last explicit call.
-"A tick on the way" means an armed timer or a `:tick` message in the mailbox.
+"A tick on the way" means an armed timer, or a tick message of the current timer in the mailbox.
 
 ## Does your change touch the verified code
 
@@ -32,13 +32,13 @@ Run the check when your diff changes one of these parts of `lib/elixir_opentui/r
 | `handle_call({:drop_live, ref}, ...)` | `HandleDropLive`, `StopUnlessWanted` |
 | `handle_call(:suspend, ...)` | `HandleSuspend` |
 | `handle_call(:resume, ...)` | `HandleResume` |
-| `handle_info(:tick, ...)`, `tick_all/2` | `HandleTick` |
+| `handle_info({:timeout, ref, :tick}, ...)`, `tick_all/2` | `HandleTick`, `HandleStaleTick` |
 | `render_and_reconcile/1` and each handler that calls it | `HandleEvent` |
 | `start_tick_loop/1` | `StartLoop` |
-| `cancel_tick_timer/1` | `CancelTimer`, `WithoutFirstTick` |
+| `cancel_tick_timer/1` | `CancelTimer`, `WithStaleTick` |
 | `stop_tick_loop/1` | `StopLoop` |
 | `reconcile_tick_loop/1` | `Reconcile` |
-| `schedule_tick/1`, `Process.send_after/3` | `held = "armed"`, `orphans`, `TimerFires` |
+| `schedule_tick/1`, `:erlang.start_timer/3` | `held = "armed"`, `orphans`, `TimerFires` |
 | `should_tick?/1`, `any_live?/1` | `ShouldTick` |
 
 Also run it when you add a handler that changes `control_state`, `suspend_count`, `live_refs`, `explicit_start`, or `tick_timer_ref`.
@@ -103,10 +103,11 @@ Keep these guards when you change the code.
    `stop/1` stopped the loop although a live reference existed.
    The guard: `handle_call(:stop_tick, ...)` calls `stop_tick_loop/1` only when `should_tick?/1` is false.
 2. `OneTickChain` broke when a `stop` and a `start` waited in the mailbox and the tick timer expired.
-   `Process.cancel_timer/2` cannot remove a `:tick` message that is already in the mailbox.
+   `Process.cancel_timer/2` cannot remove a tick message that is already in the mailbox.
    That message started a second tick chain, and ticks came two times as fast.
-   The guard: `cancel_tick_timer/1` removes the `:tick` message from the mailbox when the timer already expired.
-   In the model, `CancelTimer` describes that guard.
+   The guard: each tick message carries the reference of its timer, because `schedule_tick/1` uses `:erlang.start_timer/3`.
+   The tick handler accepts only a message whose reference equals `tick_timer_ref`.
+   In the model, `CancelTimer` marks the old message as `"stale"`, and `HandleStaleTick` drops it.
 
 When the owner decides to keep a new finding open, give its replay test the tag `:known_finding`.
 `test/test_helper.exs` excludes that tag, so `mix test` stays green.

@@ -11,14 +11,14 @@ ShouldTick(st) == st.live \/ st.refs > 0 \/ st.explicit
 
 HasTick(box) == \E i \in 1..Len(box) : box[i] = "tick"
 
-WithoutFirstTick(box) ==
+WithStaleTick(box) ==
   IF ~HasTick(box) THEN box
   ELSE LET i == CHOOSE i \in 1..Len(box) :
                    box[i] = "tick" /\ \A j \in 1..(i - 1) : box[j] # "tick"
-       IN SubSeq(box, 1, i - 1) \o SubSeq(box, i + 1, Len(box))
+       IN [box EXCEPT ![i] = "stale"]
 
 CancelTimer(w) ==
-  IF w.s.held = "fired" THEN [w EXCEPT !.m = WithoutFirstTick(w.m)] ELSE w
+  IF w.s.held = "fired" THEN [w EXCEPT !.m = WithStaleTick(w.m)] ELSE w
 
 StartLoop(w) ==
   IF w.s.control = "running" \/ w.s.count > 0
@@ -118,12 +118,18 @@ HandleTick ==
                     /\ mailbox' = StopLoop(Taken(st)).m
                     /\ UNCHANGED orphans
 
+HandleStaleTick ==
+  /\ mailbox # <<>>
+  /\ Head(mailbox) = "stale"
+  /\ mailbox' = Tail(mailbox)
+  /\ UNCHANGED <<srv, orphans>>
+
 Next ==
   \/ CallStart \/ CallStop \/ CallRequestLive \/ CallDropLive
   \/ CallSuspend \/ CallResume \/ SendEvent
   \/ TimerFires
   \/ HandleStart \/ HandleStop \/ HandleRequestLive \/ HandleDropLive
-  \/ HandleSuspend \/ HandleResume \/ HandleEvent \/ HandleTick
+  \/ HandleSuspend \/ HandleResume \/ HandleEvent \/ HandleTick \/ HandleStaleTick
 
 Spec == Init /\ [][Next]_vars
 

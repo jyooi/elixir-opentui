@@ -361,7 +361,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   @impl true
-  def handle_info(:tick, %{control_state: :running} = state) do
+  def handle_info({:timeout, ref, :tick}, %{control_state: :running, tick_timer_ref: ref} = state) do
     now = System.monotonic_time(:millisecond)
     dt = min(now - state.last_tick_time, @max_dt)
     state = %{state | last_tick_time: now}
@@ -629,15 +629,7 @@ defmodule ElixirOpentui.Runtime do
 
   defp cancel_tick_timer(%{tick_timer_ref: nil}), do: :ok
 
-  defp cancel_tick_timer(%{tick_timer_ref: ref}) do
-    if Process.cancel_timer(ref) == false do
-      receive do
-        :tick -> :ok
-      after
-        0 -> :ok
-      end
-    end
-  end
+  defp cancel_tick_timer(%{tick_timer_ref: ref}), do: Process.cancel_timer(ref, info: false)
 
   defp reconcile_tick_loop(%{control_state: :suspended} = state), do: state
 
@@ -655,7 +647,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp schedule_tick(state) do
-    ref = Process.send_after(self(), :tick, state.target_frame_time)
+    ref = :erlang.start_timer(state.target_frame_time, self(), :tick)
     %{state | tick_timer_ref: ref}
   end
 
