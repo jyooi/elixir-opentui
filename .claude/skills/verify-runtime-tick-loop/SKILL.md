@@ -61,7 +61,9 @@ Set `TLA2TOOLS_JAR` to use a local `tla2tools.jar`.
 The script does two things.
 First it checks each rule in the model `verification/runtime_tick/RuntimeTick.tla` with TLC.
 Then it runs `test/elixir_opentui/runtime_tick_model_test.exs` against the real `Runtime` process.
-That test applies every sequence of 4 calls and replays each recorded counterexample.
+That test applies every sequence of 4 calls.
+It also checks that a stop and a start behind an expired tick timer leave one tick chain.
+The replay test of each known finding goes in the same file with the tag `:known_finding`.
 
 `verification/runtime_tick/expected.txt` records which rules hold and which rules break at the sync commit.
 The script exits with 0 when the result is the same as that record.

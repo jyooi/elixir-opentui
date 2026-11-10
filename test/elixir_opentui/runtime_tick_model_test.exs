@@ -113,6 +113,6 @@ defmodule ElixirOpentui.RuntimeTickModelTest do
     observed = :counters.get(ticks, 1)
     GenServer.stop(rt)
 
-    assert observed <= 12, "expected about 10 ticks in 10 frames, got #{observed}"
+    assert observed in 5..12, "expected about 10 ticks in 10 frames, got #{observed}"
   end
 end

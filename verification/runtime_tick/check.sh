@@ -7,14 +7,17 @@ version="1.7.4"
 sha256="936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
 jar="${TLA2TOOLS_JAR:-${XDG_CACHE_HOME:-$HOME/.cache}/tla2tools/$version/tla2tools.jar}"
 
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
 if [ ! -f "$jar" ]; then
   mkdir -p "$(dirname "$jar")"
-  curl -fsSL -o "$jar" "https://github.com/tlaplus/tlaplus/releases/download/v$version/tla2tools.jar"
+  curl -fsSL -o "$work/tla2tools.jar" "https://github.com/tlaplus/tlaplus/releases/download/v$version/tla2tools.jar"
+  echo "$sha256  $work/tla2tools.jar" | sha256sum -c --quiet
+  mv "$work/tla2tools.jar" "$jar"
 fi
 echo "$sha256  $jar" | sha256sum -c --quiet
 
-work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
 cp "$here/RuntimeTick.tla" "$work/"
 status=0
 
@@ -54,12 +57,8 @@ findings="$(grep -c ' breaks$' "$here/expected.txt" || true)"
 if [ "$findings" = 0 ]; then
   echo "  known findings: none recorded"
 elif mix test test/elixir_opentui/runtime_tick_model_test.exs --only known_finding > "$work/findings.out" 2>&1; then
-  if [ "$findings" -gt 0 ]; then
-    echo "  known findings: all replays pass now, but expected.txt records $findings breaks  <== CHANGED"
-    status=1
-  else
-    echo "  known findings: none"
-  fi
+  echo "  known findings: all replays pass now, but expected.txt records $findings breaks  <== CHANGED"
+  status=1
 else
   failed="$(grep -c '^ *[0-9]*) test ' "$work/findings.out" || true)"
   if [ "$failed" = "$findings" ]; then
