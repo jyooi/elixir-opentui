@@ -44,8 +44,8 @@ Run the check when your diff changes one of these parts of `lib/elixir_opentui/r
 Also run it when you add a handler that changes `control_state`, `suspend_count`, `live_refs`, `explicit_start`, or `tick_timer_ref`.
 A change to rendering, layout, focus, or the agent actions does not touch the verified code.
 
-Sync commit: `ac045c5` (the verification described the code at this commit).
-Run `git diff ac045c5 -- lib/elixir_opentui/runtime.ex` to see what changed after it.
+Sync commit: `21ff604` (the verification described the code at this commit).
+Run `git diff 21ff604 -- lib/elixir_opentui/runtime.ex` to see what changed after it.
 
 ## Run the check
 
