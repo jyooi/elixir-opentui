@@ -138,7 +138,11 @@ defmodule ElixirOpentui.Runtime do
     GenServer.call(server, :start_tick)
   end
 
-  @doc "Stop continuous tick loop."
+  @doc """
+  End the explicit tick loop that `start/1` began.
+
+  Ticks continue while a live reference exists or a state has `_live: true`.
+  """
   @spec stop(GenServer.server()) :: :ok
   def stop(server) do
     GenServer.call(server, :stop_tick)
@@ -290,7 +294,7 @@ defmodule ElixirOpentui.Runtime do
 
   def handle_call(:stop_tick, _from, state) do
     state = %{state | explicit_start: false}
-    state = stop_tick_loop(state)
+    state = if should_tick?(state), do: state, else: stop_tick_loop(state)
     {:reply, :ok, state}
   end
 
@@ -357,7 +361,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   @impl true
-  def handle_info(:tick, %{control_state: :running} = state) do
+  def handle_info({:timeout, ref, :tick}, %{control_state: :running, tick_timer_ref: ref} = state) do
     now = System.monotonic_time(:millisecond)
     dt = min(now - state.last_tick_time, @max_dt)
     state = %{state | last_tick_time: now}
@@ -611,17 +615,21 @@ defmodule ElixirOpentui.Runtime do
   defp start_tick_loop(%{suspend_count: count} = state) when count > 0, do: state
 
   defp start_tick_loop(state) do
-    if state.tick_timer_ref, do: Process.cancel_timer(state.tick_timer_ref, info: false)
+    cancel_tick_timer(state)
     now = System.monotonic_time(:millisecond)
     state = %{state | control_state: :running, last_tick_time: now, tick_timer_ref: nil}
     schedule_tick(state)
   end
 
   defp stop_tick_loop(state) do
-    if state.tick_timer_ref, do: Process.cancel_timer(state.tick_timer_ref, info: false)
+    cancel_tick_timer(state)
     control_state = if state.suspend_count > 0, do: :suspended, else: :idle
     %{state | control_state: control_state, tick_timer_ref: nil}
   end
+
+  defp cancel_tick_timer(%{tick_timer_ref: nil}), do: :ok
+
+  defp cancel_tick_timer(%{tick_timer_ref: ref}), do: Process.cancel_timer(ref, info: false)
 
   defp reconcile_tick_loop(%{control_state: :suspended} = state), do: state
 
@@ -639,7 +647,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp schedule_tick(state) do
-    ref = Process.send_after(self(), :tick, state.target_frame_time)
+    ref = :erlang.start_timer(state.target_frame_time, self(), :tick)
     %{state | tick_timer_ref: ref}
   end
 
