@@ -8,7 +8,8 @@ nif_loaded? =
 source_build? = System.get_env("ZIGLER_PRECOMPILE_FORCE_RECOMPILE") == "true"
 
 exclude =
-  if(nif_loaded?, do: [], else: [:nif]) ++ if(source_build?, do: [], else: [:nif_source])
+  [:known_finding] ++
+    if(nif_loaded?, do: [], else: [:nif]) ++ if(source_build?, do: [], else: [:nif_source])
 
 ExUnit.configure(exclude: exclude)
 

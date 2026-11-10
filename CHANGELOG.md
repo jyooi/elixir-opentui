@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Markdown` got one row for each block from `Layout`, not one row for each rendered line.
 - `Runtime.dispatch/2` dropped `{:paste, data}`. It now goes to the focused widget.
 - `Runtime.start/1`, `request_live/1` and `stop/1` ended a suspension.
+- `Runtime` ran two tick chains after a `stop` and a `start`, or a `suspend` and a `resume`,
+  waited behind an expired tick timer. Ticks then came two times as fast.
+- `Runtime.stop/1` stopped ticks while a live reference or a `_live` state still wanted them.
 - The accessibility snapshot reported no tabs for `:tab_select`, `scroll_top: 0` for
   `:scroll_box`, an empty label for a button with `content:`, and `visible: true` for
   hidden elements.
