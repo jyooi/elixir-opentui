@@ -1,12 +1,12 @@
 ---
 name: verify-runtime-tick-loop
-description: "Check a change to the tick loop of ElixirOpentui.Runtime against its verified rules. Use when a change touches start, stop, request_live, drop_live, suspend, resume, the :tick handler, or the tick timer in lib/elixir_opentui/runtime.ex."
+description: "Check a change to the tick loop of ElixirOpentui.Runtime against its verified rules. Use when a change touches start, stop, request_live, drop_live, suspend, resume, the tick handler, or the tick timer in lib/elixir_opentui/runtime.ex."
 ---
 
 # Verify the Runtime tick loop
 
 `ElixirOpentui.Runtime` runs a tick loop that drives animations.
-Callers start, stop, suspend, and resume it, and a timer sends the `:tick` messages.
+Callers start, stop, suspend, and resume it, and a timer sends the tick messages.
 This skill checks three rules about that loop for every order of calls and timer expiry in a small model.
 
 ## The rules
@@ -46,6 +46,8 @@ A change to rendering, layout, focus, or the agent actions does not touch the ve
 
 Sync commit: `21ff604` (the verification described the code at this commit).
 Run `git diff 21ff604 -- lib/elixir_opentui/runtime.ex` to see what changed after it.
+A squash merge can remove this commit from the history.
+If git does not know the commit, use `/maintain-formal-verification-skill` to confirm the verification again and record a new sync commit.
 
 ## Run the check
 
@@ -79,7 +81,7 @@ Then decide what a `CHANGED` line means.
 
 1. **The real-code test fails on a rule that holds.**
    Your change broke the rule in the code.
-   The failure message gives the shortest sequence of calls.
+   The failure message gives a sequence of calls that breaks the rule. It is not always the shortest one.
    This is a real bug, so correct the code.
 2. **The model breaks a rule that the record says holds, after you changed the model.**
    Replay the path from `/statechart` against the real `Runtime`, one call for each step.

@@ -29,8 +29,16 @@ defmodule ElixirOpentui.RuntimeTickModelTest do
     rt
   end
 
-  defp apply_op(rt, :start, refs), do: {Runtime.start(rt), refs} |> elem(1)
-  defp apply_op(rt, :stop, refs), do: {Runtime.stop(rt), refs} |> elem(1)
+  defp apply_op(rt, :start, refs) do
+    Runtime.start(rt)
+    refs
+  end
+
+  defp apply_op(rt, :stop, refs) do
+    Runtime.stop(rt)
+    refs
+  end
+
   defp apply_op(rt, :request_live, refs), do: [Runtime.request_live(rt) | refs]
   defp apply_op(_rt, :drop_live, []), do: []
 
@@ -39,8 +47,15 @@ defmodule ElixirOpentui.RuntimeTickModelTest do
     refs
   end
 
-  defp apply_op(rt, :suspend, refs), do: {Runtime.suspend(rt), refs} |> elem(1)
-  defp apply_op(rt, :resume, refs), do: {Runtime.resume(rt), refs} |> elem(1)
+  defp apply_op(rt, :suspend, refs) do
+    Runtime.suspend(rt)
+    refs
+  end
+
+  defp apply_op(rt, :resume, refs) do
+    Runtime.resume(rt)
+    refs
+  end
 
   defp apply_op(rt, :toggle_live, refs) do
     Runtime.send_app_msg(rt, :toggle_live)
