@@ -405,4 +405,20 @@ defmodule ElixirOpentui.Animation.TimelineTest do
       assert Timeline.value(tl, :c) == 100
     end
   end
+
+  describe "play/1 on a completed timeline" do
+    test "values are readable before the next advance" do
+      tl =
+        Timeline.new(duration: 100)
+        |> Timeline.add(:x, from: 0, to: 10)
+        |> Timeline.play()
+        |> Timeline.advance(100)
+
+      assert Timeline.finished?(tl)
+      assert Timeline.value(tl, :x) == 10
+
+      tl = Timeline.play(tl)
+      assert Timeline.value(tl, :x) == 0
+    end
+  end
 end

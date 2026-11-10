@@ -51,7 +51,7 @@ defmodule ElixirOpentui.DemoRunner do
     # is ready to fire. On normal exit, the after block deletes the temp file
     # and cancels the deferred cleanup. The after block already wrote the
     # disable sequences directly.
-    deferred_tmp = arm_deferred_mouse_cleanup(tty)
+    deferred_tmp = arm_deferred_mouse_cleanup()
 
     try do
       setup_terminal(tty)
@@ -155,7 +155,7 @@ defmodule ElixirOpentui.DemoRunner do
   #
   # Port.open children go through erl_child_setup which calls setsid(),
   # losing access to /dev/tty. We resolve the real device path first.
-  defp arm_deferred_mouse_cleanup(_tty) do
+  defp arm_deferred_mouse_cleanup do
     disable_seq =
       IO.iodata_to_binary([
         ANSI.disable_mouse(),
@@ -205,7 +205,7 @@ defmodule ElixirOpentui.DemoRunner do
   # All other terminal state (keyboard protocol, cursor, reset) was
   # already restored by restore_terminal/1 and the stderr fallback.
   # This minimal write keeps visible garbage out of the user shell prompt.
-  # (The armed cleanup in arm_deferred_mouse_cleanup/1 keeps full sequences
+  # (The armed cleanup in arm_deferred_mouse_cleanup/0 keeps full sequences
   # because it fires when the after block did not run.)
   defp spawn_deferred_mouse_cleanup do
     disable_seq = IO.iodata_to_binary(ANSI.disable_mouse())
@@ -504,11 +504,11 @@ defmodule ElixirOpentui.DemoRunner do
        ) do
     case demo_mod.handle_event(event, state) do
       {:cont, new_state} ->
-        {new_renderer, ctx} =
+        new_renderer =
           if Map.get(new_state, :_live, false) do
-            {renderer, ctx}
+            renderer
           else
-            {render_frame(demo_mod, new_state, renderer, ctx), ctx}
+            render_frame(demo_mod, new_state, renderer, ctx)
           end
 
         handle_events(

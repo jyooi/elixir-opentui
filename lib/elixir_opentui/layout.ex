@@ -42,11 +42,8 @@ defmodule ElixirOpentui.Layout do
   @spec compute(Element.t(), non_neg_integer(), non_neg_integer()) ::
           {Element.t(), layout_result()}
   def compute(%Element{} = root, available_w, available_h) do
-    {tagged_root, _} = tag_nodes(root, 0)
-
-    results = %{}
-    {results, _} = layout_node(tagged_root, available_w, available_h, 0, 0, results)
-    {tagged_root, results}
+    tagged_root = tag_nodes(root)
+    {tagged_root, layout_node(tagged_root, available_w, available_h, 0, 0, %{})}
   end
 
   defp row?(dir), do: dir in [:row, :row_reverse]
@@ -84,7 +81,7 @@ defmodule ElixirOpentui.Layout do
       if style.flex_wrap == :no_wrap do
         resolved = flex_resolve(measured, style, inner_w, inner_h)
 
-        {results, _} =
+        results =
           position_flow_children(
             resolved,
             style,
@@ -139,9 +136,7 @@ defmodule ElixirOpentui.Layout do
     ref = node.attrs[:_layout_ref]
     results = if ref, do: Map.put(results, ref, rect), else: results
 
-    results = if node.id, do: Map.put(results, node.id, rect), else: results
-
-    {results, rect}
+    if node.id, do: Map.put(results, node.id, rect), else: results
   end
 
   defp resolve_dimensions(style, avail_w, avail_h) do
@@ -258,14 +253,8 @@ defmodule ElixirOpentui.Layout do
     {w, h}
   end
 
-  defp content_width(%Element{type: :text, attrs: attrs}, _avail) do
-    case Map.get(attrs, :content) do
-      nil -> 0
-      text -> TextBuffer.display_width(text)
-    end
-  end
-
-  defp content_width(%Element{type: :label, attrs: attrs}, _avail) do
+  defp content_width(%Element{type: type, attrs: attrs}, _avail)
+       when type in [:text, :label, :button] do
     case Map.get(attrs, :content) do
       nil -> 0
       text -> TextBuffer.display_width(text)
@@ -274,13 +263,6 @@ defmodule ElixirOpentui.Layout do
 
   defp content_width(%Element{type: :input, attrs: attrs}, avail) do
     Map.get(attrs, :width, min(20, avail))
-  end
-
-  defp content_width(%Element{type: :button, attrs: attrs}, _avail) do
-    case Map.get(attrs, :content) do
-      nil -> 0
-      text -> TextBuffer.display_width(text)
-    end
   end
 
   defp content_width(%Element{type: :checkbox, attrs: attrs}, _avail) do
@@ -314,15 +296,8 @@ defmodule ElixirOpentui.Layout do
     Map.get_lazy(attrs, :gutter_width, fn -> gutter_width(attrs) end)
   end
 
-  defp content_width(%Element{type: :code, attrs: attrs}, avail) do
-    Map.get(attrs, :width, avail)
-  end
-
-  defp content_width(%Element{type: :diff, attrs: attrs}, avail) do
-    Map.get(attrs, :width, avail)
-  end
-
-  defp content_width(%Element{type: :markdown, attrs: attrs}, avail) do
+  defp content_width(%Element{type: type, attrs: attrs}, avail)
+       when type in [:code, :diff, :markdown] do
     Map.get(attrs, :width, avail)
   end
 
@@ -389,16 +364,9 @@ defmodule ElixirOpentui.Layout do
     Map.get(attrs, :visible_lines, Map.get(attrs, :line_count, 0))
   end
 
-  defp content_height(%Element{type: :code, attrs: attrs}, _avail) do
+  defp content_height(%Element{type: type, attrs: attrs}, _avail)
+       when type in [:code, :diff, :markdown] do
     Map.get(attrs, :visible_lines) || Map.get(attrs, :line_count, 0)
-  end
-
-  defp content_height(%Element{type: :diff, attrs: attrs}, _avail) do
-    Map.get(attrs, :visible_lines) || Map.get(attrs, :line_count, 0)
-  end
-
-  defp content_height(%Element{type: :markdown, attrs: attrs}, _avail) do
-    Map.get(attrs, :visible_lines) || Map.get(attrs, :block_count, 0)
   end
 
   defp content_height(%Element{type: :frame_buffer, attrs: attrs}, _avail) do
@@ -420,7 +388,7 @@ defmodule ElixirOpentui.Layout do
   defp flex_resolve(measured, style, avail_w, avail_h) do
     avail_main = if row?(style.flex_direction), do: avail_w, else: avail_h
     gap = style.gap
-    total_gaps = max(0, Kernel.length(measured) - 1) * gap
+    total_gaps = max(0, length(measured) - 1) * gap
 
     total_intrinsic = Enum.reduce(measured, 0, fn m, acc -> acc + m.intrinsic_main end)
     remaining = avail_main - total_intrinsic - total_gaps
@@ -482,12 +450,12 @@ defmodule ElixirOpentui.Layout do
     total_main =
       resolved
       |> Enum.reduce(0, fn m, acc -> acc + m.resolved_main end)
-      |> Kernel.+(max(0, Kernel.length(resolved) - 1) * gap)
+      |> Kernel.+(max(0, length(resolved) - 1) * gap)
 
     free_main = max(0, avail_main - total_main)
 
     {start_offset, between_extra} =
-      justify(style.justify_content, free_main, Kernel.length(resolved))
+      justify(style.justify_content, free_main, length(resolved))
 
     {results, _offset} =
       Enum.reduce(resolved, {results, start_offset}, fn m, {res, main_offset} ->
@@ -514,13 +482,13 @@ defmodule ElixirOpentui.Layout do
         {child_x, child_y} = {base_x + dx, base_y + dy}
         {child_w, child_h} = by_axis(flex_dir, m.content_main, content_cross)
 
-        {res, _child_rect} = layout_node(m.element, child_w, child_h, child_x, child_y, res)
+        res = layout_node(m.element, child_w, child_h, child_x, child_y, res)
 
         next_offset = main_offset + m.resolved_main + gap + between_extra
         {res, next_offset}
       end)
 
-    {results, nil}
+    results
   end
 
   defp justify(:flex_start, _free, _count), do: {0, 0}
@@ -580,8 +548,7 @@ defmodule ElixirOpentui.Layout do
           true -> base_y
         end
 
-      {res, _} = layout_node(child, cw, ch, x, y, res)
-      res
+      layout_node(child, cw, ch, x, y, res)
     end)
   end
 
@@ -632,7 +599,7 @@ defmodule ElixirOpentui.Layout do
         {inner_main, _inner_cross} = by_axis(flex_dir, inner_w, inner_h)
         {line_avail_w, line_avail_h} = by_axis(flex_dir, inner_main, line_cross)
 
-        {res, _} =
+        res =
           position_flow_children(
             resolved,
             style,
@@ -675,12 +642,11 @@ defmodule ElixirOpentui.Layout do
     end
   end
 
-  defp tag_nodes(%Element{} = el, counter) do
-    ref = make_ref()
-    el = %{el | attrs: Map.put(el.attrs, :_layout_ref, ref)}
-
-    {tagged_children, counter} = Enum.map_reduce(el.children, counter + 1, &tag_nodes/2)
-
-    {%{el | children: tagged_children}, counter}
+  defp tag_nodes(%Element{} = el) do
+    %{
+      el
+      | attrs: Map.put(el.attrs, :_layout_ref, make_ref()),
+        children: Enum.map(el.children, &tag_nodes/1)
+    }
   end
 end

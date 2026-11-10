@@ -1,7 +1,7 @@
 # Run: mix run demo/todo.exs
 
 defmodule TodoApp do
-  alias ElixirOpentui.Widgets.{TextInput, Checkbox, TabSelect, ScrollBox}
+  alias ElixirOpentui.Widgets.{TextInput, TabSelect, ScrollBox}
   alias ElixirOpentui.Color
 
   @filter_options [

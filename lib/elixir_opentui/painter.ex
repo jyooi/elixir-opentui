@@ -112,7 +112,7 @@ defmodule ElixirOpentui.Painter do
             buf
           end
 
-        sorted_children = Enum.sort_by(el.children, & &1.style.z_index, &<=/2)
+        sorted_children = Enum.sort_by(el.children, & &1.style.z_index)
 
         buf =
           Enum.reduce(sorted_children, buf, fn child, b ->
@@ -214,22 +214,11 @@ defmodule ElixirOpentui.Painter do
     end
   end
 
-  defp paint_content(buf, %Element{type: :text} = el, x, y, w, _h, opacity, _focused) do
+  defp paint_content(buf, %Element{type: type} = el, x, y, w, _h, opacity, _focused)
+       when type in [:text, :label] do
     content = Map.get(el.attrs, :content, "")
     fg = el_fg(el, buf, opacity)
-    bg = el.style.bg || Map.get(el.attrs, :_parent_bg, buf.default_bg)
-    bg = Color.with_opacity(bg, opacity)
-    attrs = style_attrs(el.style)
-
-    truncated = TextBuffer.slice_columns(content, 0, w)
-    Buffer.draw_text(buf, x, y, truncated, fg, bg, attrs)
-  end
-
-  defp paint_content(buf, %Element{type: :label} = el, x, y, w, _h, opacity, _focused) do
-    content = Map.get(el.attrs, :content, "")
-    fg = el_fg(el, buf, opacity)
-    bg = el.style.bg || Map.get(el.attrs, :_parent_bg, buf.default_bg)
-    bg = Color.with_opacity(bg, opacity)
+    bg = el_bg(el, buf, opacity)
     attrs = style_attrs(el.style)
 
     truncated = TextBuffer.slice_columns(content, 0, w)
@@ -302,14 +291,13 @@ defmodule ElixirOpentui.Painter do
             c_fg,
             c_bg,
             default_fg,
-            default_bg,
-            opacity
+            default_bg
           )
         else
           buf
         end
       else
-        paint_cursor_char(buf, el, x, y, " ", c_fg, c_bg, default_fg, default_bg, opacity)
+        paint_cursor_char(buf, el, x, y, " ", c_fg, c_bg, default_fg, default_bg)
       end
     else
       buf
@@ -394,7 +382,6 @@ defmodule ElixirOpentui.Painter do
         scroll_offset,
         length(options),
         visible_items,
-        fg,
         bg,
         opacity
       )
@@ -505,8 +492,7 @@ defmodule ElixirOpentui.Painter do
           cursor_fg,
           cursor_bg,
           fg,
-          bg,
-          opacity
+          bg
         )
       else
         buf
@@ -616,7 +602,7 @@ defmodule ElixirOpentui.Painter do
     show = Map.get(el.attrs, :show_line_numbers, true)
     gutter_width = w
 
-    fg = el.style.fg || Color.with_opacity(@dim_fg, opacity)
+    fg = el.style.fg || @dim_fg
     bg = el_bg(el, buf, opacity)
 
     if not show do
@@ -895,7 +881,7 @@ defmodule ElixirOpentui.Painter do
   defp option_description(%{description: desc}) when is_binary(desc), do: desc
   defp option_description(_), do: nil
 
-  defp paint_scroll_indicator(buf, x, y, h, scroll_offset, total, visible, _fg, bg, opacity) do
+  defp paint_scroll_indicator(buf, x, y, h, scroll_offset, total, visible, bg, opacity) do
     indicator_fg = Color.with_opacity(@dim_fg, opacity)
 
     thumb_size = max(1, div(h * visible, total))
@@ -918,18 +904,7 @@ defmodule ElixirOpentui.Painter do
     end)
   end
 
-  defp paint_cursor_char(
-         buf,
-         el,
-         cx,
-         cy,
-         char,
-         block_fg,
-         block_bg,
-         normal_fg,
-         normal_bg,
-         _opacity
-       ) do
+  defp paint_cursor_char(buf, el, cx, cy, char, block_fg, block_bg, normal_fg, normal_bg) do
     case el.style.cursor_style do
       :underline ->
         Buffer.draw_char(buf, cx, cy, char, normal_fg, normal_bg, underline: true)

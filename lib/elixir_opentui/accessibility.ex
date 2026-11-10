@@ -122,7 +122,7 @@ defmodule ElixirOpentui.Accessibility do
           type: el.type,
           role: role_for(el.type),
           focused: el.id != nil and el.id == focused_id,
-          visible: not Map.get(el.attrs, :hidden, false),
+          visible: not el.style.hidden,
           state: widget_fields(el.type, el, widget_state_for(states, el.id)),
           children: child_nodes
         }
@@ -187,12 +187,12 @@ defmodule ElixirOpentui.Accessibility do
   end
 
   defp widget_fields(:scroll_box, _el, state) do
-    %{scroll_top: Map.get(state, :scroll_top, 0)}
+    %{scroll_top: Map.get(state, :scroll_y, 0)}
   end
 
   defp widget_fields(:tab_select, _el, state) do
     %{
-      tabs: state |> Map.get(:tabs, []) |> Enum.map(&tab_label/1),
+      tabs: state |> Map.get(:options, []) |> Enum.map(&option_name/1),
       selected: Map.get(state, :selected, 0)
     }
   end
@@ -208,6 +208,7 @@ defmodule ElixirOpentui.Accessibility do
   defp widget_fields(_type, _el, _state), do: %{}
 
   defp label_of(%Element{attrs: %{label: label}}, _state) when is_binary(label), do: label
+  defp label_of(%Element{attrs: %{content: content}}, _state) when is_binary(content), do: content
   defp label_of(_el, %{label: label}) when is_binary(label) and label != "", do: label
 
   defp label_of(%Element{children: children}, _state) do
@@ -220,8 +221,4 @@ defmodule ElixirOpentui.Accessibility do
   defp option_name(%{name: name}), do: name
   defp option_name(name) when is_binary(name), do: name
   defp option_name(other), do: inspect(other)
-
-  defp tab_label(%{label: label}), do: label
-  defp tab_label(label) when is_binary(label), do: label
-  defp tab_label(other), do: inspect(other)
 end

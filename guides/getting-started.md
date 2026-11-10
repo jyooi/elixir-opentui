@@ -34,8 +34,9 @@ mix zig.get
 mix compile
 ```
 
-The `mix zig.get` step downloads a Zig compiler — this is needed to compile the NIF
-that handles fast buffer operations. It only runs once.
+The `mix zig.get` step downloads a Zig compiler. Zigler, the NIF build tool, needs it.
+The text area NIF itself is downloaded as a prebuilt binary for Linux, macOS, and FreeBSD
+on x86_64 and aarch64. Other platforms compile it from source. The step only runs once.
 
 ## Your first app: a counter
 
@@ -120,7 +121,7 @@ def handle_event(%{type: :key, key: :up}, state) do
 end
 ```
 
-Key events look like `%{type: :key, key: "a", ctrl: false, shift: false, meta: false}`.
+Key events look like `%{type: :key, key: "a", ctrl: false, alt: false, shift: false, meta: false}`.
 Special keys use atoms: `:up`, `:down`, `:left`, `:right`, `:tab`, `:enter`, `:escape`,
 `:backspace`, `:home`, `:end`, `:page_up`, `:page_down`.
 

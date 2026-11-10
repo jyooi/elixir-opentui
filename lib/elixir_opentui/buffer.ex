@@ -2,7 +2,7 @@ defmodule ElixirOpentui.Buffer do
   @moduledoc """
   Cell-based terminal buffer. Each cell stores a character, fg/bg colors, and attributes.
 
-  Maps to ElixirOpentui's OptimizedBuffer. This is the "framebuffer" — layout and painting
+  Maps to OpenTUI's OptimizedBuffer. This is the "framebuffer" - layout and painting
   write cells into this buffer, and the renderer diffs it against the previous frame
   to produce minimal ANSI output.
   """
@@ -67,8 +67,6 @@ defmodule ElixirOpentui.Buffer do
       buf
     end
   end
-
-  def put_cell(buf, _, _, _), do: buf
 
   @doc "Push a scissor rect. Drawing is clipped to the intersection of all active scissor rects."
   def push_scissor(%__MODULE__{scissor_stack: stack} = buf, x, y, w, h) do
@@ -229,7 +227,7 @@ defmodule ElixirOpentui.Buffer do
         rows: rows,
         cells: new_cells
       }) do
-    for i <- 0..(cols * rows - 1),
+    for i <- 0..(cols * rows - 1)//1,
         old_cell = :array.get(i, old),
         new_cell = :array.get(i, new_cells),
         old_cell != new_cell do

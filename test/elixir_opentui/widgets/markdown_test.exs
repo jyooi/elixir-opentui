@@ -184,11 +184,20 @@ defmodule ElixirOpentui.Widgets.MarkdownTest do
       assert tree.id == :mymd
     end
 
-    test "includes blocks and block_count" do
+    test "includes blocks and line_count" do
       state = Markdown.init(%{content: @sample_markdown, id: :mymd})
       tree = Markdown.render(state)
-      assert tree.attrs.block_count > 0
+      assert tree.attrs.line_count == state.rendered_line_count
       assert is_list(tree.attrs.blocks)
+    end
+
+    test "layout gives the element one row for each rendered line" do
+      state = Markdown.init(%{content: "# Title\n\nline1\nline2\nline3\n\n- a\n- b\n", id: :md})
+      root = ElixirOpentui.Element.new(:box, [width: 30, height: 20], [Markdown.render(state)])
+      {_tree, layout} = ElixirOpentui.Layout.compute(root, 30, 20)
+
+      assert state.rendered_line_count == 9
+      assert layout[:md].h == 9
     end
   end
 end

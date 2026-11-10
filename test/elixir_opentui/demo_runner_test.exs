@@ -61,7 +61,7 @@ defmodule ElixirOpentui.DemoRunnerTest do
     test "live demos skip per-event rendering" do
       source = File.read!("lib/elixir_opentui/demo_runner.ex")
 
-      assert source =~ ~r/if Map\.get\(new_state, :_live, false\) do\s*\n\s*\{renderer, ctx\}/s,
+      assert source =~ ~r/if Map\.get\(new_state, :_live, false\) do\s*\n\s*renderer\n/s,
              "live demos should skip rendering in handle_events event clause"
     end
   end

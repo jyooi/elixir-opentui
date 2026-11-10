@@ -5,9 +5,7 @@ defmodule ElixirOpentui.Renderer do
   Keeps the last painted frame, computes layout, paints elements,
   diffs the result, and outputs minimal ANSI sequences.
 
-  Can operate in two modes:
-  - Live mode: writes to Terminal driver (real terminal)
-  - Capture mode: returns ANSI output as iodata (for testing)
+  Returns the ANSI output as iodata. The caller writes it to the terminal.
   """
 
   alias ElixirOpentui.{Buffer, Layout, Painter, ANSI}

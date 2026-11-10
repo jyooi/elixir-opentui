@@ -3,15 +3,14 @@ defmodule ElixirOpentui.Runtime do
   The MVU runtime GenServer. Owns all application and component state.
 
   Runs the main loop:
-  1. Receive events (from DemoRunner or test harness)
+  1. Receive events (from a test harness or an agent bridge)
   2. Route through EventManager
   3. Update component states
   4. Re-render the element tree
-  5. Diff and output to terminal
+  5. Paint the frame into the renderer buffer
 
-  Can run in two modes:
-  - `:live` - driven by a real terminal
-  - `:headless` — for testing (no terminal, captures frames)
+  The runtime does not write to a terminal. Read frames with `get_frame/1`
+  or `snapshot/1`. `ElixirOpentui.DemoRunner` drives a real terminal.
   """
 
   use GenServer
@@ -47,7 +46,7 @@ defmodule ElixirOpentui.Runtime do
           tree: Element.t() | nil,
           mode: :live | :headless,
           on_event: (term() -> :ok) | nil,
-          control_state: :idle | :running | :stopping,
+          control_state: :idle | :running | :suspended,
           target_frame_time: pos_integer(),
           last_tick_time: non_neg_integer(),
           live_refs: MapSet.t(reference()),
@@ -279,9 +278,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   def handle_call({:resize, cols, rows}, _from, state) do
-    new_renderer = Renderer.resize(state.renderer, cols, rows)
-    new_state = %{state | renderer: new_renderer}
-    new_state = render_and_reconcile(new_state)
+    new_state = state |> handle_resize(cols, rows) |> render_and_reconcile()
     {:reply, :ok, new_state}
   end
 
@@ -360,10 +357,6 @@ defmodule ElixirOpentui.Runtime do
   end
 
   @impl true
-  def handle_info(:tick, %{control_state: :suspended} = state) do
-    {:noreply, state}
-  end
-
   def handle_info(:tick, %{control_state: :running} = state) do
     now = System.monotonic_time(:millisecond)
     dt = min(now - state.last_tick_time, @max_dt)
@@ -380,10 +373,6 @@ defmodule ElixirOpentui.Runtime do
     {:noreply, state}
   end
 
-  def handle_info(:tick, %{control_state: :idle} = state) do
-    {:noreply, state}
-  end
-
   def handle_info(_msg, state) do
     {:noreply, state}
   end
@@ -397,10 +386,7 @@ defmodule ElixirOpentui.Runtime do
 
       state =
         Enum.reduce(actions, state, fn
-          {:update, msg}, acc -> update_app(acc, msg)
           {:resize, cols, rows}, acc -> handle_resize(acc, cols, rows)
-          {:focus_changed, _id}, acc -> acc
-          {:mouse, _event}, acc -> acc
           _, acc -> acc
         end)
 
@@ -478,7 +464,13 @@ defmodule ElixirOpentui.Runtime do
   defp apply_agent_action(state, {:mouse, event}), do: process_event(state, event)
 
   defp apply_agent_action(state, {:paste, data}) when is_binary(data) do
-    process_event(state, %{type: :paste, data: data})
+    event = %{type: :paste, data: data}
+    state = process_event(state, event)
+
+    case state.event_manager && state.event_manager.focus.focused_id do
+      nil -> state
+      focused_id -> update_component(state, focused_id, :paste, event)
+    end
   end
 
   defp apply_agent_action(state, _unknown), do: state
@@ -616,6 +608,7 @@ defmodule ElixirOpentui.Runtime do
   end
 
   defp start_tick_loop(%{control_state: :running} = state), do: state
+  defp start_tick_loop(%{suspend_count: count} = state) when count > 0, do: state
 
   defp start_tick_loop(state) do
     if state.tick_timer_ref, do: Process.cancel_timer(state.tick_timer_ref, info: false)
@@ -626,7 +619,8 @@ defmodule ElixirOpentui.Runtime do
 
   defp stop_tick_loop(state) do
     if state.tick_timer_ref, do: Process.cancel_timer(state.tick_timer_ref, info: false)
-    %{state | control_state: :idle, tick_timer_ref: nil}
+    control_state = if state.suspend_count > 0, do: :suspended, else: :idle
+    %{state | control_state: control_state, tick_timer_ref: nil}
   end
 
   defp reconcile_tick_loop(%{control_state: :suspended} = state), do: state

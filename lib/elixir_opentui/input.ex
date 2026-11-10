@@ -144,7 +144,14 @@ defmodule ElixirOpentui.Input do
 
   @type mouse_event :: %{
           type: :mouse,
-          action: :press | :release | :move | :scroll_up | :scroll_down,
+          action:
+            :press
+            | :release
+            | :move
+            | :scroll_up
+            | :scroll_down
+            | :scroll_left
+            | :scroll_right,
           button: :left | :right | :middle | :none,
           x: non_neg_integer(),
           y: non_neg_integer(),
@@ -202,22 +209,13 @@ defmodule ElixirOpentui.Input do
     end
   end
 
-  defp parse_loop(<<"\e", char, rest::binary>>, acc) when char >= 0x20 do
-    event = %{
-      type: :key,
-      key: <<char>>,
-      ctrl: false,
-      alt: true,
-      shift: char in ?A..?Z,
-      meta: false
-    }
-
-    parse_loop(rest, [event | acc])
+  defp parse_loop(<<"\e", 127, rest::binary>>, acc) do
+    parse_loop(rest, [%{key(:backspace) | alt: true} | acc])
   end
 
-  defp parse_loop(<<"\e">>, acc) do
-    [key(:escape) | acc]
-    |> Enum.reverse()
+  defp parse_loop(<<"\e", char::utf8, rest::binary>>, acc) when char >= 0x20 do
+    event = %{key(<<char::utf8>>) | alt: true, shift: char in ?A..?Z}
+    parse_loop(rest, [event | acc])
   end
 
   defp parse_loop(<<"\e", rest::binary>>, acc) do
@@ -396,11 +394,17 @@ defmodule ElixirOpentui.Input do
     motion = band(cb, 32) != 0
 
     cond do
-      band(cb, 64) != 0 and base == 0 -> {:scroll_up, :none}
-      band(cb, 64) != 0 and base == 1 -> {:scroll_down, :none}
-      motion -> {:move, button_from_base(base)}
-      action_char == "m" -> {:release, button_from_base(base)}
-      true -> {:press, button_from_base(base)}
+      band(cb, 64) != 0 ->
+        {Enum.at([:scroll_up, :scroll_down, :scroll_left, :scroll_right], base), :none}
+
+      motion ->
+        {:move, button_from_base(base)}
+
+      action_char == "m" ->
+        {:release, button_from_base(base)}
+
+      true ->
+        {:press, button_from_base(base)}
     end
   end
 
@@ -408,7 +412,6 @@ defmodule ElixirOpentui.Input do
   defp button_from_base(1), do: :middle
   defp button_from_base(2), do: :right
   defp button_from_base(3), do: :none
-  defp button_from_base(_), do: :none
 
   defp band(a, b), do: Bitwise.band(a, b)
 
@@ -458,7 +461,7 @@ defmodule ElixirOpentui.Input do
 
     if mod_str do
       {mod_value, event_type} = split_modifier_event_type(mod_str)
-      event = apply_kitty_modifier(event, mod_value)
+      event = apply_modifier(event, mod_value)
 
       if event_type,
         do: Map.put(event, :event_type, event_type_atom(event_type)),
@@ -493,11 +496,7 @@ defmodule ElixirOpentui.Input do
   #   bit 5 (32)  meta      → (dropped, no widget uses it)
   #   bit 6 (64)  caps_lock → (dropped, not sent with flags=5)
   #   bit 7 (128) num_lock  → (dropped, not sent with flags=5)
-  defp apply_kitty_modifier(event, mod) do
-    # Kitty uses 1-based modifiers, same as xterm.
-    apply_modifier(event, mod)
-  end
-
+  #
   # Modifier decoding: ANSI modifier value (1 = none, 2 = shift, 3 = alt, and so on).
   # This encoding is shared by xterm and Kitty protocols.
   defp apply_modifier(event, mod) do

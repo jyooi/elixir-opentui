@@ -11,8 +11,15 @@ defmodule ElixirOpentui.Precompiled do
   @version Mix.Project.config()[:version]
   @base_url "https://github.com/jyooi/elixir-opentui/releases/download/v#{@version}"
 
-  @doc "Precompiled config for ElixirOpentui.EditBufferNIF"
+  @doc """
+  Precompiled config for ElixirOpentui.EditBufferNIF.
+
+  Creates `priv/lib` first. Zigler 0.15.2 copies the downloaded library
+  there and does not create the directory, so a fresh build fails without it.
+  """
   def edit_buffer_nif_precompiled do
+    File.mkdir_p!(Path.join(:code.priv_dir(:elixir_opentui), "lib"))
+
     {:web, "#{@base_url}/Elixir.ElixirOpentui.EditBufferNIF.#TRIPLE.#EXT",
      edit_buffer_nif_shasums()}
   end

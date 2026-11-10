@@ -176,7 +176,7 @@ defmodule MarkdownDemo do
         id: :md_view,
         content: md_state.content,
         blocks: md_state.blocks,
-        block_count: length(md_state.blocks),
+        line_count: md_state.rendered_line_count,
         scroll_offset: md_state.scroll_offset,
         visible_lines: @viewport,
         width: panel_w - 4

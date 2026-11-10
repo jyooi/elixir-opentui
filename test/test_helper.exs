@@ -5,6 +5,11 @@ nif_loaded? =
     _ -> false
   end
 
-unless nif_loaded?, do: ExUnit.configure(exclude: [:nif])
+source_build? = System.get_env("ZIGLER_PRECOMPILE_FORCE_RECOMPILE") == "true"
+
+exclude =
+  if(nif_loaded?, do: [], else: [:nif]) ++ if(source_build?, do: [], else: [:nif_source])
+
+ExUnit.configure(exclude: exclude)
 
 ExUnit.start()

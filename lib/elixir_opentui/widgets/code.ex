@@ -127,14 +127,11 @@ defmodule ElixirOpentui.Widgets.Code do
   def render(state) do
     import ElixirOpentui.View, only: [code: 1]
 
-    lines = String.split(state.content, "\n")
-
     code(
       id: state.id,
       content: state.content,
       filetype: state.filetype,
       tokens: state.tokens,
-      lines: lines,
       line_count: state.line_count,
       show_line_numbers: state.show_line_numbers,
       scroll_offset: state.scroll_offset,
@@ -166,8 +163,8 @@ defmodule ElixirOpentui.Widgets.Code do
   @doc """
   Tokenize source code using Makeup for the given filetype.
 
-  Returns a list of `{token_type, metadata, text}` tuples, or the raw
-  content string if no lexer is available for the filetype.
+  Returns a list of `{token_type, metadata, text}` tuples, or `nil` if no
+  lexer is available for the filetype.
   """
   @spec highlight(String.t() | nil, String.t() | nil) :: list() | nil
   def highlight(content, filetype) when is_binary(content) do

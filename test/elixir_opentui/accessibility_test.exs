@@ -218,4 +218,61 @@ defmodule ElixirOpentui.AccessibilityTest do
     :ok = Runtime.dispatch(rt, {:focus, :email})
     assert Runtime.snapshot(rt).frame > first
   end
+
+  defmodule WidgetStateApp do
+    use ElixirOpentui.Component
+
+    alias ElixirOpentui.Widgets.{ScrollBox, TabSelect, TextInput}
+
+    def init(_), do: %{}
+    def update(_, _, state), do: state
+
+    def render(_) do
+      import ElixirOpentui.View
+
+      box id: :root, width: 60, height: 20 do
+        component(TabSelect, id: :tabs, options: ["One", "Two"])
+        component(ScrollBox, id: :scroller, content_height: 100, height: 5)
+        component(TextInput, id: :name, value: "", width: 20)
+        text(id: :secret, content: "secret", hidden: true)
+        button(id: :save, content: "Save", width: 10, height: 1)
+      end
+    end
+  end
+
+  describe "widget state in the snapshot" do
+    setup do
+      {:ok, rt} = Runtime.start_link(cols: 60, rows: 20)
+      :ok = Runtime.mount(rt, WidgetStateApp)
+      %{rt: rt}
+    end
+
+    test "tab_select reports its tab names", %{rt: rt} do
+      assert Runtime.find_widget(rt, :tabs).state == %{tabs: ["One", "Two"], selected: 0}
+    end
+
+    test "scroll_box reports its scroll position", %{rt: rt} do
+      key = %{type: :key, key: :down, ctrl: false, alt: false, shift: false, meta: false}
+      :ok = Runtime.dispatch(rt, {:focus, :scroller})
+      :ok = Runtime.dispatch(rt, {:key, key})
+
+      assert Runtime.find_widget(rt, :scroller).state == %{scroll_top: 1}
+    end
+
+    test "a hidden element is not visible", %{rt: rt} do
+      refute Runtime.find_widget(rt, :secret).visible
+      assert Runtime.find_widget(rt, :save).visible
+    end
+
+    test "a button with content reports it as its label", %{rt: rt} do
+      assert Runtime.find_widget(rt, :save).state == %{label: "Save"}
+    end
+
+    test "paste goes to the focused widget", %{rt: rt} do
+      :ok = Runtime.dispatch(rt, {:focus, :name})
+      :ok = Runtime.dispatch(rt, {:paste, "hello"})
+
+      assert Runtime.find_widget(rt, :name).state.value == "hello"
+    end
+  end
 end

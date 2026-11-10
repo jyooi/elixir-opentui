@@ -343,8 +343,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:undo, _event, state) do
     EditBufferNIF.undo(state.edit_buffer)
 
-    %{state | selection: nil}
-    |> apply_nif_selection_reset()
+    state
+    |> clear_selection()
     |> sync_scroll()
     |> emit_change()
   end
@@ -352,8 +352,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
   defp execute_action(:redo, _event, state) do
     EditBufferNIF.redo(state.edit_buffer)
 
-    %{state | selection: nil}
-    |> apply_nif_selection_reset()
+    state
+    |> clear_selection()
     |> sync_scroll()
     |> emit_change()
   end
@@ -467,26 +467,16 @@ defmodule ElixirOpentui.Widgets.TextArea do
   end
 
   defp collapse_selection(%{selection: nil} = state), do: state
-
-  defp collapse_selection(state) do
-    EditBufferNIF.view_reset_selection(state.editor_view)
-    %{state | selection: nil}
-  end
+  defp collapse_selection(state), do: clear_selection(state)
 
   defp collapse_selection_to(_side, %{selection: nil} = state), do: state
 
-  defp collapse_selection_to(side, %{selection: %{anchor: a, focus: f}} = state) do
-    {sel_start, sel_end} = if a <= f, do: {a, f}, else: {f, a}
-
-    offset =
-      case side do
-        :start -> sel_start
-        :end -> sel_end
-      end
+  defp collapse_selection_to(side, state) do
+    {sel_start, sel_end} = selection_range(state.selection)
+    offset = if side == :start, do: sel_start, else: sel_end
 
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, offset)
-    EditBufferNIF.view_reset_selection(state.editor_view)
-    %{state | selection: nil}
+    clear_selection(state)
   end
 
   defp clear_selection(state) do
@@ -506,19 +496,14 @@ defmodule ElixirOpentui.Widgets.TextArea do
     {sel_start, _sel_end} = selection_range(state.selection)
     EditBufferNIF.view_delete_selected_text(state.editor_view)
     EditBufferNIF.set_cursor_by_offset(state.edit_buffer, sel_start)
-    EditBufferNIF.view_reset_selection(state.editor_view)
 
-    %{state | selection: nil}
+    state
+    |> clear_selection()
     |> sync_scroll()
   end
 
   defp selection_range(%{anchor: a, focus: f}) when a <= f, do: {a, f}
   defp selection_range(%{anchor: a, focus: f}), do: {f, a}
-
-  defp apply_nif_selection_reset(state) do
-    EditBufferNIF.view_reset_selection(state.editor_view)
-    state
-  end
 
   defp delete_range_by_offsets(state, from_offset, to_offset) when from_offset < to_offset do
     state = clear_selection(state)
@@ -547,8 +532,8 @@ defmodule ElixirOpentui.Widgets.TextArea do
 
   defp selection_visual_coords(%{selection: %{anchor: a, focus: f}}) when a == f, do: nil
 
-  defp selection_visual_coords(%{selection: %{anchor: a, focus: f}} = state) do
-    {sel_start, sel_end} = if a <= f, do: {a, f}, else: {f, a}
+  defp selection_visual_coords(state) do
+    {sel_start, sel_end} = selection_range(state.selection)
 
     {sr, sc, er, ec} =
       EditBufferNIF.view_selection_visual_coords(state.editor_view, sel_start, sel_end)

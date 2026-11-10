@@ -24,9 +24,7 @@ defmodule ElixirOpentui.Focus do
   @doc "Build focus state from an element tree."
   @spec from_tree(Element.t()) :: t()
   def from_tree(tree) do
-    ids = collect_focusable(tree, [])
-
-    %__MODULE__{focused_id: nil, focusable_ids: ids}
+    %__MODULE__{focused_id: nil, focusable_ids: focusable_ids(tree)}
   end
 
   @doc "Set focus to a specific element id."
@@ -96,7 +94,7 @@ defmodule ElixirOpentui.Focus do
   @doc "Update focus state when the tree changes (e.g., elements added/removed)."
   @spec update_tree(t(), Element.t()) :: t()
   def update_tree(state, tree) do
-    new_ids = collect_focusable(tree, [])
+    new_ids = focusable_ids(tree)
 
     focused =
       if state.focused_id in new_ids do
@@ -108,10 +106,12 @@ defmodule ElixirOpentui.Focus do
     %{state | focusable_ids: new_ids, focused_id: focused}
   end
 
+  defp focusable_ids(tree), do: tree |> collect_focusable([]) |> Enum.reverse()
+
   defp collect_focusable(%Element{} = el, acc) do
     acc =
       if el.id != nil and (el.type in @focusable_types or el.attrs[:focusable] == true) do
-        acc ++ [el.id]
+        [el.id | acc]
       else
         acc
       end

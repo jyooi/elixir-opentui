@@ -71,7 +71,13 @@ defmodule ElixirOpentui.Animation.Timeline do
   @doc "Set the timeline to playing state. A completed timeline starts over."
   @spec play(t()) :: t()
   def play(%__MODULE__{state: :complete} = tl) do
-    %{tl | state: :playing, elapsed: 0.0, loop_count: 0, values: %{}}
+    %{
+      tl
+      | state: :playing,
+        elapsed: 0.0,
+        loop_count: 0,
+        values: evaluate_items(tl.items, 0.0, %{})
+    }
   end
 
   def play(%__MODULE__{} = tl), do: %{tl | state: :playing}

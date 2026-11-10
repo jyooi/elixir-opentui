@@ -2,7 +2,6 @@ defmodule ElixirOpentui.TextBufferTest do
   use ExUnit.Case, async: true
 
   alias ElixirOpentui.TextBuffer
-  alias ElixirOpentui.Color
 
   describe "display_width/1" do
     test "ASCII text width equals length" do

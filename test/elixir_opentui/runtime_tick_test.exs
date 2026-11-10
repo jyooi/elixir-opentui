@@ -533,6 +533,26 @@ defmodule ElixirOpentui.RuntimeTickTest do
       frame = Runtime.get_frame(rt)
       assert is_list(frame)
     end
+
+    test "start, request_live and stop do not end a suspension" do
+      {:ok, rt} = Runtime.start_link(cols: 40, rows: 5)
+      Runtime.mount(rt, TickCounterApp)
+
+      Runtime.suspend(rt)
+      Runtime.start(rt)
+      assert :sys.get_state(rt).control_state == :suspended
+
+      ref = Runtime.request_live(rt)
+      assert :sys.get_state(rt).control_state == :suspended
+
+      Runtime.drop_live(rt, ref)
+      Runtime.stop(rt)
+      assert :sys.get_state(rt).control_state == :suspended
+
+      Runtime.start(rt)
+      Runtime.resume(rt)
+      assert :sys.get_state(rt).control_state == :running
+    end
   end
 
   describe "send_app_msg/2" do
