@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="pele pele-state" viewBox="0 0 1261 862" width="1261" height="862" style="max-width:100%;height:auto;--_bg:var(--pele-bg,#fff);--_fg:var(--pele-fg,#1f1f1f);--_m:var(--pele-muted,#6e6e6e);--_l:var(--pele-line,#1f1f1f);--_s:var(--pele-surface,#f3f3f3);--_a:var(--pele-surface-alt,#e6e6e6);--_b:var(--pele-border,#8a8a8a);--_c:var(--pele-accent,#5b7bd5);color:var(--_fg);--_tw:var(--pele-title-weight,bold);--_fm:var(--pele-font-mono,monospace);font:16px sans-serif;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;font-family:var(--pele-font,sans-serif)" fill="var(--_fg)" role="graphics-document document" aria-roledescription="state"><desc>Chart digest: 8702c755bb1edba2a6611f9ce0d46cca9f10ee0fee3c40223a88ea397c5aaeab</desc><style>
+.pele {
+  --pele-bg: #ffffff;
+  --pele-fg: #1c1c1c;
+  --pele-muted: #656565;
+  --pele-line: #808080;
+  --pele-surface: #fcfcfc;
+  --pele-surface-alt: #f1f1f1;
+  --pele-border: #c9c9c9;
+}
+.pele .blue rect { fill: #c3e0ff; }
+.pele .orange rect { fill: #f0d3bf; }
+.pele .purple rect { fill: #e3d5ff; }
+.pele .yellow rect { fill: #f0dcbf; }
+.pele .teal rect { fill: #bfe3df; }
+.pele .tan rect { fill: #e5d9ce; }
+.pele .pink rect { fill: #ffcbe6; }
+.pele .breaks rect {
+  fill: #ffecee !important;
+  stroke: #e72e3b !important;
+  stroke-width: 2.5px !important;
+}
+.pele .breaks text {
+  fill: #cd2834 !important;
+}
+.pele .mayBreak rect {
+  fill: #fff3e6 !important;
+  stroke: #e8730c !important;
+  stroke-width: 2.5px !important;
+}
+.pele .mayBreak text {
+  fill: #b85a06 !important;
+}
+.pele .bugPath rect {
+  stroke: #1680f3 !important;
+  stroke-width: 2.5px !important;
+}
+.pele .repeats rect {
+  stroke: #9b35d6 !important;
+  stroke-width: 2.5px !important;
+  stroke-dasharray: 6 3;
+}
+@media (prefers-color-scheme: dark) {
+  .pele {
+    --pele-bg: #1f1f1f;
+    --pele-fg: #f5f5f5;
+    --pele-muted: #acacac;
+    --pele-line: #939393;
+    --pele-surface: #121212;
+    --pele-surface-alt: #2c2c2c;
+    --pele-border: #4e4e4e;
+  }
+  .pele .blue rect { fill: #1b3857; }
+  .pele .orange rect { fill: #573117; }
+  .pele .purple rect { fill: #3c2e57; }
+  .pele .yellow rect { fill: #573d17; }
+  .pele .teal rect { fill: #174641; }
+  .pele .tan rect { fill: #3d3127; }
+  .pele .pink rect { fill: #57233e; }
+  .pele .breaks rect {
+    fill: #2e2021 !important;
+    stroke: #cf2b35 !important;
+  }
+  .pele .breaks text {
+    fill: #ff6463 !important;
+  }
+  .pele .mayBreak rect {
+    fill: #2e2619 !important;
+    stroke: #d0700f !important;
+  }
+  .pele .mayBreak text {
+    fill: #ffa257 !important;
+  }
+  .pele .bugPath rect {
+    stroke: #116dd2 !important;
+  }
+  .pele .repeats rect {
+    stroke: #9a3fcf !important;
+  }
+}
+</style><text class="pele-title" font-weight="var(--_tw)" text-anchor="middle" xml:space="preserve"><tspan x="630.5" y="25.6">Runtime tick loop: start, stop, live, suspend, and resume</tspan></text><g transform="translate(0,36)"><g class="pele-clusters"><g class="pele-cluster pele-state-composite" data-id="legend"><rect x="742.61" y="8" width="388.54" height="112" rx="10" fill="var(--_a)" fill-opacity="0.5" stroke="var(--_b)"/><path d="M742.61,44H1131.15" fill="none" stroke="var(--_b)"/><text class="pele-cluster-label" x="936.88" y="31.6" text-anchor="middle">Legend</text></g></g><g class="pele-edges" fill="none" stroke="var(--_l)" stroke-linecap="round"><g class="pele-edge pele-transition" data-id="edge0"><path d="M695.61,120L695.61,157"/><path class="pele-marker" d="M695.61,164L692.25,156L698.97,156Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge1"><path d="M695.61,208L695.61,360C695.61,364.08 571.6,367.17 571.6,371.25L571.6,375"/><path class="pele-marker" d="M571.6,382L568.24,374L574.96,374Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge2"><path d="M727.61,208L727.61,221C727.61,235.76 1194.36,247.74 1194.36,262.5L1194.36,572C1194.36,657.5 956.98,657.5 956.98,743L956.98,749"/><path class="pele-marker" d="M956.98,756L953.62,748L960.34,748Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge3"><path d="M940.98,756L940.98,743C940.98,657.5 1099.83,657.5 1099.83,572L1099.83,262.5C1099.83,244.75 711.61,238.75 711.61,221L711.61,215"/><path class="pele-marker" d="M711.61,208L714.97,216L708.25,216Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge4"><path d="M555.6,382L555.6,372.38C555.6,366.19 471.14,366.19 471.14,360L471.14,230C471.14,227.19 679.61,221.56 679.61,218.75L679.61,215"/><path class="pele-marker" d="M679.61,208L682.97,216L676.25,216Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge5"><path d="M569.34,426L569.34,435.63C569.34,439.86 714.01,443.77 714.01,448L714.01,488C714.01,493.63 639.42,493.63 639.42,499.25L639.42,503"/><path class="pele-marker" d="M639.42,510L636.06,502L642.78,502Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge6"><path d="M553.34,510L553.34,433"/><path class="pele-marker" d="M553.34,426L556.7,434L549.98,434Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge7"><path d="M639.42,572L639.42,581.63C639.42,585.68 790.34,589.94 790.34,594L790.34,688C790.34,715.5 908.98,715.5 908.98,743L908.98,749"/><path class="pele-marker" d="M908.98,756L905.62,748L912.34,748Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge8"><path d="M924.98,756L924.98,743C924.98,657.5 910.77,657.5 910.77,572L910.77,458C910.77,453.25 585.34,443.75 585.34,439L585.34,433"/><path class="pele-marker" d="M585.34,426L588.7,434L581.98,434Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge9"><path d="M583.38,572L583.38,688C583.38,712.8 536.02,728 458.76,728C381.49,728 334.14,733.99 334.14,743.75L334.14,749"/><path class="pele-marker" d="M334.14,756L330.78,748L337.5,748Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge10"><path d="M302.14,756L302.14,743C302.14,657.5 336.13,657.5 336.13,572L336.13,458C336.13,450.82 537.34,446.18 537.34,439L537.34,433"/><path class="pele-marker" d="M537.34,426L540.7,434L533.98,434Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge11"><path d="M187.3,756L187.3,743C187.3,657.5 112.43,657.5 112.43,572L112.43,262.5C112.43,250 663.61,233.5 663.61,221L663.61,215"/><path class="pele-marker" d="M663.61,208L666.97,216L660.25,216Z" fill="var(--_l)" stroke="none"/></g><g class="pele-edge pele-transition" data-id="edge12"><path d="M318.14,756L318.14,743C318.14,726.26 338.01,716 370.42,716C402.84,716 422.71,705.36 422.71,688L422.71,594C422.71,589.16 527.33,587.59 527.33,582.75L527.33,579"/><path class="pele-marker" d="M527.33,572L530.69,580L523.97,580Z" fill="var(--_l)" stroke="none"/></g></g><g class="pele-edge-labels" font-size="14"><g class="pele-edge-label" data-id="edge1"><rect x="594.35" y="268" width="202.52" height="54" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="695.61" y="281.9">an event turns live mode on or</tspan><tspan x="695.61" y="299.9">you call request_live or you call</tspan><tspan x="695.61" y="317.9">start</tspan></text></g><g class="pele-edge-label" data-id="edge2"><rect x="1138.22" y="393.5" width="112.27" height="21" rx="3" fill="var(--_bg)"/><text x="1194.36" y="408.9" text-anchor="middle">you call suspend</text></g><g class="pele-edge-label" data-id="edge3"><rect x="1015.3" y="523" width="169.06" height="36" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="1099.83" y="536.9">you call resume [while the</tspan><tspan x="1099.83" y="554.9">runtime wants no ticks]</tspan></text></g><g class="pele-edge-label" data-id="edge4"><rect x="367.93" y="232" width="206.42" height="126" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="471.14" y="245.9">you call stop [while nothing else</tspan><tspan x="471.14" y="263.9">wants ticks] or you call</tspan><tspan x="471.14" y="281.9">drop_live [while nothing else</tspan><tspan x="471.14" y="299.9">wants ticks] or an event turns</tspan><tspan x="471.14" y="317.9">live mode off [while nothing else</tspan><tspan x="471.14" y="335.9">wants ticks] or a tick runs, and</tspan><tspan x="471.14" y="353.9">the runtime wants no more ticks</tspan></text></g><g class="pele-edge-label" data-id="edge5"><rect x="657.87" y="457.5" width="112.27" height="21" rx="3" fill="var(--_bg)"/><text x="714.01" y="472.9" text-anchor="middle">you call suspend</text></g><g class="pele-edge-label" data-id="edge6"><rect x="468.81" y="450" width="169.06" height="36" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="553.34" y="463.9">you call resume [while the</tspan><tspan x="553.34" y="481.9">runtime wants ticks]</tspan></text></g><g class="pele-edge-label" data-id="edge7"><rect x="687.9" y="596" width="204.87" height="90" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="790.34" y="609.9">you call stop [while nothing else</tspan><tspan x="790.34" y="627.9">wants ticks] or the runtime</tspan><tspan x="790.34" y="645.9">drops the leftover tick or you</tspan><tspan x="790.34" y="663.9">call drop_live [while nothing</tspan><tspan x="790.34" y="681.9">else wants ticks]</tspan></text></g><g class="pele-edge-label" data-id="edge8"><rect x="826.24" y="523" width="169.06" height="36" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="910.77" y="536.9">you call resume [while the</tspan><tspan x="910.77" y="554.9">runtime wants ticks]</tspan></text></g><g class="pele-edge-label" data-id="edge9"><rect x="498.85" y="623" width="169.06" height="36" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="583.38" y="636.9">you call resume [while the</tspan><tspan x="583.38" y="654.9">runtime wants no ticks]</tspan></text></g><g class="pele-edge-label" data-id="edge10"><rect x="234.87" y="514" width="202.52" height="54" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="336.13" y="527.9">an event turns live mode on or</tspan><tspan x="336.13" y="545.9">you call request_live or you call</tspan><tspan x="336.13" y="563.9">start</tspan></text></g><g class="pele-edge-label" data-id="edge11"><rect x="10" y="514" width="204.87" height="54" rx="3" fill="var(--_bg)"/><text text-anchor="middle" xml:space="preserve"><tspan x="112.43" y="527.9">you call stop [while nothing else</tspan><tspan x="112.43" y="545.9">wants ticks] or the runtime</tspan><tspan x="112.43" y="563.9">drops the leftover tick</tspan></text></g><g class="pele-edge-label" data-id="edge12"><rect x="366.58" y="630.5" width="112.27" height="21" rx="3" fill="var(--_bg)"/><text x="422.71" y="645.9" text-anchor="middle">you call suspend</text></g></g><g class="pele-nodes"><g class="pele-node pele-state tan" data-id="s0" transform="translate(695.61,186)"><rect x="-53.34" y="-22" width="106.69" height="44" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#e5d9ce;"/><text class="pele-label" style="fill:#1f1f1f;" x="0" y="5.6" text-anchor="middle">Not ticking</text></g><g class="pele-node pele-state purple" data-id="s1" transform="translate(938.89,778)"><rect x="-56.47" y="-22" width="112.94" height="44" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#e3d5ff;"/><text class="pele-label" style="fill:#1f1f1f;" x="0" y="5.6" text-anchor="middle">Suspended</text></g><g class="pele-node pele-state teal" data-id="s2" transform="translate(563.6,404)"><rect x="-41.34" y="-22" width="82.67" height="44" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#bfe3df;"/><text class="pele-label" style="fill:#1f1f1f;" x="0" y="5.6" text-anchor="middle">Ticking</text></g><g class="pele-node pele-state purple" data-id="s3" transform="translate(583.38,541)"><rect x="-108.05" y="-31" width="216.1" height="62" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#e3d5ff;"/><text class="pele-label" style="fill:#1f1f1f;" text-anchor="middle" xml:space="preserve"><tspan x="0" y="-4.9">Suspended, a leftover tick</tspan><tspan x="0" y="16.1">is on the way</tspan></text></g><g class="pele-node pele-state tan" data-id="s4" transform="translate(248.22,787)"><rect x="-112.92" y="-31" width="225.84" height="62" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#e5d9ce;"/><text class="pele-label" style="fill:#1f1f1f;" text-anchor="middle" xml:space="preserve"><tspan x="0" y="-4.9">Not ticking, a leftover tick is</tspan><tspan x="0" y="16.1">on the way</tspan></text></g><g class="pele-node pele-state-start" data-id="root_start" transform="translate(695.61,113)"><circle r="7" fill="var(--_l)"/></g><g class="pele-node pele-state tan" data-id="lg0" transform="translate(803.07,82)"><rect x="-44.46" y="-22" width="88.93" height="44" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#e5d9ce;"/><text class="pele-label" style="fill:#1f1f1f;" x="0" y="5.6" text-anchor="middle">stopped</text></g><g class="pele-node pele-state teal" data-id="lg1" transform="translate(926.21,82)"><rect x="-38.67" y="-22" width="77.34" height="44" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#bfe3df;"/><text class="pele-label" style="fill:#1f1f1f;" x="0" y="5.6" text-anchor="middle">ticking</text></g><g class="pele-node pele-state purple" data-id="lg2" transform="translate(1060.02,82)"><rect x="-55.14" y="-22" width="110.27" height="44" rx="10" fill="var(--_s)" stroke="var(--_b)" style="fill:#e3d5ff;"/><text class="pele-label" style="fill:#1f1f1f;" x="0" y="5.6" text-anchor="middle">suspended</text></g></g></g></svg>
