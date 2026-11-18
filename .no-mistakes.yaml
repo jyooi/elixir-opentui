@@ -1,0 +1,3 @@
+commands:
+  prepare: mix deps.get
+  test: mix test && elixir scripts/check_verification.exs

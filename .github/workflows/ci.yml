@@ -17,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Elixir
         uses: erlef/setup-beam@v1
@@ -52,3 +54,12 @@ jobs:
 
       - name: Run tests
         run: mix test
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Verify
+        run: elixir scripts/check_verification.exs
